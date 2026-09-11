@@ -347,19 +347,90 @@ function spyToc() {
 function loadScript(src) {
   return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
 }
+/* ------------------------------------------------------------ 夜读 / 字号偏好
+   MODE_KEY / SIZE_KEY 与三页 <head> 里那段 bootstrap 是同一对键：head 负责在样式
+   生效前把 data-mode / data-size 贴到 <html> 上（否则跳页会先闪一下另一套底色），
+   这里负责改它、存它。值 null = 从没手动选过，交给 CSS 的 prefers-color-scheme 兜底。 */
+const MODE_KEY = "read-mode";
+const SIZE_KEY = "read-size";
+
+function currentMode() {
+  const m = document.documentElement.dataset.mode;
+  if (m === "day" || m === "night") return m;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day";
+}
+
+const SIZES = ["s", "m", "l"];
+const SIZE_NAME = { s: "小", m: "标准", l: "大" };
+function currentSize() {
+  const s = document.documentElement.dataset.size;
+  return SIZES.indexOf(s) >= 0 ? s : "m";
+}
+function applySize(v) {
+  document.documentElement.dataset.size = v;
+  try { localStorage.setItem(SIZE_KEY, v); } catch (e) { /* 隐私模式下偏好不持久，但当下仍生效 */ }
+}
+function cycleSize() {
+  const next = SIZES[(SIZES.indexOf(currentSize()) + 1) % SIZES.length];
+  applySize(next);
+  toast("正文字号：" + SIZE_NAME[next]);
+}
+
+function toggleMode() {
+  const next = currentMode() === "night" ? "day" : "night";
+  document.documentElement.dataset.mode = next;
+  try { localStorage.setItem(MODE_KEY, next); } catch (e) { /* 同上 */ }
+  const btn = $("rail-mode");
+  if (btn) btn.setAttribute("aria-pressed", next === "night" ? "true" : "false");
+  renderMermaid(next);
+  toast(next === "night" ? "夜读已开启" : "已回到白昼");
+}
+/* 连点两次会白重画一遍示意图，120ms 防抖把「快速切回来」这种手滑合成一次 */
+function debounce(fn, ms) {
+  let t = 0;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+const switchMode = debounce(toggleMode, 120);
+
+let MMD = null;
+async function runMermaid(nodes, mode) {
+  if (!MMD || !nodes || !nodes.length) return;
+  try {
+    MMD.initialize({
+      startOnLoad: false,
+      theme: mode === "night" ? "dark" : "neutral",
+      securityLevel: "loose",
+      fontFamily: getComputedStyle(document.body).fontFamily
+    });
+    await MMD.run({ nodes });
+  } catch (e) { /* 图重画失败不该拖住换模式 */ }
+}
 async function loadMermaid() {
   try {
     await loadScript("/vendor/mermaid/mermaid.min.js");
-    const mermaid = window.mermaid;
-    mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+    MMD = window.mermaid;
     const nodes = [...document.querySelectorAll(".mermaid-src")];
-    nodes.forEach((n, i) => { n.classList.add("mermaid"); n.id = "mmd-" + i; });
-    await mermaid.run({ nodes });
+    nodes.forEach((n, i) => {
+      n.classList.add("mermaid");
+      n.id = "mmd-" + i;
+      // mermaid.run 会把源码换成 SVG，换主题时要靠这一份重画
+      n.dataset.src = n.innerHTML;
+    });
+    await runMermaid(nodes, currentMode());
   } catch (e) {
     document.querySelectorAll(".mermaid-src").forEach((n) => {
       n.insertAdjacentHTML("beforebegin", `<p style="font-size:12px;color:var(--ink-faint)">（示意图源码，mermaid 组件未加载）</p>`);
     });
   }
+}
+function renderMermaid(mode) {
+  const nodes = [...document.querySelectorAll(".mermaid-src[data-src]")];
+  if (!nodes.length) return;
+  nodes.forEach((el) => {
+    el.innerHTML = el.dataset.src;
+    el.removeAttribute("data-processed");
+  });
+  runMermaid(nodes, mode);
 }
 
 /* ------------------------------------------------------------ 右侧竖向导航
@@ -384,6 +455,15 @@ function initRail() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   });
+
+  // 下面两颗是阅读偏好，不是导航：状态一开始就和 bootstrap 对齐
+  const modeBtn = $("rail-mode");
+  if (modeBtn) {
+    modeBtn.setAttribute("aria-pressed", currentMode() === "night" ? "true" : "false");
+    modeBtn.addEventListener("click", switchMode);
+  }
+  const sizeBtn = $("rail-size");
+  if (sizeBtn) sizeBtn.addEventListener("click", cycleSize);
 
   // 已经在顶端时收起「回顶端」，别让它永远占着一个位置
   const sync = () => {

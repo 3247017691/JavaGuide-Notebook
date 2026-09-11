@@ -7,6 +7,20 @@
 <meta name="description" content="JavaGuide 离线正文：左侧便签目录可折叠、可逐节划掉，右上盖章标记整篇已读。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f9f6ee'/%3E%3Crect width='32' height='5' fill='%232f6db0'/%3E%3Cpath d='M32 0v9l-9-9z' fill='%23dcd3be'/%3E%3Crect x='6' y='12' width='20' height='2.5' fill='%2317181a'/%3E%3Crect x='6' y='18' width='13' height='2.5' fill='%23b0492f'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/cheat.css">
+<!-- 模式与字号在样式生效前落到 <html> 上：三页共用同一对 localStorage 键，
+     不这么做的话白昼↔夜读切换后跳页会先闪一下另一套底色。没手动选过时留空，
+     交给 cheat.css 里的 prefers-color-scheme 兜底。 -->
+<script>
+(function () {
+  var d = document.documentElement;
+  try {
+    var m = localStorage.getItem("read-mode");
+    if (m === "day" || m === "night") { d.dataset.mode = m; }
+    var s = localStorage.getItem("read-size");
+    d.dataset.size = (s === "s" || s === "l") ? s : "m";
+  } catch (e) { d.dataset.size = "m"; }
+})();
+</script>
 </head>
 <body>
 <a class="skip" href="#r-body">跳到正文</a>
@@ -47,6 +61,12 @@
     <button class="rail-btn" id="rail-top" type="button" title="返回最顶端" aria-label="返回最顶端">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.6 3.7h12.8"/><path d="M12 20.3V7.6"/><path d="M6.7 12.9 12 7.6l5.3 5.3"/></svg>
     </button>
+    <!-- 以下两颗不是导航，是阅读偏好：太阳/月亮同一颗按钮换脸，字号那颗 A 按当前档位缩放 -->
+    <button class="rail-btn" id="rail-mode" type="button" title="夜读 / 白昼" aria-label="切换夜读">
+      <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5 17 7M7 17l-1.5 1.5"/></svg>
+      <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8Z"/></svg>
+    </button>
+    <button class="rail-btn" id="rail-size" type="button" title="正文字号：小 / 标准 / 大" aria-label="切换正文字号">A</button>
   </nav>
 </div>
 

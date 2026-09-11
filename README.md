@@ -72,7 +72,7 @@ bash retry-curl.sh         # 用 curl 重试失败图片
 
 - **真路径规范化**：用 `path.posix.normalize` 解析 `./`、`../`、目录链（`xxx/` → `xxx/README.html`）、无扩展名和 URL 编码。
 - **文件名兜底**：原站改版把文章挪过目录时，按文件名在全仓索引里找落点；同名文件取路径前缀最接近的那个。
-- **延伸页**：330 篇之外被链接到的页面（`zhuanlan/`、`about-the-author/` 等）也一并渲染，共 113 篇。它们只读、不计入进度，阅读页显示「延伸页」。
+- **延伸页**：332 篇目录里有 1 篇（`09-009 IDEA`）本身就是站外链接、无本地正文，其余 331 篇之外被链接到的页面（`zhuanlan/`、`about-the-author/` 等）也一并渲染，共 113 篇。它们只读、不计入进度，阅读页显示「延伸页」。
 - **锚点校验**：链接带 `#锚点` 时先确认目标页真有这个 id，对不上就丢掉 hash。
 - **别名表**：原站已删除的老地址在 `build-content.js` 的 `ALIASES` 里手工指向现在的页面。
 
@@ -86,11 +86,11 @@ bash retry-curl.sh         # 用 curl 重试失败图片
 
 | 环节 | 做法 |
 |---|---|
-| 桌面底色 | `--desk` 浅亚麻（`#e9e3d4`），纸面靠投影浮起 |
-| 目录位置 | 在纸面**之外左侧**的留白里，`position: sticky; top: var(--page-pad-y)` 悬浮 |
+| 桌面底色 | `--desk` 浅亚麻（`#e7e0cd`），纸面靠投影浮起 |
+| 目录位置 | 在纸面**之外左侧**的留白里，`position: sticky; top: var(--pad-y)` 悬浮 |
 | 列排布 | 栅格 `var(--toc-w) minmax(0,1fr)`；目录 / 纸面用显式 `grid-area` 摆位，DOM 里纸面仍排在目录前——窄屏塌成 block 时顺序自然是「正文在上、目录在下」 |
-| 目录宽度 | `--toc-w: clamp(240px, 23vw, 340px)` |
-| 高度上限 | `max-height: calc(100vh - var(--page-pad-y) * 2)`，超出在卡内滚（`overscroll-behavior: contain`） |
+| 目录宽度 | `--toc-w: clamp(238px, 22vw, 330px)` |
+| 高度上限 | `max-height: calc(100vh - var(--pad-y) * 2)`，超出在卡内滚（`overscroll-behavior: contain`） |
 | 父子折叠 | h2 为父条目带三角，h3 为子条目；状态存 `localStorage["toc-collapsed:<文章id>"]` |
 | 窄屏 | `≤1024px` 时目录回落到纸面下方，铺成便签云，不折叠 |
 
