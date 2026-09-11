@@ -1,0 +1,337 @@
+<h2 id="1-代理模式" tabindex="-1">1. 代理模式</h2>
+<p>代理模式是一种比较好理解的设计模式。简单来说就是 <strong>我们使用代理对象来代替对真实对象(real object)的访问，这样就可以在不修改原目标对象的前提下，提供额外的功能操作，扩展目标对象的功能。</strong></p>
+<p><strong>代理模式的主要作用是扩展目标对象的功能，比如说在目标对象的某个方法执行前后你可以增加一些自定义的操作。</strong></p>
+<p>举个例子：新娘找来了自己的姨妈来代替自己处理新郎的提问，新娘收到的提问都是经过姨妈处理过滤之后的。姨妈在这里就可以看作是代理你的代理对象，代理的行为（方法）是接收和回复新郎的提问。</p>
+<p><img src="/img/1-DjWCgTFm-xqbhbNQVsaWQw-dc7d1891.png" alt="" loading="lazy"></p>
+<p style="text-align:right;font-size:13px;color:gray">https://medium.com/@mithunsasidharan/understanding-the-proxy-design-pattern-5e63fe38052a</p>
+<p>代理模式有静态代理和动态代理两种实现方式，我们 先来看一下静态代理模式的实现。</p>
+<h2 id="2-静态代理" tabindex="-1">2. 静态代理</h2>
+<p>静态代理中，我们对目标对象的每个方法的增强都是手动完成的（后面会具体演示代码），非常不灵活（比如接口一旦新增加方法，目标对象和代理对象都要进行修改）且麻烦(需要对每个目标类都单独写一个代理类）。 实际应用场景非常非常少，日常开发几乎看不到使用静态代理的场景。</p>
+<p>上面我们是从实现和应用角度来说的静态代理，从 JVM 层面来说， <strong>静态代理在编译时就将接口、实现类、代理类这些都变成了一个个实际的 class 文件。</strong></p>
+<p>静态代理实现步骤:</p>
+<ol>
+<li>定义一个接口及其实现类；</li>
+<li>创建一个代理类同样实现这个接口</li>
+<li>将目标对象注入进代理类，然后在代理类的对应方法调用目标类中的对应方法。这样的话，我们就可以通过代理类屏蔽对目标对象的访问，并且可以在目标方法执行前后做一些自己想做的事情。</li>
+</ol>
+<p>下面通过代码展示！</p>
+<p><strong>1.定义发送短信的接口</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">SmsService</span> {
+    <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span>;
+}
+</code></pre>
+<p><strong>2.实现发送短信的接口</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SmsServiceImpl</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">SmsService</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span> {
+        System.out.println(<span class="hljs-string">&quot;send message:&quot;</span> + message);
+        <span class="hljs-keyword">return</span> message;
+    }
+}
+</code></pre>
+<p><strong>3.创建代理类并同样实现发送短信的接口</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SmsProxy</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">SmsService</span> {
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> SmsService smsService;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">SmsProxy</span><span class="hljs-params">(SmsService smsService)</span> {
+        <span class="hljs-built_in">this</span>.smsService = smsService;
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span> {
+        <span class="hljs-comment">//调用方法之前，我们可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;before method send()&quot;</span>);
+        smsService.send(message);
+        <span class="hljs-comment">//调用方法之后，我们同样可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;after method send()&quot;</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+    }
+}
+</code></pre>
+<p><strong>4.实际使用</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Main</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        <span class="hljs-type">SmsService</span> <span class="hljs-variable">smsService</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SmsServiceImpl</span>();
+        <span class="hljs-type">SmsProxy</span> <span class="hljs-variable">smsProxy</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SmsProxy</span>(smsService);
+        smsProxy.send(<span class="hljs-string">&quot;java&quot;</span>);
+    }
+}
+</code></pre>
+<p>运行上述代码之后，控制台打印出：</p>
+<pre class="md-pre"><code class="hljs">before method send()
+send message:java
+after method send()
+</code></pre>
+<p>可以输出结果看出，我们已经增加了 <code>SmsServiceImpl</code> 的 <code>send()</code> 方法。</p>
+<h2 id="3-动态代理" tabindex="-1">3. 动态代理</h2>
+<p>相比于静态代理来说，动态代理更加灵活。我们不需要针对每个目标类都单独创建一个代理类，并且也不需要我们必须实现接口，我们可以直接代理实现类（CGLIB 动态代理机制）。</p>
+<p><strong>从 JVM 角度来说，动态代理是在运行时动态生成类字节码，并加载到 JVM 中的。</strong></p>
+<p>说到动态代理，Spring AOP、RPC 框架应该是两个不得不提的，它们的实现都依赖了动态代理。</p>
+<p><strong>动态代理在我们日常开发中使用的相对较少，但是在框架中的几乎是必用的一门技术。学会了动态代理之后，对于我们理解和学习各种框架的原理也非常有帮助。</strong></p>
+<p>就 Java 来说，动态代理的实现方式有很多种，比如 <strong>JDK 动态代理</strong>、<strong>CGLIB 动态代理</strong>等等。</p>
+<p><a href="https://github.com/Snailclimb/guide-rpc-framework" target="_blank" rel="noopener">guide-rpc-framework</a> 使用的是 JDK 动态代理，我们先来看看 JDK 动态代理的使用。</p>
+<p>另外，虽然 <a href="https://github.com/Snailclimb/guide-rpc-framework" target="_blank" rel="noopener">guide-rpc-framework</a> 没有用到 <strong>CGLIB 动态代理</strong>，我们这里还是简单介绍一下其使用以及和<strong>JDK 动态代理</strong>的对比。</p>
+<h3 id="31-jdk-动态代理机制" tabindex="-1">3.1. JDK 动态代理机制</h3>
+<h4 id="311-介绍" tabindex="-1">3.1.1. 介绍</h4>
+<p><strong>在 Java 动态代理机制中 <code>InvocationHandler</code> 接口和 <code>Proxy</code> 类是核心。</strong></p>
+<p><code>Proxy</code> 类中使用频率最高的方法是：<code>newProxyInstance()</code>，这个方法主要用来生成一个代理对象。</p>
+<pre class="md-pre"><code class="hljs">    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">newProxyInstance</span><span class="hljs-params">(ClassLoader loader,
+                                          Class&lt;?&gt;[] interfaces,
+                                          InvocationHandler h)</span>
+        <span class="hljs-keyword">throws</span> IllegalArgumentException
+    {
+        ......
+    }
+</code></pre>
+<p>这个方法一共有 3 个参数：</p>
+<ol>
+<li><strong>loader</strong> :类加载器，用于加载代理对象。</li>
+<li><strong>interfaces</strong> : 被代理类实现的一些接口；</li>
+<li><strong>h</strong> : 实现了 <code>InvocationHandler</code> 接口的对象；</li>
+</ol>
+<p>要实现动态代理的话，还必须需要实现 <code>InvocationHandler</code> 来自定义处理逻辑。 当我们的动态代理对象调用一个方法时，这个方法的调用就会被转发到实现 <code>InvocationHandler</code> 接口类的 <code>invoke</code> 方法来调用。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">InvocationHandler</span> {
+
+    <span class="hljs-comment">/**
+     * 当你使用代理对象调用方法的时候实际会调用到这个方法
+     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">invoke</span><span class="hljs-params">(Object proxy, Method method, Object[] args)</span>
+        <span class="hljs-keyword">throws</span> Throwable;
+}
+</code></pre>
+<p><code>invoke()</code> 方法有下面三个参数：</p>
+<ol>
+<li><strong>proxy</strong> :动态生成的代理类</li>
+<li><strong>method</strong> : 与代理类对象调用的方法相对应</li>
+<li><strong>args</strong> : 当前 method 方法的参数</li>
+</ol>
+<p>也就是说：<strong>你通过 <code>Proxy</code> 类的 <code>newProxyInstance()</code> 创建的代理对象在调用方法的时候，实际会调用到实现 <code>InvocationHandler</code> 接口的类的 <code>invoke()</code> 方法。</strong> 你可以在 <code>invoke()</code> 方法中自定义处理逻辑，比如在方法执行前后做什么事情。</p>
+<h4 id="312-jdk-动态代理类使用步骤" tabindex="-1">3.1.2. JDK 动态代理类使用步骤</h4>
+<ol>
+<li>定义一个接口及其实现类；</li>
+<li>自定义 <code>InvocationHandler</code> 并重写 <code>invoke</code> 方法，在 <code>invoke</code> 方法中我们会调用原生方法（被代理类的方法）并自定义一些处理逻辑；</li>
+<li>通过 <code>Proxy.newProxyInstance(ClassLoader loader,Class&lt;?&gt;[] interfaces,InvocationHandler h)</code> 方法创建代理对象；</li>
+</ol>
+<h4 id="313-代码示例" tabindex="-1">3.1.3. 代码示例</h4>
+<p>这样说可能会有点空洞和难以理解，我上个例子，大家感受一下吧！</p>
+<p><strong>1.定义发送短信的接口</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">SmsService</span> {
+    <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span>;
+}
+</code></pre>
+<p><strong>2.实现发送短信的接口</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SmsServiceImpl</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">SmsService</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span> {
+        System.out.println(<span class="hljs-string">&quot;send message:&quot;</span> + message);
+        <span class="hljs-keyword">return</span> message;
+    }
+}
+</code></pre>
+<p><strong>3.定义一个 JDK 动态代理类</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.lang.reflect.InvocationHandler;
+<span class="hljs-keyword">import</span> java.lang.reflect.InvocationTargetException;
+<span class="hljs-keyword">import</span> java.lang.reflect.Method;
+
+<span class="hljs-comment">/**
+ * <span class="hljs-doctag">@author</span> shuang.kou
+ * <span class="hljs-doctag">@createTime</span> 2020年05月11日 11:23:00
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DebugInvocationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">InvocationHandler</span> {
+    <span class="hljs-comment">/**
+     * 代理类中的真实对象
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Object target;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">DebugInvocationHandler</span><span class="hljs-params">(Object target)</span> {
+        <span class="hljs-built_in">this</span>.target = target;
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">invoke</span><span class="hljs-params">(Object proxy, Method method, Object[] args)</span> <span class="hljs-keyword">throws</span> InvocationTargetException, IllegalAccessException {
+        <span class="hljs-comment">//调用方法之前，我们可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;before method &quot;</span> + method.getName());
+        <span class="hljs-type">Object</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> method.invoke(target, args);
+        <span class="hljs-comment">//调用方法之后，我们同样可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;after method &quot;</span> + method.getName());
+        <span class="hljs-keyword">return</span> result;
+    }
+}
+
+</code></pre>
+<p><code>invoke()</code> 方法: 当我们的动态代理对象调用原生方法的时候，最终实际上调用到的是 <code>invoke()</code> 方法，然后 <code>invoke()</code> 方法代替我们去调用了被代理对象的原生方法。</p>
+<p><strong>4.获取代理对象的工厂类</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">JdkProxyFactory</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">getProxy</span><span class="hljs-params">(Object target)</span> {
+        <span class="hljs-keyword">return</span> Proxy.newProxyInstance(
+                target.getClass().getClassLoader(), <span class="hljs-comment">// 目标类的类加载器</span>
+                target.getClass().getInterfaces(),  <span class="hljs-comment">// 代理需要实现的接口，可指定多个</span>
+                <span class="hljs-keyword">new</span> <span class="hljs-title class_">DebugInvocationHandler</span>(target)   <span class="hljs-comment">// 代理对象对应的自定义 InvocationHandler</span>
+        );
+    }
+}
+</code></pre>
+<p><code>getProxy()</code>：主要通过 <code>Proxy.newProxyInstance（）</code> 方法获取某个类的代理对象</p>
+<p><strong>5.实际使用</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">SmsService</span> <span class="hljs-variable">smsService</span> <span class="hljs-operator">=</span> (SmsService) JdkProxyFactory.getProxy(<span class="hljs-keyword">new</span> <span class="hljs-title class_">SmsServiceImpl</span>());
+smsService.send(<span class="hljs-string">&quot;java&quot;</span>);
+</code></pre>
+<p>运行上述代码之后，控制台打印出：</p>
+<pre class="md-pre"><code class="hljs">before <span class="hljs-keyword">method</span> <span class="hljs-title function_">send</span>
+<span class="hljs-title function_">send</span> <span class="hljs-title function_">message</span>:java
+after <span class="hljs-keyword">method</span> <span class="hljs-title function_">send</span>
+</code></pre>
+<h3 id="32-cglib-动态代理机制" tabindex="-1">3.2. CGLIB 动态代理机制</h3>
+<h4 id="321-介绍" tabindex="-1">3.2.1. 介绍</h4>
+<p><strong>JDK 动态代理有一个最致命的问题是其只能代理实现了接口的类。</strong></p>
+<p><strong>为了解决这个问题，我们可以用 CGLIB 动态代理机制来避免。</strong></p>
+<p><a href="https://github.com/cglib/cglib" target="_blank" rel="noopener">CGLIB</a>(<em>Code Generation Library</em>)是一个基于<a href="http://www.baeldung.com/java-asm" target="_blank" rel="noopener">ASM</a>的字节码生成库，它允许我们在运行时对字节码进行修改和动态生成。CGLIB 通过继承方式实现代理。很多知名的开源框架都使用到了<a href="https://github.com/cglib/cglib" target="_blank" rel="noopener">CGLIB</a>， 例如 Spring 中的 AOP 模块中：如果目标对象实现了接口，则默认采用 JDK 动态代理，否则采用 CGLIB 动态代理。</p>
+<p><strong>在 CGLIB 动态代理机制中 <code>MethodInterceptor</code> 接口和 <code>Enhancer</code> 类是核心。</strong></p>
+<p>你需要自定义 <code>MethodInterceptor</code> 并重写 <code>intercept</code> 方法，<code>intercept</code> 用于拦截增强被代理类的方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">MethodInterceptor</span>
+<span class="hljs-keyword">extends</span> <span class="hljs-title class_">Callback</span>{
+    <span class="hljs-comment">// 拦截被代理类中的方法</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">intercept</span><span class="hljs-params">(Object obj, java.lang.reflect.Method method, Object[] args,MethodProxy proxy)</span> <span class="hljs-keyword">throws</span> Throwable;
+}
+
+</code></pre>
+<ol>
+<li><strong>obj</strong> : 被代理的对象（需要增强的对象）</li>
+<li><strong>method</strong> : 被拦截的方法（需要增强的方法）</li>
+<li><strong>args</strong> : 方法入参</li>
+<li><strong>proxy</strong> : 用于调用原始方法</li>
+</ol>
+<p>你可以通过 <code>Enhancer</code> 类来动态获取被代理类，当代理类调用方法的时候，实际调用的是 <code>MethodInterceptor</code> 中的 <code>intercept</code> 方法。</p>
+<h4 id="322-cglib-动态代理类使用步骤" tabindex="-1">3.2.2. CGLIB 动态代理类使用步骤</h4>
+<ol>
+<li>定义一个类；</li>
+<li>自定义 <code>MethodInterceptor</code> 并重写 <code>intercept</code> 方法，<code>intercept</code> 用于拦截增强被代理类的方法，和 JDK 动态代理中的 <code>invoke</code> 方法类似；</li>
+<li>通过 <code>Enhancer</code> 类的 <code>create()</code> 创建代理类；</li>
+</ol>
+<h4 id="323-代码示例" tabindex="-1">3.2.3. 代码示例</h4>
+<p>不同于 JDK 动态代理不需要额外的依赖。<a href="https://github.com/cglib/cglib" target="_blank" rel="noopener">CGLIB</a>(<em>Code Generation Library</em>) 实际是属于一个开源项目，如果你要使用它的话，需要手动添加相关依赖。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>cglib<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>cglib<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.3.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p><strong>1.实现一个使用阿里云发送短信的类</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">package</span> github.javaguide.dynamicProxy.cglibDynamicProxy;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AliSmsService</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">send</span><span class="hljs-params">(String message)</span> {
+        System.out.println(<span class="hljs-string">&quot;send message:&quot;</span> + message);
+        <span class="hljs-keyword">return</span> message;
+    }
+}
+</code></pre>
+<p><strong>2.自定义 <code>MethodInterceptor</code>（方法拦截器）</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> net.sf.cglib.proxy.MethodInterceptor;
+<span class="hljs-keyword">import</span> net.sf.cglib.proxy.MethodProxy;
+
+<span class="hljs-keyword">import</span> java.lang.reflect.Method;
+
+<span class="hljs-comment">/**
+ * 自定义MethodInterceptor
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DebugMethodInterceptor</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">MethodInterceptor</span> {
+
+
+    <span class="hljs-comment">/**
+     * <span class="hljs-doctag">@param</span> o           代理对象本身（注意不是原始对象，如果使用method.invoke(o, args)会导致循环调用）
+     * <span class="hljs-doctag">@param</span> method      被拦截的方法（需要增强的方法）
+     * <span class="hljs-doctag">@param</span> args        方法入参
+     * <span class="hljs-doctag">@param</span> methodProxy 高性能的方法调用机制，避免反射开销
+     */</span>
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">intercept</span><span class="hljs-params">(Object o, Method method, Object[] args, MethodProxy methodProxy)</span> <span class="hljs-keyword">throws</span> Throwable {
+        <span class="hljs-comment">//调用方法之前，我们可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;before method &quot;</span> + method.getName());
+        <span class="hljs-type">Object</span> <span class="hljs-variable">object</span> <span class="hljs-operator">=</span> methodProxy.invokeSuper(o, args);
+        <span class="hljs-comment">//调用方法之后，我们同样可以添加自己的操作</span>
+        System.out.println(<span class="hljs-string">&quot;after method &quot;</span> + method.getName());
+        <span class="hljs-keyword">return</span> object;
+    }
+
+}
+</code></pre>
+<p><strong>3.获取代理类</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> net.sf.cglib.proxy.Enhancer;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CglibProxyFactory</span> {
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">getProxy</span><span class="hljs-params">(Class&lt;?&gt; clazz)</span> {
+        <span class="hljs-comment">// 创建动态代理增强类</span>
+        <span class="hljs-type">Enhancer</span> <span class="hljs-variable">enhancer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Enhancer</span>();
+        <span class="hljs-comment">// 设置类加载器</span>
+        enhancer.setClassLoader(clazz.getClassLoader());
+        <span class="hljs-comment">// 设置被代理类</span>
+        enhancer.setSuperclass(clazz);
+        <span class="hljs-comment">// 设置方法拦截器</span>
+        enhancer.setCallback(<span class="hljs-keyword">new</span> <span class="hljs-title class_">DebugMethodInterceptor</span>());
+        <span class="hljs-comment">// 创建代理类</span>
+        <span class="hljs-keyword">return</span> enhancer.create();
+    }
+}
+</code></pre>
+<p><strong>4.实际使用</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">AliSmsService</span> <span class="hljs-variable">aliSmsService</span> <span class="hljs-operator">=</span> (AliSmsService) CglibProxyFactory.getProxy(AliSmsService.class);
+aliSmsService.send(<span class="hljs-string">&quot;java&quot;</span>);
+</code></pre>
+<p>运行上述代码之后，控制台打印出：</p>
+<pre class="md-pre"><code class="hljs">before method send
+send message:java
+after method send
+</code></pre>
+<h3 id="33-jdk-动态代理和-cglib-动态代理对比" tabindex="-1">3.3. JDK 动态代理和 CGLIB 动态代理对比</h3>
+<ol>
+<li>JDK 动态代理是官方的，它要求被代理的类必须实现接口。它的原理是动态生成一个接口的实现类来作为代理。CGLIB 是第三方的，它不需要接口。它的原理是动态生成一个被代理类的子类来作为代理。但也正因为是继承，所以它不能代理 <code>final</code> 的类，被代理的方法也不能是 <code>final</code> 或 <code>private</code>。</li>
+<li>就二者的效率来说，大部分情况都是 JDK 动态代理更优秀，随着 JDK 版本的升级，这个优势更加明显。</li>
+</ol>
+<h2 id="4-静态代理和动态代理的对比" tabindex="-1">4. 静态代理和动态代理的对比</h2>
+<p>静态代理和动态代理的核心差异在于 <strong>代理关系的确定时机、实现灵活性及维护成本</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>静态代理 (Static Proxy)</th>
+<th>动态代理 (Dynamic Proxy)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>代理关系确定时机</td>
+<td>编译期（编译后生成固定的 <code>.class</code> 字节码文件）</td>
+<td>运行时（动态生成代理类字节码并加载到 JVM）</td>
+</tr>
+<tr>
+<td>实现方式</td>
+<td>在编译前手动编写代理类，常通过组合和委托调用目标对象</td>
+<td>无需手动编写具体代理类，通过 <code>Handler</code>/<code>Interceptor</code> 封装增强逻辑</td>
+</tr>
+<tr>
+<td>接口依赖</td>
+<td>不是必须；基于接口的静态代理通常让代理类与目标类遵循同一接口</td>
+<td>JDK 动态代理面向接口，CGLIB 等子类代理面向可继承的实现类</td>
+</tr>
+<tr>
+<td>代码量与维护性</td>
+<td>代码量大（目标类越多，代理类越多），维护成本高；接口新增方法时，目标类与代理类需同步修改</td>
+<td>代码量极少（通用增强逻辑可复用），维护性好；与接口解耦，接口变更不影响代理逻辑</td>
+</tr>
+<tr>
+<td>核心优势</td>
+<td>实现简单、逻辑直观，无额外框架依赖</td>
+<td>灵活性强、复用性高，降低重复编码，适配复杂场景</td>
+</tr>
+<tr>
+<td>典型应用场景</td>
+<td>简单的装饰器模式、少量固定类的增强需求</td>
+<td>Spring AOP、RPC 框架（如 Dubbo）、ORM 框架</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-总结" tabindex="-1">5. 总结</h2>
+<p>这篇文章中主要介绍了代理模式的两种实现：静态代理以及动态代理。涵盖了静态代理和动态代理实战、静态代理和动态代理的区别、JDK 动态代理和 Cglib 动态代理区别等内容。</p>
+<p>文中涉及到的所有源码，你可以在这里找到：<a href="https://github.com/Snailclimb/guide-rpc-framework-learning/tree/master/src/main/java/github/javaguide/proxy" target="_blank" rel="noopener">https://github.com/Snailclimb/guide-rpc-framework-learning/tree/master/src/main/java/github/javaguide/proxy</a>。</p>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,354 @@
+<p>学 Java 并发时，锁相关的名字很容易让大家搞混：互斥锁、读写锁、自旋锁、悲观锁、乐观锁、CAS、AQS、<code>synchronized</code>、<code>ReentrantLock</code>、<code>StampedLock</code>、偏向锁、轻量级锁、重量级锁。</p>
+<p>这些名字并不都在同一个分类维度里。</p>
+<p>有的说“谁能进入临界区”，比如互斥锁和读写锁；有的说“拿不到锁时怎么等”，比如自旋锁和阻塞锁；有的说“修改共享数据前先锁住，还是提交时再校验”，比如悲观锁和乐观锁；还有的说 HotSpot 在不同竞争强度下怎么优化 <code>synchronized</code>。</p>
+<p>这篇文章先把锁的坐标系立起来，再看 Java 里常用锁工具怎么落地。关于悲观锁、乐观锁和 CAS 的细节，站内已经有两篇文章详细介绍：<a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a>、<a href="/read/java/concurrent/cas.html">CAS 详解</a>。本文只保留必要上下文，重点放在“锁体系怎么串起来”。</p>
+<p>PS：本文主要以 HotSpot / OpenJDK 为背景。<code>synchronized</code> 的 monitor 互斥和内存语义属于 Java/JVM 规范层面；对象头、Mark Word、轻量级锁、锁膨胀这些内容属于 HotSpot 实现优化，Java 语言规范并不承诺固定流程。偏向锁从 JDK 15 起默认禁用并废弃相关参数，JDK 18 起相关参数已经 obsoleted；虚拟线程与 <code>synchronized</code> pinning 的结论也要区分 JDK 21~23 和 JDK 24+。</p>
+<p>先用一张表把分类维度拆开：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>典型名称</th>
+<th>回答的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>临界区互斥方式</td>
+<td>互斥锁、读写锁</td>
+<td>谁能进入临界区</td>
+</tr>
+<tr>
+<td>等待策略</td>
+<td>自旋锁、阻塞锁</td>
+<td>拿不到锁时怎么等</td>
+</tr>
+<tr>
+<td>并发控制思路</td>
+<td>悲观锁、乐观锁</td>
+<td>先锁住再改，还是提交时校验</td>
+</tr>
+<tr>
+<td>原子更新机制</td>
+<td>CAS、Atomic 类</td>
+<td>如何无阻塞更新单个变量</td>
+</tr>
+<tr>
+<td>JVM 实现优化</td>
+<td>轻量级锁、重量级锁、锁膨胀</td>
+<td>HotSpot 如何降低 <code>synchronized</code> 成本</td>
+</tr>
+<tr>
+<td>Java 锁工具</td>
+<td><code>synchronized</code>、<code>ReentrantLock</code>、<code>StampedLock</code></td>
+<td>代码里具体用什么</td>
+</tr>
+</tbody>
+</table>
+<h2 id="一把锁到底保护什么" tabindex="-1">一把锁到底保护什么？</h2>
+<p>锁要解决的是临界区问题。临界区指那段会访问共享可变状态，并且不能让多个执行单元随意交错执行的代码。</p>
+<p><img src="/img/os-lock-critical-section-67226b1b.png" alt="" loading="lazy"></p>
+<p>比如下面这个自增：</p>
+<pre class="md-pre"><code class="hljs">count++;
+</code></pre>
+<p>源码里只有一行，但这行代码不能当成不可拆的动作。线程通常要先读出 <code>count</code>，再加 1，最后写回去。两个线程同时执行时，可能都读到旧值 <code>0</code>，各自算出 <code>1</code>，最后都把 <code>1</code> 写回去。两个线程都执行了自增，结果只加了一次。</p>
+<p>锁的做法很直接：进入这段代码前先获得锁，执行完再释放锁。只要所有访问同一份共享状态的代码都遵守同一把锁的约定，就可以把原本可能交错的读写压成一段互斥执行。</p>
+<p>这里有一句很容易被忽略的话：<strong>锁真正保护的是访问对象状态的协议，对象本身不会因为被加锁就自动安全</strong>。</p>
+<p><code>synchronized (account)</code> 不会神奇地让 <code>account</code> 的所有字段都安全。如果另一段代码绕过这把锁直接改 <code>account.balance</code>，线程安全照样会被破坏。MIT 6.005 的锁课程反复强调的也是这个点：锁应该守住某个数据抽象的表示不变量，随手找个对象套一下，并不能保证不变量一直成立。</p>
+<h2 id="互斥锁同一时刻只允许一个线程进入" tabindex="-1">互斥锁：同一时刻只允许一个线程进入</h2>
+<p>互斥锁（Mutex）的规则很简单：同一时刻，最多只有一个线程持有锁并进入临界区。</p>
+<p>在 Java 中，<code>synchronized</code> 和 <code>ReentrantLock</code> 都可以作为互斥锁使用：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Counter</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> count;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">void</span> <span class="hljs-title function_">increment</span><span class="hljs-params">()</span> {
+        count++;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">int</span> <span class="hljs-title function_">get</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> count;
+    }
+}
+</code></pre>
+<p>换成 <code>ReentrantLock</code>，写法会啰嗦一点，但能拿到更多控制权：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Counter</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantLock</span>();
+    <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> count;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">increment</span><span class="hljs-params">()</span> {
+        lock.lock();
+        <span class="hljs-keyword">try</span> {
+            count++;
+        } <span class="hljs-keyword">finally</span> {
+            lock.unlock();
+        }
+    }
+}
+</code></pre>
+<p><code>try/finally</code> 不能省。<code>synchronized</code> 的释放动作由 JVM 帮你做，代码块正常退出或异常退出都会释放 monitor；<code>ReentrantLock</code> 是显式 API，拿锁和解锁要自己配对。Oracle 的 <code>ReentrantLock</code> 文档也把“调用 <code>lock</code> 后立刻进入 <code>try</code> 块”作为推荐写法。</p>
+<p>互斥锁真正难的地方不在语法，而在锁粒度。</p>
+<p>一把大锁把所有操作都包住，最省心，但并发度低；多把小锁分别保护不同数据，吞吐可能更好，但锁顺序、死锁、状态一致性都更难管。OSTEP 在讲 POSIX mutex 时也提到过这个取舍：不同数据用不同锁能增加并发，但程序员必须清楚每把锁到底保护哪一块状态。</p>
+<h2 id="读写锁读读共享写操作独占" tabindex="-1">读写锁：读读共享，写操作独占</h2>
+<p>互斥锁对读操作也很严格：只要一个线程在读，另一个线程也不能进来读。但很多业务对象有一个特点：读不会改变状态，多个读线程同时执行并不会互相破坏。</p>
+<p>读写锁就是为这种场景准备的。</p>
+<p>它把访问分成两类：</p>
+<ul>
+<li>读锁：共享锁，多个线程可以同时持有。</li>
+<li>写锁：独占锁，只能一个线程持有，并且写锁和读锁互斥。</li>
+</ul>
+<p>对应规则也很好记：</p>
+<ul>
+<li>读读不互斥。</li>
+<li>读写互斥。</li>
+<li>写写互斥。</li>
+</ul>
+<p>Java 里的典型实现是 <code>ReentrantReadWriteLock</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">ProfileCache</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantReadWriteLock</span> <span class="hljs-variable">rwLock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantReadWriteLock</span>();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Lock</span> <span class="hljs-variable">readLock</span> <span class="hljs-operator">=</span> rwLock.readLock();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Lock</span> <span class="hljs-variable">writeLock</span> <span class="hljs-operator">=</span> rwLock.writeLock();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Map</span>&lt;Long, String&gt; <span class="hljs-variable">cache</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-type">long</span> userId)</span> {
+        readLock.lock();
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">return</span> cache.get(userId);
+        } <span class="hljs-keyword">finally</span> {
+            readLock.unlock();
+        }
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">put</span><span class="hljs-params">(<span class="hljs-type">long</span> userId, String profile)</span> {
+        writeLock.lock();
+        <span class="hljs-keyword">try</span> {
+            cache.put(userId, profile);
+        } <span class="hljs-keyword">finally</span> {
+            writeLock.unlock();
+        }
+    }
+}
+</code></pre>
+<p>读写锁适合读多写少、读操作足够短、数据结构不容易被拆坏的场景。它不适合所有缓存，也不一定比互斥锁快。如果写操作很频繁，读线程和写线程会不断互相挡路，读写锁的维护成本反而可能抵消收益。</p>
+<p>Java 还提供了 <code>StampedLock</code>，它支持写锁、悲观读锁和乐观读。乐观读没有真正持有传统读锁；它会先拿一个 stamp，读完后再校验期间有没有写入发生：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Point</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">StampedLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StampedLock</span>();
+    <span class="hljs-keyword">private</span> <span class="hljs-type">double</span> x;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">double</span> y;
+
+    <span class="hljs-type">double</span> <span class="hljs-title function_">distanceFromOrigin</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">long</span> <span class="hljs-variable">stamp</span> <span class="hljs-operator">=</span> lock.tryOptimisticRead();
+        <span class="hljs-type">double</span> <span class="hljs-variable">currentX</span> <span class="hljs-operator">=</span> x;
+        <span class="hljs-type">double</span> <span class="hljs-variable">currentY</span> <span class="hljs-operator">=</span> y;
+        <span class="hljs-keyword">if</span> (!lock.validate(stamp)) {
+            stamp = lock.readLock();
+            <span class="hljs-keyword">try</span> {
+                currentX = x;
+                currentY = y;
+            } <span class="hljs-keyword">finally</span> {
+                lock.unlockRead(stamp);
+            }
+        }
+        <span class="hljs-keyword">return</span> Math.hypot(currentX, currentY);
+    }
+}
+</code></pre>
+<p><code>StampedLock</code> 的乐观读有边界：读到的数据可能短暂不一致，所以只适合能在本地变量里完成读取、并且可以通过 <code>validate</code> 失败后重读来兜底的短读场景。它也很难直接替代 <code>ReentrantReadWriteLock</code>，尤其要注意它不支持重入。</p>
+<h2 id="自旋锁不阻塞先原地等一会儿" tabindex="-1">自旋锁：不阻塞，先原地等一会儿</h2>
+<p>线程拿不到锁时，通常有两种等待方式：</p>
+<ul>
+<li>阻塞：挂起当前线程，让操作系统之后再唤醒。</li>
+<li>自旋：不挂起线程，在 CPU 上循环检查锁是否可用。</li>
+</ul>
+<p>自旋锁适合临界区非常短的场景。比如持锁线程马上就会释放锁，如果等待线程直接阻塞，线程挂起和唤醒的成本可能比“原地转几圈”等待还高。</p>
+<p>问题也在这里：自旋会付出 CPU 成本，它会持续占用 CPU。如果锁很久不释放，或者等待线程很多，自旋会把 CPU 时间浪费在空转上。</p>
+<p>Java 代码里可以用 CAS 写出一个很小的自旋锁示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">SpinLock</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">AtomicReference</span>&lt;Thread&gt; <span class="hljs-variable">owner</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicReference</span>&lt;&gt;();
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">lock</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">Thread</span> <span class="hljs-variable">current</span> <span class="hljs-operator">=</span> Thread.currentThread();
+        <span class="hljs-keyword">while</span> (!owner.compareAndSet(<span class="hljs-literal">null</span>, current)) {
+            Thread.onSpinWait();
+        }
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">unlock</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">Thread</span> <span class="hljs-variable">current</span> <span class="hljs-operator">=</span> Thread.currentThread();
+        <span class="hljs-keyword">if</span> (!owner.compareAndSet(current, <span class="hljs-literal">null</span>)) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalMonitorStateException</span>();
+        }
+    }
+}
+</code></pre>
+<p>这段代码只是用来说明“自旋 + CAS”的关系，不建议直接拿去做业务锁。真实锁要考虑可重入、公平性、中断、超时、异常释放、监控指标、等待队列等问题。JDK 已经把这些复杂性封装在 <code>synchronized</code>、<code>ReentrantLock</code>、AQS 同步器和 Atomic 类里了。</p>
+<h2 id="悲观锁乐观锁和-cas-的位置" tabindex="-1">悲观锁、乐观锁和 CAS 的位置</h2>
+<p>悲观锁和乐观锁描述的是两种并发控制思路，不对应某个固定 Java 类。</p>
+<p>悲观锁假设冲突很可能发生，所以先把资源锁住再操作。<code>synchronized</code>、<code>ReentrantLock</code>、数据库 <code>SELECT ... FOR UPDATE</code> 都是常见例子。</p>
+<p>乐观锁假设冲突不频繁，先不阻塞别人，提交修改时再检查数据有没有被改过。数据库里的 <code>version</code> 字段、Java Atomic 类里的 CAS，都属于这个方向。</p>
+<p>CAS（Compare-And-Swap，比较并交换）可以理解成一种硬件支持的原子更新方式：只有当内存中的值仍然等于预期旧值时，才把它改成新值。否则说明有人先改过了，当前线程可以选择重试、放弃或走降级逻辑。</p>
+<p>CAS 常见问题有三个：</p>
+<ul>
+<li>失败重试会消耗 CPU，冲突越激烈越明显。</li>
+<li>只能很自然地处理单个变量，多个变量的一致性要额外设计。</li>
+<li>ABA 问题：值从 A 变成 B，又变回 A，单看值会以为它没变过。</li>
+</ul>
+<p>ABA 可以用版本号、时间戳或带标记引用解决。Java 里有 <code>AtomicStampedReference</code> 和 <code>AtomicMarkableReference</code> 这类工具，不过在业务代码里更常见的做法是让数据模型本身带版本号。</p>
+<p>这块如果继续展开，就会和已有文章重复。想看实现方式、版本号示例、ABA 处理和 Atomic 类源码，可以继续读：</p>
+<ul>
+<li><a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a></li>
+<li><a href="/read/java/concurrent/cas.html">CAS 详解</a></li>
+<li><a href="/read/java/concurrent/atomic-classes.html">Atomic 原子类总结</a></li>
+</ul>
+<h2 id="synchronized-的底层monitor字节码和内存语义" tabindex="-1">synchronized 的底层：monitor、字节码和内存语义</h2>
+<p><code>synchronized</code> 是 Java 语言内置的同步机制，可以修饰实例方法、静态方法，也可以包住代码块。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Account</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-type">long</span> balance;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">void</span> <span class="hljs-title function_">deposit</span><span class="hljs-params">(<span class="hljs-type">long</span> amount)</span> {
+        balance += amount;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">long</span> <span class="hljs-title function_">balance</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) {
+            <span class="hljs-keyword">return</span> balance;
+        }
+    }
+}
+</code></pre>
+<p>同步方法和同步代码块在字节码层面的表现不完全一样：</p>
+<ul>
+<li>同步方法依赖方法访问标志 <code>ACC_SYNCHRONIZED</code>。</li>
+<li>同步代码块会生成 <code>monitorenter</code> 和 <code>monitorexit</code> 指令。</li>
+</ul>
+<p>不管表现形式如何，语义都是进入 monitor、退出 monitor。Java 语言规范还规定了锁释放和后续锁获取之间的 happens-before 关系：一个线程释放某把锁之前的写入，对随后获得同一把锁的线程可见。</p>
+<p>这也是 <code>synchronized</code> 和“只做互斥”的普通概念锁不同的地方。它同时提供互斥和内存可见性。只保护临界区但不建立可见性，另一个线程可能仍然读到旧值。</p>
+<p>另外，<code>synchronized</code> 是可重入的。一个线程已经持有某个对象的 monitor 时，可以再次进入同一把锁保护的代码，JVM 会记录重入次数，退出时逐层减少。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">ReentrantDemo</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">void</span> <span class="hljs-title function_">outer</span><span class="hljs-params">()</span> {
+        inner();
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">void</span> <span class="hljs-title function_">inner</span><span class="hljs-params">()</span> {
+        <span class="hljs-comment">// 同一线程可以再次进入 this 的 monitor</span>
+    }
+}
+</code></pre>
+<h2 id="synchronized-锁优化别把锁升级背成固定口诀" tabindex="-1">synchronized 锁优化：别把“锁升级”背成固定口诀</h2>
+<p>很多资料会把 <code>synchronized</code> 讲成“无锁 -&gt; 偏向锁 -&gt; 轻量级锁 -&gt; 重量级锁”。这条线索对理解 HotSpot 早期优化很有帮助，但不能脱离版本。</p>
+<p>JDK 6 之后，HotSpot 为 <code>synchronized</code> 做了大量优化。偏向锁面向“总是同一个线程进入同一把锁”的场景；轻量级锁面向“竞争不激烈，多个线程错开进入”的场景；重量级锁则会用到 ObjectMonitor，竞争线程可能阻塞和唤醒。</p>
+<p>版本差异要单独记一下：</p>
+<ul>
+<li>JDK 6 到 JDK 14：偏向锁是 HotSpot 常见优化之一。</li>
+<li>JDK 15：JEP 374 将偏向锁默认禁用，并废弃相关参数。</li>
+<li>JDK 18：偏向锁相关参数被 obsoleted，传入后会被忽略并给出警告。</li>
+<li>JDK 21 到 JDK 23：虚拟线程在 <code>synchronized</code> 中阻塞时可能 pin 住平台线程。</li>
+<li>JDK 24：JEP 491 改进了虚拟线程与 <code>synchronized</code> 的配合，阻塞在 <code>synchronized</code> 上的虚拟线程可以释放底层平台线程，减少 pinning 问题。</li>
+</ul>
+<p>所以，面试或写文章时可以讲“HotSpot 曾经通过偏向锁、轻量级锁、重量级锁降低 <code>synchronized</code> 成本”，但不要把偏向锁说成现代 JDK 一定会走的默认路径。</p>
+<p>工程上更重要的是另一个结论：早年那句“能不用就不用”已经不适合今天的 <code>synchronized</code>。普通互斥场景下，它语法简单、异常释放安全、JIT 优化成熟。只有当你需要公平锁、可中断获取、超时获取、多个条件队列时，才更自然地转向 <code>ReentrantLock</code>。</p>
+<h2 id="reentrantlockcondition-和-aqs-怎么接上" tabindex="-1">ReentrantLock、Condition 和 AQS 怎么接上</h2>
+<p><code>ReentrantLock</code> 提供了比 <code>synchronized</code> 更细的控制能力：</p>
+<ul>
+<li>可以选择公平锁或非公平锁。</li>
+<li>可以用 <code>lockInterruptibly()</code> 响应中断。</li>
+<li>可以用 <code>tryLock()</code> 或 <code>tryLock(timeout, unit)</code> 避免无限等待。</li>
+<li>可以创建多个 <code>Condition</code>，把不同等待条件拆开管理。</li>
+</ul>
+<p>一个典型写法如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">BoundedBuffer</span>&lt;E&gt; {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ReentrantLock</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ReentrantLock</span>();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Condition</span> <span class="hljs-variable">notFull</span> <span class="hljs-operator">=</span> lock.newCondition();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Condition</span> <span class="hljs-variable">notEmpty</span> <span class="hljs-operator">=</span> lock.newCondition();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Queue</span>&lt;E&gt; <span class="hljs-variable">queue</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayDeque</span>&lt;&gt;();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> capacity;
+
+    BoundedBuffer(<span class="hljs-type">int</span> capacity) {
+        <span class="hljs-built_in">this</span>.capacity = capacity;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">put</span><span class="hljs-params">(E item)</span> <span class="hljs-keyword">throws</span> InterruptedException {
+        lock.lockInterruptibly();
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">while</span> (queue.size() == capacity) {
+                notFull.await();
+            }
+            queue.add(item);
+            notEmpty.signal();
+        } <span class="hljs-keyword">finally</span> {
+            lock.unlock();
+        }
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">E</span> <span class="hljs-title function_">take</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> InterruptedException {
+        lock.lockInterruptibly();
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">while</span> (queue.isEmpty()) {
+                notEmpty.await();
+            }
+            <span class="hljs-type">E</span> <span class="hljs-variable">item</span> <span class="hljs-operator">=</span> queue.remove();
+            notFull.signal();
+            <span class="hljs-keyword">return</span> item;
+        } <span class="hljs-keyword">finally</span> {
+            lock.unlock();
+        }
+    }
+}
+</code></pre>
+<p>这里的 <code>while</code> 也不能随便改成 <code>if</code>。线程被唤醒后，只能说明“有机会重新竞争锁并检查条件”，不代表条件一定成立。虚假唤醒、多个等待线程竞争、条件被别的线程先消费掉，都要求醒来后再次检查。</p>
+<p><code>ReentrantLock</code> 底层依赖 AQS（AbstractQueuedSynchronizer）。AQS 可以先粗略理解成一套同步器框架：用一个 <code>state</code> 表示同步状态，用 FIFO 队列管理没抢到资源的线程，再配合 CAS、<code>LockSupport.park/unpark</code> 完成排队、阻塞和唤醒。</p>
+<p>很多并发工具都建立在 AQS 之上，比如 <code>ReentrantLock</code>、<code>Semaphore</code>、<code>CountDownLatch</code>、<code>ReentrantReadWriteLock</code>。如果想把队列、<code>state</code>、CAS 和阻塞唤醒这条线继续拆开，可以接着看 <a href="/read/java/concurrent/aqs.html">AQS 详解</a> 和 <a href="/read/java/concurrent/reentrantlock.html">从ReentrantLock的实现看AQS的原理及应用</a>。</p>
+<h2 id="java-锁该怎么选" tabindex="-1">Java 锁该怎么选？</h2>
+<p>选锁时别急着比较“哪个最快”。锁的表现跟临界区长度、竞争强度、线程数量、失败后的处理方式都有关。先把几个问题问清楚：这段代码保护哪份共享状态？持锁时间大概多长？拿不到锁时能不能等待？等待失败后是返回、重试，还是直接报错？</p>
+<p>如果只是保护 JVM 进程内的一小段状态，比如更新几个字段、维护一个内存 Map、切换对象状态，<code>synchronized</code> 往往就够了。它写起来短，退出代码块时自动释放锁，也少了手写 <code>unlock()</code> 漏掉的风险。等到代码需要超时获取、可中断获取、公平锁，或者要用多个 <code>Condition</code> 管理不同等待队列，再换成 <code>ReentrantLock</code> 会更顺手。</p>
+<p>读多写少时，可以看 <code>ReentrantReadWriteLock</code>。这里的重点是“写少”，光有读方法还不够。如果写操作很频繁，读锁和写锁会一直互相挡，维护读写状态也有成本，最后未必比一把互斥锁更划算。<code>StampedLock</code> 的乐观读更挑场景：读逻辑要短，读到中间状态也不能出大问题，并且必须接受校验失败后重新读一遍。</p>
+<p>如果只是更新一个计数、状态位或引用，优先看 Atomic 类、<code>LongAdder</code>、<code>LongAccumulator</code> 这类工具。它们适合很短的原子更新，不适合把一整段业务流程塞进 CAS 重试循环里。业务流程越长，失败重试越容易把 CPU 消耗在无效循环上，也更难处理副作用。</p>
+<p>如果问题已经越过 JVM 边界，比如多个应用实例同时改同一行数据库记录，Java 里的锁就管不住了。冲突不频繁时，可以用版本号做乐观锁；冲突比较频繁、必须强一致修改时，通常要回到数据库行锁、<code>SELECT ... FOR UPDATE</code>、唯一约束这类数据库机制。再往外走到跨服务互斥，就需要 Redis、ZooKeeper、数据库等外部系统来承接，不能指望 <code>synchronized</code> 或 <code>ReentrantLock</code>。</p>
+<p>锁粒度也别一味追求“小”。一把大锁容易保证正确性，但吞吐可能受影响；拆成多把小锁，竞争会少一些，可锁顺序、死锁和排查成本都会上来。很多时候，先用清楚的一把锁把不变量守住，再根据压测结果拆锁，比一开始就设计一堆细粒度锁更稳。</p>
+<h2 id="常见坑" tabindex="-1">常见坑</h2>
+<p><strong>锁对象不稳定。</strong></p>
+<p>有些代码看起来加了锁，实际可能锁到了不同对象。常见原因是锁对象会变，比如字符串拼接结果、装箱对象、可重新赋值的字段。线程 A 进来时锁的是旧对象，线程 B 进来时锁的是新对象，两边互不影响，临界区就被拆开了。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-type">Object</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Object</span>();
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">update</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">synchronized</span> (lock) {
+        lock = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Object</span>(); <span class="hljs-comment">// 后续线程可能会锁到另一把锁</span>
+    }
+}
+</code></pre>
+<p>如果需要单独的锁对象，通常把它定义成 <code>private final</code>，并且不要把它暴露给外部代码。</p>
+<p><strong>锁住外部可见对象。</strong></p>
+<p><code>synchronized (this)</code> 和 <code>synchronized (SomeClass.class)</code> 有时没问题，但它们也可能被外部代码拿来加锁，导致你无法控制锁竞争范围。库代码尤其要谨慎，通常更推荐私有 final 锁对象。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Object</span> <span class="hljs-variable">lock</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Object</span>();
+</code></pre>
+<p><strong>持锁期间做慢操作。</strong></p>
+<p>持锁时访问数据库、调用 RPC、写大文件，都会拉长锁占用时间。锁占用越久，等待线程越多，超时、线程池耗尽和死锁风险都会变高。</p>
+<p><strong>锁顺序不一致。</strong></p>
+<p>两个线程分别按 <code>A -&gt; B</code> 和 <code>B -&gt; A</code> 的顺序加锁，很容易形成死锁。多把锁同时使用时，要给资源排一个全局稳定顺序。死锁的完整介绍可以看 <a href="/read/cs-basics/operating-system/dead-lock.html">死锁详解</a>。</p>
+<p><strong>把线程安全类和复合操作混为一谈。</strong></p>
+<p><code>ConcurrentHashMap</code> 的单次 <code>get</code>、<code>put</code> 是线程安全的，但“先判断不存在，再插入”是复合操作，需要用 <code>computeIfAbsent</code> 这类原子方法，或者额外同步。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 不推荐：containsKey 和 put 之间可能被其他线程插入</span>
+<span class="hljs-keyword">if</span> (!map.containsKey(key)) {
+    map.put(key, createValue());
+}
+
+<span class="hljs-comment">// 推荐：把复合逻辑交给 ConcurrentHashMap 的原子方法</span>
+map.computeIfAbsent(key, ignored -&gt; createValue());
+</code></pre>
+<p><strong>只看锁，不看资源池。</strong></p>
+<p>线上很多“卡住”和 Java 锁死锁无关，线程可能都在等数据库连接、HTTP 连接、线程池队列或外部服务返回。线程栈里看到 <code>WAITING</code> 只能说明线程在等，判断死锁还要找到稳定的等待环。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>锁是一组并发控制工具的总称，这个概念还是比较大的。</p>
+<p>互斥锁和读写锁回答“谁能进临界区”；自旋锁和阻塞锁回答“拿不到锁怎么等”；悲观锁和乐观锁回答“冲突发生前后怎么处理”；CAS 和 Atomic 类解决单变量原子更新；<code>synchronized</code>、<code>ReentrantLock</code>、<code>StampedLock</code>、AQS 则是 Java 把这些思想落到代码里的方式。</p>
+<p>真正写代码时，先把共享状态和不变量找出来，再决定锁保护什么、锁粒度多大、等待是否能中断、失败是否能重试。工具只是手段，真正要守住的是同一套同步协议：所有访问共享状态的路径都必须遵守它。</p>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se24/html/jls-17.html" target="_blank" rel="noopener">The Java Language Specification, Chapter 17. Threads and Locks</a></li>
+<li><a href="https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.monitorenter" target="_blank" rel="noopener">The Java Virtual Machine Specification, monitorenter</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Lock.html" target="_blank" rel="noopener">Oracle Java API: Lock</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReentrantLock.html" target="_blank" rel="noopener">Oracle Java API: ReentrantLock</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/StampedLock.html" target="_blank" rel="noopener">Oracle Java API: StampedLock</a></li>
+<li><a href="https://openjdk.org/jeps/374" target="_blank" rel="noopener">OpenJDK JEP 374: Deprecate and Disable Biased Locking</a></li>
+<li><a href="https://openjdk.org/jeps/491" target="_blank" rel="noopener">OpenJDK JEP 491: Synchronize Virtual Threads without Pinning</a></li>
+<li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/Chinese/28.pdf" target="_blank" rel="noopener">OSTEP 中文版：Locks</a></li>
+<li><a href="http://web.mit.edu/6.005/www/fa15/classes/23-locks/" target="_blank" rel="noopener">MIT 6.005: Locks and Synchronization</a></li>
+</ul>

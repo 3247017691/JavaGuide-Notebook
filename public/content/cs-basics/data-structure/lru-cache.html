@@ -1,0 +1,355 @@
+<p>LRU 是 Least Recently Used 的缩写，意思是最近最少使用。当缓存容量满了，需要淘汰最久没有被访问的数据。</p>
+<p>面试里手写 LRU 很高频，因为它把哈希表和双向链表结合在一起：哈希表负责 <code>O(1)</code> 查找节点，双向链表负责 <code>O(1)</code> 移动节点和删除尾节点。</p>
+<p>文章内容概览：</p>
+<ol>
+<li>什么是 LRU 缓存？</li>
+<li>LRU 为什么适合做缓存淘汰？</li>
+<li>为什么需要哈希表 + 双向链表？</li>
+<li>如何手写 <code>get</code> 和 <code>put</code>？</li>
+<li>Java <code>LinkedHashMap</code> 如何实现 LRU？</li>
+<li>真实工程里的 LRU 还要考虑什么？</li>
+</ol>
+<p><img src="/img/lru-cache-6035d197.png" alt="" loading="lazy"></p>
+<h2 id="什么是-lru-缓存" tabindex="-1">什么是 LRU 缓存？</h2>
+<p>缓存的核心矛盾是：空间有限，但希望尽量把“未来还会被访问”的数据留在内存里。</p>
+<p>问题是，程序并不知道未来。LRU 的做法是用“最近访问过”去近似预测“接下来还可能访问”。如果一个数据刚刚被访问过，它很可能还会再被访问；如果一个数据很久没被访问，缓存满的时候就优先淘汰它。</p>
+<p>举个例子，容量为 2 的缓存按顺序访问：</p>
+<pre class="md-pre"><code class="hljs">put(1, 1)
+put(2, 2)
+get(1)
+put(3, 3)
+</code></pre>
+<p>在 <code>put(3, 3)</code> 之前，缓存里有 <code>1</code> 和 <code>2</code>。虽然 <code>1</code> 更早插入，但它刚被 <code>get(1)</code> 访问过，所以最近最少使用的是 <code>2</code>，最终应该淘汰 <code>2</code>。</p>
+<p>这个例子也说明了一点：LRU 看的不是“谁最早插入”，而是“谁最久没被访问”。</p>
+<h2 id="为什么需要缓存淘汰策略" tabindex="-1">为什么需要缓存淘汰策略？</h2>
+<p>缓存不是无限大的。无论是本地内存缓存、Redis、数据库 Buffer Pool，还是操作系统里的页面缓存，都要面对容量上限。</p>
+<p>容量满了之后，如果没有淘汰策略，就只能拒绝新数据或者随机删数据。随机删当然简单，但可能把刚好很热的数据删掉，导致命中率变差。LRU 则利用访问时间顺序做了一个经验判断：长期没被碰过的数据，短期内再次访问的概率通常更低。</p>
+<p>常见淘汰策略可以简单对比一下：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>淘汰依据</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FIFO</td>
+<td>最早进入缓存的数据</td>
+<td>实现简单，但不关心数据后来是否被频繁访问</td>
+</tr>
+<tr>
+<td>LRU</td>
+<td>最久没有被访问的数据</td>
+<td>适合有时间局部性的访问模式</td>
+</tr>
+<tr>
+<td>LFU</td>
+<td>访问次数最少的数据</td>
+<td>适合长期热点明显的场景，但需要维护频率信息</td>
+</tr>
+<tr>
+<td>TTL</td>
+<td>过期时间</td>
+<td>适合数据有明确有效期的场景，不等同于容量淘汰</td>
+</tr>
+</tbody>
+</table>
+<p>LRU 之所以常被拿来面试，是因为它既有真实工程背景，又能很好地考察数据结构组合。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能说清为什么只用哈希表或只用链表都不够。</li>
+<li>能写 <code>get</code> 和 <code>put</code>。</li>
+<li>能解释双向链表头尾分别代表什么。</li>
+<li>能处理容量满、更新已有 key、删除尾节点等边界。</li>
+<li>能知道 Java <code>LinkedHashMap</code> 可以实现 LRU。</li>
+</ul>
+<h2 id="lru-的访问顺序怎么维护" tabindex="-1">LRU 的访问顺序怎么维护？</h2>
+<p>LRU 缓存里，每一次访问都会改变数据的新旧程度。</p>
+<p>通常我们会约定：</p>
+<ul>
+<li>链表头部表示最近使用的数据。</li>
+<li>链表尾部表示最久未使用的数据。</li>
+<li><code>get(key)</code> 命中后，把对应节点移动到头部。</li>
+<li><code>put(key, value)</code> 如果是新 key，把新节点插入头部。</li>
+<li><code>put(key, value)</code> 如果是已有 key，更新 value 后也要移动到头部。</li>
+<li>容量超过上限时，删除尾部节点。</li>
+</ul>
+<p>这里最容易漏的是 <code>get()</code>。很多同学会觉得 <code>get()</code> 只是读数据，不该改结构。但对 LRU 来说，读也是一次访问；只要命中缓存，这个 key 的“最近使用时间”就变新了。</p>
+<h2 id="数据结构设计" tabindex="-1">数据结构设计</h2>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HashMap&lt;Integer, Node&gt;</code></td>
+<td>根据 key 快速找到链表节点</td>
+</tr>
+<tr>
+<td>双向链表</td>
+<td>按访问时间排序，头部是最近使用，尾部是最久未使用</td>
+</tr>
+<tr>
+<td>虚拟头尾节点</td>
+<td>简化插入和删除边界</td>
+</tr>
+</tbody>
+</table>
+<p>访问一个 key 后，需要把它移动到链表头部。插入新 key 时，也放到头部。容量超限时，删除尾部前一个节点。</p>
+<p>为什么必须两个结构配合？</p>
+<p>只用哈希表，可以 <code>O(1)</code> 找到 value，但不知道哪个 key 最久没用。你还得额外维护访问顺序。</p>
+<p>只用链表，可以维护访问顺序，尾部就是该淘汰的节点。但每次根据 key 查找节点都要从头扫到尾，复杂度是 <code>O(n)</code>。</p>
+<p>哈希表 + 双向链表刚好补齐彼此短板：</p>
+<ul>
+<li>哈希表让我们能根据 key 直接定位链表节点。</li>
+<li>双向链表让我们能快速移动节点、删除尾部节点。</li>
+<li>节点里同时存 key 和 value，是为了淘汰尾节点时能从哈希表里删除对应 key。</li>
+</ul>
+<h2 id="面试手写路径" tabindex="-1">面试手写路径</h2>
+<p>LRU 的代码细节多，建议不要一上来就写完整类。面试时可以先把操作拆开：</p>
+<ol>
+<li>先定义链表顺序：头部表示最近使用，尾部表示最久未使用。</li>
+<li>再定义 <code>get</code>：查不到返回 <code>-1</code>，查到后移动到头部。</li>
+<li>再定义 <code>put</code>：已有 key 更新值并移动到头部；新 key 插入头部。</li>
+<li>最后处理淘汰：超过容量后删除尾部前一个节点，并从哈希表删除。</li>
+<li>把链表操作封装成 <code>addToHead</code>、<code>remove</code>、<code>moveToHead</code>、<code>removeTail</code>。</li>
+</ol>
+<p>这样写的好处是，<code>get</code> 和 <code>put</code> 都只组合几个基础链表操作，不会在主流程里反复改指针，出错概率低很多。</p>
+<h2 id="为什么用双向链表" tabindex="-1">为什么用双向链表？</h2>
+<p>把一个节点移动到头部，需要先把它从原位置摘下来，再插到头节点后面。</p>
+<p>如果用单向链表，删除当前节点时必须知道它的前驱节点。哈希表里即使能直接找到当前节点，也找不到它前面的节点，还是要从头遍历。</p>
+<p>双向链表的节点同时有 <code>prev</code> 和 <code>next</code>，删除任意节点只需要改四个指针：</p>
+<pre class="md-pre"><code class="hljs">node.prev.next = node.next;
+node.next.prev = node.prev;
+</code></pre>
+<p>这就是 LRU 要用双向链表的关键原因：它不只是要删除尾节点，还要在 <code>get()</code> 命中和 <code>put()</code> 更新已有 key 时，把任意节点移动到头部。</p>
+<p>虚拟头尾节点也很重要。有了 <code>head</code> 和 <code>tail</code> 两个哨兵节点，插入头部、删除尾部、处理空链表时都能走同一套代码，不需要到处写 <code>null</code> 判断。</p>
+<h2 id="手写-lru" tabindex="-1">手写 LRU</h2>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LRUCache</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> capacity;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Map</span>&lt;Integer, Node&gt; <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Node</span> <span class="hljs-variable">head</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>);
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Node</span> <span class="hljs-variable">tail</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>);
+
+    LRUCache(<span class="hljs-type">int</span> capacity) {
+        <span class="hljs-built_in">this</span>.capacity = capacity;
+        head.next = tail;
+        tail.prev = head;
+    }
+
+    <span class="hljs-type">int</span> <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-type">int</span> key)</span> {
+        <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> map.get(key);
+        <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) {
+            <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+        }
+        moveToHead(node);
+        <span class="hljs-keyword">return</span> node.value;
+    }
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">put</span><span class="hljs-params">(<span class="hljs-type">int</span> key, <span class="hljs-type">int</span> value)</span> {
+        <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> map.get(key);
+        <span class="hljs-keyword">if</span> (node != <span class="hljs-literal">null</span>) {
+            node.value = value;
+            moveToHead(node);
+            <span class="hljs-keyword">return</span>;
+        }
+        <span class="hljs-type">Node</span> <span class="hljs-variable">newNode</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>(key, value);
+        map.put(key, newNode);
+        addToHead(newNode);
+        <span class="hljs-keyword">if</span> (map.size() &gt; capacity) {
+            <span class="hljs-type">Node</span> <span class="hljs-variable">removed</span> <span class="hljs-operator">=</span> removeTail();
+            map.remove(removed.key);
+        }
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">void</span> <span class="hljs-title function_">moveToHead</span><span class="hljs-params">(Node node)</span> {
+        remove(node);
+        addToHead(node);
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">void</span> <span class="hljs-title function_">addToHead</span><span class="hljs-params">(Node node)</span> {
+        node.prev = head;
+        node.next = head.next;
+        head.next.prev = node;
+        head.next = node;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">void</span> <span class="hljs-title function_">remove</span><span class="hljs-params">(Node node)</span> {
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">Node</span> <span class="hljs-title function_">removeTail</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> tail.prev;
+        remove(node);
+        <span class="hljs-keyword">return</span> node;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span> {
+        <span class="hljs-type">int</span> key;
+        <span class="hljs-type">int</span> value;
+        Node prev;
+        Node next;
+
+        Node(<span class="hljs-type">int</span> key, <span class="hljs-type">int</span> value) {
+            <span class="hljs-built_in">this</span>.key = key;
+            <span class="hljs-built_in">this</span>.value = value;
+        }
+    }
+}
+</code></pre>
+<p><code>get</code> 和 <code>put</code> 的时间复杂度都是 <code>O(1)</code>，空间复杂度是 <code>O(capacity)</code>。</p>
+<h2 id="操作过程示意" tabindex="-1">操作过程示意</h2>
+<p>假设容量为 2，按顺序执行：</p>
+<pre class="md-pre"><code class="hljs">put(1, 1)
+put(2, 2)
+get(1)
+put(3, 3)
+</code></pre>
+<p>链表状态变化如下，左侧表示最近使用：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>链表状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>初始状态</td>
+<td>空</td>
+<td>虚拟头尾相连，缓存为空</td>
+</tr>
+<tr>
+<td><code>put(1, 1)</code></td>
+<td><code>1</code></td>
+<td>新节点插入头部</td>
+</tr>
+<tr>
+<td><code>put(2, 2)</code></td>
+<td><code>2 -&gt; 1</code></td>
+<td><code>2</code> 是最近使用</td>
+</tr>
+<tr>
+<td><code>get(1)</code></td>
+<td><code>1 -&gt; 2</code></td>
+<td>访问 <code>1</code> 后移动到头部</td>
+</tr>
+<tr>
+<td><code>put(3, 3)</code></td>
+<td><code>3 -&gt; 1</code></td>
+<td>容量超限，淘汰尾部的 <code>2</code></td>
+</tr>
+</tbody>
+</table>
+<p>这张表能帮助检查两个点：访问已有节点要更新使用顺序；淘汰节点时，删除的是最久未使用的尾部节点，而不是刚插入的新节点。</p>
+<h2 id="linkedhashmap-实现" tabindex="-1">LinkedHashMap 实现</h2>
+<p>Java 的 <code>LinkedHashMap</code> 支持按访问顺序维护元素：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LRUCacheWithLinkedHashMap</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">LinkedHashMap</span>&lt;Integer, Integer&gt; {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> capacity;
+
+    LRUCacheWithLinkedHashMap(<span class="hljs-type">int</span> capacity) {
+        <span class="hljs-built_in">super</span>(capacity, <span class="hljs-number">0.75f</span>, <span class="hljs-literal">true</span>);
+        <span class="hljs-built_in">this</span>.capacity = capacity;
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">protected</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">removeEldestEntry</span><span class="hljs-params">(Map.Entry&lt;Integer, Integer&gt; eldest)</span> {
+        <span class="hljs-keyword">return</span> size() &gt; capacity;
+    }
+}
+</code></pre>
+<p>构造函数里的第三个参数 <code>accessOrder</code> 设置为 <code>true</code>，表示按照访问顺序排序，而不是插入顺序。</p>
+<p><code>LinkedHashMap</code> 官方文档里也专门提到过这种 access-order 模式适合构建 LRU 缓存。这里有两个点要记住：</p>
+<ol>
+<li><code>accessOrder = false</code> 时，遍历顺序是插入顺序；<code>accessOrder = true</code> 时，遍历顺序是访问顺序。</li>
+<li><code>removeEldestEntry()</code> 会在插入新映射后被调用，返回 <code>true</code> 时删除最旧的 entry。</li>
+</ol>
+<p>不过，<code>LinkedHashMap</code> 不是线程安全的。如果要在多线程环境里直接用它做本地缓存，需要自己加锁，或者选择成熟缓存库。</p>
+<h2 id="lru-和-redis-有什么关系" tabindex="-1">LRU 和 Redis 有什么关系？</h2>
+<p>Redis 作为缓存使用时，也需要在内存达到 <code>maxmemory</code> 上限后执行淘汰策略。Redis 支持 <code>allkeys-lru</code>、<code>volatile-lru</code> 等策略：</p>
+<ul>
+<li><code>allkeys-lru</code>：从所有 key 里淘汰最近最少使用的 key。</li>
+<li><code>volatile-lru</code>：只从设置了过期时间的 key 里淘汰最近最少使用的 key。</li>
+</ul>
+<p>不过 Redis 的 LRU 不是面试手写题里的“精确 LRU”。为了节省内存和 CPU，Redis 使用的是近似 LRU：随机采样一小批 key，从中挑出最久没访问的 key 淘汰。采样数量可以通过 <code>maxmemory-samples</code> 调整。</p>
+<p>这也能帮助我们理解真实工程和面试题的区别：面试题通常要求用哈希表 + 双向链表实现精确 LRU；工程系统会根据内存、吞吐、并发和命中率做折中。</p>
+<h2 id="工程场景" tabindex="-1">工程场景</h2>
+<ul>
+<li>本地缓存淘汰。</li>
+<li>操作系统页面置换。</li>
+<li>热点数据缓存。</li>
+<li>网关、客户端 SDK 或中间件里的小容量结果缓存。</li>
+</ul>
+<p>真实工程里还要考虑线程安全、过期时间、最大内存、统计指标和淘汰回调。面试手写 LRU 主要考数据结构组合，不需要把这些都写进代码。</p>
+<p>如果是 Java 项目里的本地缓存，很多时候不会自己手写 LRU，而是直接用 Caffeine 这类缓存库。原因也很现实：工程缓存不只要容量淘汰，还要处理过期、并发、加载、统计、异步刷新、不同 entry 的权重等问题。Caffeine 官方文档里就把淘汰分成基于大小、基于时间、基于引用等多类。</p>
+<h2 id="面试追问" tabindex="-1">面试追问</h2>
+<table>
+<thead>
+<tr>
+<th>追问</th>
+<th>回答重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么不用单独的 <code>HashMap</code>？</td>
+<td><code>HashMap</code> 能查值，但不知道谁最久没被使用</td>
+</tr>
+<tr>
+<td>为什么不用单独的链表？</td>
+<td>链表能维护顺序，但按 key 查找节点需要 <code>O(n)</code></td>
+</tr>
+<tr>
+<td>为什么要用双向链表？</td>
+<td>删除任意节点时需要同时连接前驱和后继，单向链表无法 <code>O(1)</code> 找到前驱</td>
+</tr>
+<tr>
+<td>为什么要用虚拟头尾节点？</td>
+<td>统一空链表、头节点、尾节点的插入删除逻辑，减少分支判断</td>
+</tr>
+<tr>
+<td><code>LinkedHashMap</code> 怎么实现 LRU？</td>
+<td>构造时开启 <code>accessOrder</code>，重写 <code>removeEldestEntry</code> 控制容量</td>
+</tr>
+<tr>
+<td>真实缓存还要考虑什么？</td>
+<td>线程安全、过期时间、最大内存、淘汰回调、命中率统计和缓存击穿等工程问题</td>
+</tr>
+</tbody>
+</table>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>更新已有 key 时，也要移动到头部。</li>
+<li>删除尾节点后，别忘了从哈希表里删除 key。</li>
+<li>双向链表删除节点时要同时改前后两个指针。</li>
+<li>虚拟头尾节点可以减少空链表边界判断。</li>
+<li><code>LinkedHashMap</code> 的 <code>accessOrder</code> 要设为 <code>true</code>。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>LRU 为什么需要哈希表和双向链表配合？</li>
+<li><code>get</code> 操作为什么也要移动节点？</li>
+<li>更新已有 key 时，为什么不能只改 value？</li>
+<li>淘汰尾节点后，为什么还要从哈希表删除 key？</li>
+<li><code>LinkedHashMap</code> 的插入顺序和访问顺序有什么区别？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/lru-cache/" target="_blank" rel="noopener">146. LRU 缓存</a></li>
+<li><a href="https://leetcode.cn/problems/lfu-cache/" target="_blank" rel="noopener">460. LFU 缓存</a></li>
+</ul>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/LinkedHashMap.html" target="_blank" rel="noopener">Java SE 17 API：LinkedHashMap</a></li>
+<li><a href="https://redis.io/docs/latest/develop/reference/eviction/" target="_blank" rel="noopener">Redis Docs：Key eviction</a></li>
+<li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/" target="_blank" rel="noopener">Operating Systems: Three Easy Pieces</a></li>
+<li><a href="https://github.com/ben-manes/caffeine/wiki/Eviction" target="_blank" rel="noopener">Caffeine Wiki：Eviction</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

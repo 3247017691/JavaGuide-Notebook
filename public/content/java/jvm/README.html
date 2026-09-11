@@ -1,0 +1,67 @@
+<p>JVM 是 Java 后端绕不开的核心基础。学习 JVM 的目标不是背概念，而是能解释对象如何创建和回收、类如何加载、GC 如何影响应用、参数如何配置，以及线上 OOM、频繁 GC、CPU 飙高等问题应该如何排查。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统学习 JVM 的 Java 后端开发者。</li>
+<li>准备 JVM 内存、类加载、GC、参数调优和线上排查相关面试题的同学。</li>
+<li>已经参与过线上服务维护，但对 GC 日志、堆转储、线程栈和 JDK 工具不熟的读者。</li>
+<li>想继续深入 Spring、Netty、中间件或性能优化的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>JVM 运行时内存区域、对象创建、对象访问和 OOM 场景。</li>
+<li>类文件结构、类加载过程、类加载器和双亲委派模型。</li>
+<li>垃圾回收基础、对象存活判断、垃圾收集算法和主流垃圾收集器。</li>
+<li>JVM 参数、GC 日志、堆转储、线程栈和常见 JDK 监控诊断工具。</li>
+<li>线上问题排查的基本路径：现象观察、指标采集、工具分析、原因定位和优化验证。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li>准备面试时先看 <a href="/read/java/jvm/jvm-interview-questions.html">JVM 常见面试题总结</a>，找出自己答不完整的模块；系统学习可以从下一步开始。</li>
+<li><a href="/read/java/jvm/jvm-intro.html">大白话带你认识 JVM</a>：先建立 JVM 的整体认知。</li>
+<li><a href="/read/java/jvm/memory-area.html">Java内存区域详解（重点）</a>：理解运行时数据区和常见 OOM 场景。</li>
+<li><a href="/read/java/jvm/class-file-structure.html">类文件结构详解</a>、<a href="/read/java/jvm/class-loading-process.html">类加载过程详解</a>、<a href="/read/java/jvm/classloader.html">类加载器详解（重点）</a>：掌握类从 <code>.class</code> 到可运行对象的过程。</li>
+<li><a href="/read/java/jvm/jvm-garbage-collection.html">JVM垃圾回收详解（重点）</a>：系统学习 GC 基础、算法和垃圾收集器。</li>
+<li><a href="/read/java/jvm/jvm-parameters-intro.html">最重要的 JVM 参数总结</a>、<a href="/read/java/jvm/jdk-monitoring-and-troubleshooting-tools.html">JDK 监控和故障处理工具总结</a>、<a href="/read/java/jvm/jvm-in-action.html">Java 后端线上问题排查</a>：进入参数配置和线上实践。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="jvm-基础与内存" tabindex="-1">JVM 基础与内存</h3>
+<ul>
+<li><a href="/read/java/jvm/jvm-interview-questions.html">JVM 常见面试题总结</a>：按内存、类加载、GC、参数工具和线上排查整理高频问题。</li>
+<li><a href="/read/java/jvm/jvm-intro.html">大白话带你认识 JVM</a>：用整体视角理解 JVM 的定位和组成。</li>
+<li><a href="/read/java/jvm/memory-area.html">Java内存区域详解（重点）</a>：讲解程序计数器、虚拟机栈、本地方法栈、堆、方法区和直接内存。</li>
+<li><a href="/read/java/jvm/class-file-structure.html">类文件结构详解</a>：理解魔数、版本号、常量池、访问标志、字段表、方法表和属性表。</li>
+</ul>
+<h3 id="类加载" tabindex="-1">类加载</h3>
+<ul>
+<li><a href="/read/java/jvm/class-loading-process.html">类加载过程详解</a>：梳理加载、验证、准备、解析、初始化、使用和卸载。</li>
+<li><a href="/read/java/jvm/classloader.html">类加载器详解（重点）</a>：理解启动类加载器、扩展类加载器（JDK 8）/平台类加载器（JDK 9+）、应用类加载器和双亲委派模型。</li>
+</ul>
+<h3 id="垃圾回收与调优" tabindex="-1">垃圾回收与调优</h3>
+<ul>
+<li><a href="/read/java/jvm/jvm-garbage-collection.html">JVM垃圾回收详解（重点）</a>：理解对象存活判断、引用类型、垃圾收集算法、分代收集和主流垃圾收集器。</li>
+<li><a href="/read/java/jvm/jvm-parameters-intro.html">最重要的JVM参数总结</a>：整理堆大小、GC 日志、OOM 转储、垃圾收集器和诊断相关参数。</li>
+<li><a href="/read/java/jvm/jdk-monitoring-and-troubleshooting-tools.html">JDK监控和故障处理工具总结</a>：介绍 jps、jstat、jmap、jstack、jcmd、JConsole、VisualVM、JMC 等工具。</li>
+<li><a href="/read/java/jvm/jvm-in-action.html">Java 后端线上问题排查</a>：从告警确认、止血留证开始，串起 CPU、内存、GC、线程池、连接池、慢 SQL、Redis 和消息积压的排查过程。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>JVM 运行时内存区域如何划分？哪些区域线程私有？</li>
+<li>堆和方法区分别存放什么？直接内存会不会 OOM？</li>
+<li>对象是如何创建的？对象访问定位有哪几种方式？</li>
+<li>类加载过程有哪些阶段？初始化阶段什么时候触发？</li>
+<li>什么是双亲委派模型？为什么需要它？</li>
+<li>如何判断对象是否可以被回收？强软弱虚引用有什么区别？</li>
+<li>Minor GC、Major GC、Full GC 有什么区别？</li>
+<li>G1、ZGC、Shenandoah 分别适合什么场景？</li>
+<li>常用 JVM 参数有哪些？线上如何保留 GC 日志和 OOM dump？</li>
+<li>CPU 飙高、频繁 Full GC、内存泄漏应该如何排查？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/java/README.html">Java 知识体系</a></li>
+<li><a href="/read/java/basis/README.html">Java 基础专题</a></li>
+<li><a href="/read/java/concurrent/README.html">Java 并发编程专题</a></li>
+<li><a href="/read/java/io/README.html">Java IO 专题</a></li>
+<li><a href="/read/cs-basics/operating-system/README.html">操作系统</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

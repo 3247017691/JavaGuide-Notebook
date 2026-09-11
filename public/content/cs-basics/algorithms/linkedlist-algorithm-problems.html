@@ -1,0 +1,393 @@
+<!-- markdownlint-disable MD024 -->
+<h2 id="1-两数相加" tabindex="-1">1. 两数相加</h2>
+<h3 id="题目描述" tabindex="-1">题目描述</h3>
+<blockquote>
+<p>Leetcode:给定两个非空链表来表示两个非负整数。位数按照逆序方式存储，它们的每个节点只存储单个数字。将两数相加返回一个新的链表。</p>
+<p>你可以假设除了数字 0 之外，这两个数字都不会以零开头。</p>
+</blockquote>
+<p>示例：</p>
+<pre class="md-pre"><code class="hljs">输入：(<span class="hljs-number">2</span> -&gt; <span class="hljs-number">4</span> -&gt; <span class="hljs-number">3</span>) + (<span class="hljs-number">5</span> -&gt; <span class="hljs-number">6</span> -&gt; <span class="hljs-number">4</span>)
+输出：<span class="hljs-number">7</span> -&gt; <span class="hljs-number">0</span> -&gt; <span class="hljs-number">8</span>
+原因：<span class="hljs-number">342</span> + <span class="hljs-number">465</span> = <span class="hljs-number">807</span>
+</code></pre>
+<h3 id="问题分析" tabindex="-1">问题分析</h3>
+<p>Leetcode 官方详细解答地址：</p>
+<p><a href="https://leetcode-cn.com/problems/add-two-numbers/solution/" target="_blank" rel="noopener">https://leetcode-cn.com/problems/add-two-numbers/solution/</a></p>
+<blockquote>
+<p>要对头结点进行操作时，考虑创建哑节点 dummy，使用 dummy-&gt;next 表示真正的头节点。这样可以避免处理头节点为空的边界问题。</p>
+</blockquote>
+<p>我们使用变量来跟踪进位，并从包含最低有效位的表头开始模拟逐位相加的过程。</p>
+<p><img src="/img/34910956-b0579be2.jpg" alt="" loading="lazy"></p>
+<h3 id="solution" tabindex="-1">Solution</h3>
+<p><strong>我们首先从最低有效位也就是列表 l1 和 l2 的表头开始相加。注意需要考虑到进位的情况！</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */</span>
+ <span class="hljs-comment">//https://leetcode-cn.com/problems/add-two-numbers/description/</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+<span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">addTwoNumbers</span><span class="hljs-params">(ListNode l1, ListNode l2)</span> {
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">dummyHead</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">0</span>);
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">p</span> <span class="hljs-operator">=</span> l1, q = l2, curr = dummyHead;
+    <span class="hljs-comment">//carry 表示进位数</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">carry</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (p != <span class="hljs-literal">null</span> || q != <span class="hljs-literal">null</span>) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> (p != <span class="hljs-literal">null</span>) ? p.val : <span class="hljs-number">0</span>;
+        <span class="hljs-type">int</span> <span class="hljs-variable">y</span> <span class="hljs-operator">=</span> (q != <span class="hljs-literal">null</span>) ? q.val : <span class="hljs-number">0</span>;
+        <span class="hljs-type">int</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> carry + x + y;
+        <span class="hljs-comment">//进位数</span>
+        carry = sum / <span class="hljs-number">10</span>;
+        <span class="hljs-comment">//新节点的数值为sum % 10</span>
+        curr.next = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(sum % <span class="hljs-number">10</span>);
+        curr = curr.next;
+        <span class="hljs-keyword">if</span> (p != <span class="hljs-literal">null</span>) p = p.next;
+        <span class="hljs-keyword">if</span> (q != <span class="hljs-literal">null</span>) q = q.next;
+    }
+    <span class="hljs-keyword">if</span> (carry &gt; <span class="hljs-number">0</span>) {
+        curr.next = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(carry);
+    }
+    <span class="hljs-keyword">return</span> dummyHead.next;
+}
+}
+</code></pre>
+<h2 id="2-翻转链表" tabindex="-1">2. 翻转链表</h2>
+<h3 id="题目描述-2" tabindex="-1">题目描述</h3>
+<blockquote>
+<p>剑指 offer:输入一个链表，反转链表后，输出链表的所有元素。</p>
+</blockquote>
+<p><img src="/img/81431871-2a45237b.jpg" alt="" loading="lazy"></p>
+<h3 id="问题分析-2" tabindex="-1">问题分析</h3>
+<p>这道算法题，说直白点就是：如何让后一个节点指向前一个节点！在下面的代码中定义了一个 next 节点，该节点主要是保存要反转到头的那个节点，防止链表 “断裂”。</p>
+<h3 id="solution-2" tabindex="-1">Solution</h3>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ListNode</span> {
+  <span class="hljs-type">int</span> val;
+  <span class="hljs-type">ListNode</span> <span class="hljs-variable">next</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+
+  ListNode(<span class="hljs-type">int</span> val) {
+    <span class="hljs-built_in">this</span>.val = val;
+  }
+}
+</code></pre>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ *
+ * <span class="hljs-doctag">@author</span> Snailclimb
+ * <span class="hljs-doctag">@date</span> 2018年9月19日
+ * <span class="hljs-doctag">@Description</span>: 反转单链表
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">ReverseList</span><span class="hljs-params">(ListNode head)</span> {
+
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">next</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">pre</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+
+    <span class="hljs-keyword">while</span> (head != <span class="hljs-literal">null</span>) {
+      <span class="hljs-comment">// 保存要反转到头的那个节点</span>
+      next = head.next;
+      <span class="hljs-comment">// 要反转的那个节点指向已经反转的上一个节点(备注:第一次反转的时候会指向null)</span>
+      head.next = pre;
+      <span class="hljs-comment">// 上一个已经反转到头部的节点</span>
+      pre = head;
+      <span class="hljs-comment">// 一直向链表尾走</span>
+      head = next;
+    }
+    <span class="hljs-keyword">return</span> pre;
+  }
+
+}
+</code></pre>
+<p>测试方法：</p>
+<pre class="md-pre"><code class="hljs">  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">a</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">1</span>);
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">b</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">2</span>);
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">3</span>);
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">d</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">4</span>);
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">5</span>);
+    a.next = b;
+    b.next = c;
+    c.next = d;
+    d.next = e;
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">Solution</span>().ReverseList(a);
+    <span class="hljs-keyword">while</span> (e != <span class="hljs-literal">null</span>) {
+      System.out.println(e.val);
+      e = e.next;
+    }
+  }
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">5
+4
+3
+2
+1
+</code></pre>
+<h2 id="3-链表中倒数第-k-个节点" tabindex="-1">3. 链表中倒数第 k 个节点</h2>
+<h3 id="题目描述-3" tabindex="-1">题目描述</h3>
+<blockquote>
+<p>剑指 offer: 输入一个链表，输出该链表中倒数第 k 个结点。</p>
+</blockquote>
+<h3 id="问题分析-3" tabindex="-1">问题分析</h3>
+<blockquote>
+<p><strong>链表中倒数第 k 个节点也就是正数第（L-K+1）个节点，知道了这一点，这一题基本就没问题！</strong></p>
+</blockquote>
+<p>首先两个节点/指针，一个节点 node1 先开始跑，指针 node1 跑到 k-1 个节点后，另一个节点 node2 开始跑，当 node1 跑到最后时，node2 所指的节点就是倒数第 k 个节点也就是正数第（L-K+1）个节点。</p>
+<h3 id="solution-3" tabindex="-1">Solution</h3>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/*
+public class ListNode {
+    int val;
+    ListNode next = null;
+
+    ListNode(int val) {
+        this.val = val;
+    }
+}*/</span>
+
+<span class="hljs-comment">// 时间复杂度O(n),一次遍历即可</span>
+<span class="hljs-comment">// https://www.nowcoder.com/practice/529d3ae5a407492994ad2a246518148a?tpId=13&amp;tqId=11167&amp;tPage=1&amp;rp=1&amp;ru=/ta/coding-interviews&amp;qru=/ta/coding-interviews/question-ranking</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">FindKthToTail</span><span class="hljs-params">(ListNode head, <span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-comment">// 如果链表为空或者k小于等于0</span>
+    <span class="hljs-keyword">if</span> (head == <span class="hljs-literal">null</span> || k &lt;= <span class="hljs-number">0</span>) {
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+    }
+    <span class="hljs-comment">// 声明两个指向头结点的节点</span>
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">node1</span> <span class="hljs-operator">=</span> head, node2 = head;
+    <span class="hljs-comment">// 记录节点的个数</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-comment">// 记录k值，后面要使用</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> k;
+    <span class="hljs-comment">// p指针先跑，并且记录节点数，当node1节点跑了k-1个节点后，node2节点开始跑，</span>
+    <span class="hljs-comment">// 当node1节点跑到最后时，node2节点所指的节点就是倒数第k个节点</span>
+    <span class="hljs-keyword">while</span> (node1 != <span class="hljs-literal">null</span>) {
+      node1 = node1.next;
+      count++;
+      <span class="hljs-keyword">if</span> (k &lt; <span class="hljs-number">1</span>) {
+        node2 = node2.next;
+      }
+      k--;
+    }
+    <span class="hljs-comment">// 如果节点个数小于所求的倒数第k个节点，则返回空</span>
+    <span class="hljs-keyword">if</span> (count &lt; index)
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">return</span> node2;
+
+  }
+}
+</code></pre>
+<h2 id="4-删除链表的倒数第-n-个节点" tabindex="-1">4. 删除链表的倒数第 N 个节点</h2>
+<blockquote>
+<p>Leetcode:给定一个链表，删除链表的倒数第 n 个节点，并且返回链表的头结点。</p>
+</blockquote>
+<p><strong>示例：</strong></p>
+<pre class="md-pre"><code class="hljs">给定一个链表: <span class="hljs-number">1</span>-&gt;<span class="hljs-number">2</span>-&gt;<span class="hljs-number">3</span>-&gt;<span class="hljs-number">4</span>-&gt;<span class="hljs-number">5</span>, 和 n = <span class="hljs-number">2.</span>
+
+当删除了倒数第二个节点后，链表变为 <span class="hljs-number">1</span>-&gt;<span class="hljs-number">2</span>-&gt;<span class="hljs-number">3</span>-&gt;<span class="hljs-number">5.</span>
+
+</code></pre>
+<p><strong>说明：</strong></p>
+<p>给定的 n 保证是有效的。</p>
+<p><strong>进阶：</strong></p>
+<p>你能尝试使用一趟扫描实现吗？</p>
+<p>该题在 LeetCode 上有详细解答，具体可参考 LeetCode。</p>
+<h3 id="问题分析-4" tabindex="-1">问题分析</h3>
+<p>我们注意到这个问题可以容易地简化成另一个问题：删除从列表开头数起的第（L - n + 1）个结点，其中 L 是列表的长度。只要我们找到列表的长度 L，这个问题就很容易解决。</p>
+<p><img src="/img/94354387-f7f7748c.jpg" alt="" loading="lazy"></p>
+<h3 id="solution-4" tabindex="-1">Solution</h3>
+<p><strong>两次遍历法</strong></p>
+<p>首先我们将添加一个 <strong>哑结点</strong> 作为辅助，该结点位于列表头部。哑结点用来简化某些极端情况，例如列表中只含有一个结点，或需要删除列表的头部。在第一次遍历中，我们找出列表的长度 L。然后设置一个指向哑结点的指针，并移动它遍历列表，直至它到达第（L - n）个结点那里。<strong>我们把第（L - n）个结点的 next 指针重新链接至第（L - n + 2）个结点，完成这个算法。</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */</span>
+<span class="hljs-comment">// https://leetcode-cn.com/problems/remove-nth-node-from-end-of-list/description/</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">removeNthFromEnd</span><span class="hljs-params">(ListNode head, <span class="hljs-type">int</span> n)</span> {
+    <span class="hljs-comment">// 哑结点，哑结点用来简化某些极端情况，例如列表中只含有一个结点，或需要删除列表的头部</span>
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">dummy</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">0</span>);
+    <span class="hljs-comment">// 哑结点指向头结点</span>
+    dummy.next = head;
+    <span class="hljs-comment">// 保存链表长度</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">length</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">len</span> <span class="hljs-operator">=</span> head;
+    <span class="hljs-keyword">while</span> (len != <span class="hljs-literal">null</span>) {
+      length++;
+      len = len.next;
+    }
+    length = length - n;
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">target</span> <span class="hljs-operator">=</span> dummy;
+    <span class="hljs-comment">// 找到 L-n 位置的节点</span>
+    <span class="hljs-keyword">while</span> (length &gt; <span class="hljs-number">0</span>) {
+      target = target.next;
+      length--;
+    }
+    <span class="hljs-comment">// 把第 (L - n)个结点的 next 指针重新链接至第 (L - n + 2)个结点</span>
+    target.next = target.next.next;
+    <span class="hljs-keyword">return</span> dummy.next;
+  }
+}
+</code></pre>
+<p><strong>进阶——一次遍历法：</strong></p>
+<blockquote>
+<p>链表中倒数第 N 个节点也就是正数第（L - n + 1）个节点。</p>
+</blockquote>
+<p>其实这种方法就和我们上面第四题找“链表中倒数第 k 个节点”所用的思想是一样的。<strong>基本思路就是：</strong> 定义两个节点 node1、node2；node1 节点先跑，node1 节点跑到第 n+1 个节点的时候，node2 节点开始跑。当 node1 节点跑到最后一个节点时，node2 节点所在的位置就是第（L - n）个节点（L 代表总链表长度，也就是倒数第 n + 1 个节点）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Definition for singly-linked list.
+ * public class ListNode {
+ *     int val;
+ *     ListNode next;
+ *     ListNode(int x) { val = x; }
+ * }
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">removeNthFromEnd</span><span class="hljs-params">(ListNode head, <span class="hljs-type">int</span> n)</span> {
+
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">dummy</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">0</span>);
+    dummy.next = head;
+    <span class="hljs-comment">// 声明两个指向头结点的节点</span>
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">node1</span> <span class="hljs-operator">=</span> dummy, node2 = dummy;
+
+    <span class="hljs-comment">// node1 节点先跑，node1节点 跑到第 n 个节点的时候,node2 节点开始跑</span>
+    <span class="hljs-comment">// 当node1 节点跑到最后一个节点时，node2 节点所在的位置就是第 （L-n ） 个节点，也就是倒数第 n+1（L代表总链表长度）</span>
+    <span class="hljs-keyword">while</span> (node1 != <span class="hljs-literal">null</span>) {
+      node1 = node1.next;
+      <span class="hljs-keyword">if</span> (n &lt; <span class="hljs-number">1</span> &amp;&amp; node1 != <span class="hljs-literal">null</span>) {
+        node2 = node2.next;
+      }
+      n--;
+    }
+
+    node2.next = node2.next.next;
+
+    <span class="hljs-keyword">return</span> dummy.next;
+
+  }
+}
+</code></pre>
+<h2 id="5-合并两个排序的链表" tabindex="-1">5. 合并两个排序的链表</h2>
+<h3 id="题目描述-4" tabindex="-1">题目描述</h3>
+<blockquote>
+<p>剑指 offer:输入两个单调递增的链表，输出两个链表合成后的链表，当然我们需要合成后的链表满足单调不减规则。</p>
+</blockquote>
+<h3 id="问题分析-5" tabindex="-1">问题分析</h3>
+<p>我们可以这样分析：</p>
+<ol>
+<li>假设我们有两个链表 A，B；</li>
+<li>A 的头节点 A1 的值与 B 的头结点 B1 的值比较，假设 A1 小，则 A1 为头节点；</li>
+<li>A2 再和 B1 比较，假设 B1 小，则 A1 指向 B1；</li>
+<li>A2 再和 B2 比较</li>
+<li>就这样循环往复就行了，应该还算好理解。</li>
+</ol>
+<p>考虑通过递归的方式实现！</p>
+<h3 id="solution-5" tabindex="-1">Solution</h3>
+<p><strong>递归版本：</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/*
+public class ListNode {
+    int val;
+    ListNode next = null;
+
+    ListNode(int val) {
+        this.val = val;
+    }
+}*/</span>
+<span class="hljs-comment">//https://www.nowcoder.com/practice/d8b6b4358f774294a89de2a6ac4d9337?tpId=13&amp;tqId=11169&amp;tPage=1&amp;rp=1&amp;ru=/ta/coding-interviews&amp;qru=/ta/coding-interviews/question-ranking</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Solution</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ListNode</span> <span class="hljs-title function_">Merge</span><span class="hljs-params">(ListNode list1, ListNode list2)</span> {
+    <span class="hljs-keyword">if</span> (list1 == <span class="hljs-literal">null</span>) {
+      <span class="hljs-keyword">return</span> list2;
+    }
+    <span class="hljs-keyword">if</span> (list2 == <span class="hljs-literal">null</span>) {
+      <span class="hljs-keyword">return</span> list1;
+    }
+    <span class="hljs-keyword">if</span> (list1.val &lt;= list2.val) {
+      list1.next = Merge(list1.next, list2);
+      <span class="hljs-keyword">return</span> list1;
+    } <span class="hljs-keyword">else</span> {
+      list2.next = Merge(list1, list2.next);
+      <span class="hljs-keyword">return</span> list2;
+    }
+  }
+}
+</code></pre>
+<h2 id="面试复盘重点" tabindex="-1">面试复盘重点</h2>
+<p>链表题的代码通常不长，但指针更新顺序很容易写错。面试前至少要掌握 4 个模板：虚拟头节点、反转链表、快慢指针、合并链表。</p>
+<table>
+<thead>
+<tr>
+<th>模板</th>
+<th>适用题型</th>
+<th>关键点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>虚拟头节点</td>
+<td>删除节点、合并链表、头节点可能变化</td>
+<td>返回 <code>dummy.next</code></td>
+</tr>
+<tr>
+<td>反转链表</td>
+<td>整体反转、区间反转、K 个一组反转</td>
+<td>保存 <code>next</code>，再改 <code>cur.next</code></td>
+</tr>
+<tr>
+<td>快慢指针</td>
+<td>环检测、倒数第 K 个、中点</td>
+<td>先判断 <code>fast</code> 和 <code>fast.next</code></td>
+</tr>
+<tr>
+<td>合并链表</td>
+<td>两个有序链表、K 个有序链表</td>
+<td>递归或迭代，注意尾部接上剩余链表</td>
+</tr>
+</tbody>
+</table>
+<p>反转链表的迭代模板建议背熟：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">ListNode</span> <span class="hljs-title function_">reverseList</span><span class="hljs-params">(ListNode head)</span> {
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">prev</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">cur</span> <span class="hljs-operator">=</span> head;
+    <span class="hljs-keyword">while</span> (cur != <span class="hljs-literal">null</span>) {
+        <span class="hljs-type">ListNode</span> <span class="hljs-variable">next</span> <span class="hljs-operator">=</span> cur.next;
+        cur.next = prev;
+        prev = cur;
+        cur = next;
+    }
+    <span class="hljs-keyword">return</span> prev;
+}
+</code></pre>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>反转链表时，核心是先保存 <code>next</code>，再修改 <code>cur.next</code>。可以按下面的指针变化来记：</p>
+<pre class="md-pre"><code class="hljs">初始：prev = null, cur = head
+
+每一轮：
+next = cur.next
+cur.next = prev
+prev = cur
+cur = next
+
+结束：cur == null，prev 指向新头节点
+</code></pre>
+<p>删除节点、合并链表这类题，优先考虑虚拟头节点：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">ListNode</span> <span class="hljs-variable">dummy</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ListNode</span>(<span class="hljs-number">0</span>);
+dummy.next = head;
+<span class="hljs-comment">// 中间统一操作 dummy 后面的链表</span>
+<span class="hljs-keyword">return</span> dummy.next;
+</code></pre>
+<p>几个易错点：</p>
+<ul>
+<li>删除倒数第 N 个节点时，虚拟头节点能统一处理删除头节点的情况。</li>
+<li>区间反转要先保存区间前一个节点和区间后一个节点。</li>
+<li>判断链表有环时，循环条件是 <code>fast != null &amp;&amp; fast.next != null</code>。</li>
+<li>递归合并链表代码短，但链表很长时可能有递归栈风险。</li>
+<li>空链表、单节点链表、删除头节点、删除尾节点都要单独过一遍。</li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

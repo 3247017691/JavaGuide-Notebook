@@ -1,0 +1,76 @@
+<p>GitHub 不只是代码托管平台。对开发者来说，它同时承担了项目展示、代码阅读、开源协作、自动化构建和个人主页的作用。这篇文章整理一些比较实用的 GitHub 使用技巧。</p>
+<h2 id="一键生成-github-简历与-github-年报" tabindex="-1">一键生成 GitHub 简历与 GitHub 年报</h2>
+<p>通过 <a href="https://resume.github.io/" target="_blank" rel="noopener">https://resume.github.io/</a> 这个网站你可以一键生成一个在线的 GitHub 简历。</p>
+<p>不过，简历里是否放 GitHub 链接要看账号内容质量。如果账号里有完整项目、持续维护记录、清晰 README 和比较规范的提交历史，GitHub 链接会加分；如果只有空仓库或者临时练习代码，就没必要强行放。生成后的效果如下图所示。</p>
+<p><img src="/img/image-20201108192205620-a5a4105a.png" alt="" loading="lazy"></p>
+<p>通过 <a href="https://www.githubtrends.io/wrapped" target="_blank" rel="noopener">https://www.githubtrends.io/wrapped</a> 这个网站，你可以生成一份 GitHub 个人年报，这个年报会列举出你在这一年的项目贡献情况、最常使用的编程语言、详细的贡献信息。</p>
+<p><img src="/img/image-20211226144607457-9a01730d.png" alt="" loading="lazy"></p>
+<h2 id="个性化-github-首页" tabindex="-1">个性化 GitHub 首页</h2>
+<p>GitHub 目前支持在个人主页自定义展示一些内容。展示效果如下图所示。</p>
+<p><img src="/img/image-20210616221212259-50c2e8ba.png" alt="" loading="lazy"></p>
+<p>想要做到这样非常简单，你只需要创建一个和你的 GitHub 账户同名的仓库，然后自定义<code>README.md</code>的内容即可。</p>
+<p>展示在你主页的自定义内容就是<code>README.md</code>的内容（<em>不会 Markdown 语法的小伙伴自行面壁 5 分钟</em>）。</p>
+<p><img src="/img/image-20201107110309341-355239b7.png" alt="" loading="lazy"></p>
+<p>这个也是可以玩出花来的！比如说：通过 <a href="https://hellogithub.com/periodical/statistics/click/?target=https://github.com/anuraghazra/github-readme-stats" target="_blank" rel="noopener">github-readme-stats</a> 这个开源项目，你可以在 README 中展示动态生成的 GitHub 统计信息。展示效果如下图所示。</p>
+<p><img src="/img/image-20210616221312426-cbbca19f.png" alt="" loading="lazy"></p>
+<p>关于个性化首页这个就不多提了，感兴趣的小伙伴自行研究一下。</p>
+<h2 id="自定义项目徽章" tabindex="-1">自定义项目徽章</h2>
+<p>你在 GitHub 上看到的项目徽章都是通过 <a href="https://shields.io/" target="_blank" rel="noopener">https://shields.io/</a> 这个网站生成的。我的 JavaGuide 这个项目的徽章如下图所示。</p>
+<p><img src="/img/image-20201107143136559-62170ad2.png" alt="" loading="lazy"></p>
+<p>并且，你不光可以生成静态徽章，shield.io 还可以动态读取你项目的状态并生成对应的徽章。</p>
+<p><img src="/img/image-20201107143502356-2f8b8313.png" alt="" loading="lazy"></p>
+<p>生成的描述项目状态的徽章效果如下图所示。</p>
+<p><img src="/img/image-20201107143752642-fcfeaa4e.png" alt="" loading="lazy"></p>
+<h2 id="自动为项目添加贡献情况图标" tabindex="-1">自动为项目添加贡献情况图标</h2>
+<p>通过 repobeats 这个工具可以为 GitHub 项目添加如下图所示的项目贡献基本情况图表。</p>
+<p><img src="/img/repobeats-7e377980.png" alt="" loading="lazy"></p>
+<p>地址：<a href="https://repobeats.axiom.co/" target="_blank" rel="noopener">https://repobeats.axiom.co/</a> 。</p>
+<h2 id="github-表情" tabindex="-1">GitHub 表情</h2>
+<p><img src="/img/image-20201107162254582-46615280.png" alt="" loading="lazy"></p>
+<p>如果你想要在 GitHub 使用表情的话，可以在这里找找：<a href="https://www.webfx.com/tools/emoji-cheat-sheet/" target="_blank" rel="noopener">www.webfx.com/tools/emoji-cheat-sheet/</a>。</p>
+<p><img src="/img/image-20201107162432941-fa620aab.png" alt="" loading="lazy"></p>
+<h2 id="高效阅读-github-项目的源代码" tabindex="-1">高效阅读 GitHub 项目的源代码</h2>
+<p>GitHub Codespaces 可以提供类似 VS Code 的在线开发环境，适合临时阅读、调试或快速参与开源项目。对于大型项目或需要本地服务依赖的项目，还是建议 clone 到本地，用自己熟悉的 IDE 阅读和调试。</p>
+<p>简单介绍几种常用的 GitHub 项目源码阅读方式。</p>
+<h3 id="chrome-插件-octotree" tabindex="-1">Chrome 插件 Octotree</h3>
+<p>这个已经老生常谈了，是我最喜欢的一种方式。使用了 Octotree 之后网页侧边栏会按照树形结构展示项目，为我们带来 IDE 般的阅读源代码的感受。</p>
+<p><img src="/img/image-20201107144944798-0bf10917.png" alt="" loading="lazy"></p>
+<h3 id="sourcegraph" tabindex="-1">Sourcegraph</h3>
+<p>不想将项目 clone 到本地时，也可以使用 Sourcegraph 这类代码搜索和阅读工具。Sourcegraph 支持跨仓库代码搜索、引用跳转等功能，阅读大型项目时比较有帮助。</p>
+<p>当你下载了这个插件之后，你的项目主页会多出一个小图标如下图所示。点击这个小图标即可在线阅读项目源代码。</p>
+<p><img src="/img/image-20201107145749659-5034715a.png" alt="" loading="lazy"></p>
+<p>使用 Sourcegraph 阅读代码的效果类似下面这样，同样是树形结构展示代码，还支持类之间的跳转。</p>
+<p><img src="/img/image-20201107150307314-f8d6db4f.png" alt="" loading="lazy"></p>
+<h3 id="克隆项目到本地" tabindex="-1">克隆项目到本地</h3>
+<p>先把项目克隆到本地，然后使用自己喜欢的 IDE 来阅读。想深入理解一个项目，首选这种方式。</p>
+<pre class="md-pre"><code class="hljs">git <span class="hljs-built_in">clone</span> https://github.com/Snailclimb/JavaGuide.git
+</code></pre>
+<h2 id="扩展-github-的功能" tabindex="-1">扩展 GitHub 的功能</h2>
+<p><strong>Enhanced GitHub</strong> 可以让你的 GitHub 更好用。这个浏览器插件可以展示仓库大小、文件大小，并支持快速下载单个文件。</p>
+<p><img src="/img/image-20201107160817672-8db933ee.png" alt="" loading="lazy"></p>
+<h2 id="自动为-markdown-文件生成目录" tabindex="-1">自动为 Markdown 文件生成目录</h2>
+<p>如果你想为 Markdown 文件生成目录，通过 VS Code 的 <strong>Markdown Preview Enhanced</strong> 这类插件就可以了。</p>
+<p>生成的目录效果如下图所示。你直接点击目录中的链接即可跳转到文章对应的位置，可以优化阅读体验。</p>
+<p><img src="/img/iShot2020-11-07-16-14-14-1-d677ca02.png" alt="" loading="lazy"></p>
+<p>不过，目前 GitHub 已经会为 Markdown 文件自动生成目录，只是需要通过页面上的目录按钮展开。</p>
+<p><img src="/img/image-20211227093215005-0e3e4917.png" alt="" loading="lazy"></p>
+<h2 id="善用-github-explore" tabindex="-1">善用 GitHub Explore</h2>
+<p>GitHub 自带的 Explore 是一个非常强大且好用的功能，适合用来发现项目、主题和技术趋势。</p>
+<p>简单来说，GitHub Explore 可以提供下面这些服务：</p>
+<ol>
+<li>可以根据你的个人兴趣为你推荐项目；</li>
+<li>GitHub Topics 按照类别/话题将一些项目进行了分类汇总。比如 <a href="https://github.com/topics/data-visualization" target="_blank" rel="noopener">Data visualization</a> 汇总了数据可视化相关的一些开源项目，<a href="https://github.com/topics/awesome" target="_blank" rel="noopener">Awesome Lists</a> 汇总了 Awesome 系列的仓库；</li>
+<li>通过 GitHub Trending 我们可以看到最近比较热门的一些开源项目，我们可以按照语言类型以及时间维度对项目进行筛选；</li>
+<li>GitHub Collections 类似一个收藏夹集合。比如 <a href="https://github.com/collections/teaching-computational-social-science" target="_blank" rel="noopener">Teaching materials for computational social science</a> 这个收藏夹就汇总了计算机课程相关的开源资源，<a href="https://github.com/collections/learn-to-code" target="_blank" rel="noopener">Learn to Code</a> 这个收藏夹就汇总了对你学习编程有帮助的一些仓库；</li>
+<li>……</li>
+</ol>
+<p><img src="/img/github-explore-cce0f1aa.png" alt="" loading="lazy"></p>
+<h2 id="github-actions-很强大" tabindex="-1">GitHub Actions 很强大</h2>
+<p>你可以简单地将 GitHub Actions 理解为 GitHub 自带的自动化平台。通过 GitHub Actions，你可以直接在 GitHub 上完成构建、测试、部署、依赖扫描、定时任务等工作。</p>
+<p>关于 GitHub Actions 的详细介绍，推荐看一下阮一峰老师写的 <a href="https://www.ruanyifeng.com/blog/2019/09/getting-started-with-github-actions.html" target="_blank" rel="noopener">GitHub Actions 入门教程</a> 。</p>
+<p>GitHub Actions 有一个官方市场，上面有很多别人提交的 Actions，可以直接复用。</p>
+<p><img src="/img/image-20211227100147433-5efe5259.png" alt="" loading="lazy"></p>
+<h2 id="后记" tabindex="-1">后记</h2>
+<p>GitHub 技巧不需要一次性全部记住。个人主页、项目徽章、代码阅读、Explore/Trending、GitHub Actions 这几块先用起来，就已经能覆盖大部分日常场景。</p>
+<p>另外，这篇文章没有展开讲 GitHub 搜索语法。实际使用中，关键词搜索、语言筛选、Star 数排序、更新时间筛选，往往比死记复杂语法更常用。</p>
+<!-- @include: @article-footer.snippet.md -->

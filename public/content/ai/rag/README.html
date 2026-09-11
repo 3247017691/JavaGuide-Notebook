@@ -1,0 +1,52 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>RAG 不只有“文档切块 + 向量检索”。解析、权限、排序、生成、更新和评测都会影响最终答案。</p>
+<p>这份 <strong>RAG 专题</strong> 面向企业知识库问答、智能客服、文档助手和内部搜索等场景，按文档进入系统后的真实链路展开：解析、清洗、切分、向量化、索引、召回、重排、生成、更新和评测。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在学习或落地 RAG 知识库问答的开发者。</li>
+<li>做过“文档切块 + 向量检索”Demo，但对召回质量、文档更新、一致性和评测不熟的工程师。</li>
+<li>准备 RAG、向量数据库、GraphRAG、企业知识库相关面试题的同学。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>RAG 的效果问题要分段排查：文档处理、Chunk、Embedding、召回、Rerank、上下文压缩和生成。</li>
+<li>向量数据库选型要结合数据规模、过滤条件、更新频率、延迟要求和运维成本。</li>
+<li>GraphRAG 更适合实体关系强、全局问题多、需要跨文档推理的场景。</li>
+<li>知识库更新不是简单覆盖文件，还要考虑版本、去重、增量索引、回滚和灰度。</li>
+<li>RAG 评测要同时看检索指标和生成指标，不能只凭最终回答是否“像那么回事”来判断。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/ai/rag/rag-basis.html">RAG 基础概念：检索、生成与工程取舍</a>：先理解 RAG 的核心流程、优势和局限。</li>
+<li><a href="/read/ai/rag/rag-document-processing.html">RAG 文档处理与切分策略</a>：理解文档进入索引前的处理链路。</li>
+<li><a href="/read/ai/rag/rag-vector-store.html">RAG 向量索引算法和向量数据库</a>：补齐向量索引和数据库选型基础。</li>
+<li><a href="/read/ai/rag/rag-optimization.html">RAG 优化：从召回、重排到上下文工程</a>：掌握召回、重排、改写和上下文压缩。</li>
+<li><a href="/read/ai/rag/graphrag.html">GraphRAG：用图结构补充向量检索</a>、<a href="/read/ai/rag/rag-knowledge-update.html">RAG 知识库文档更新策略</a>：进一步理解复杂知识组织和持续更新。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/ai/rag/rag-basis.html">RAG 基础概念：检索、生成与工程取舍</a>：理解 RAG 的工作流程、适用场景和局限性。</li>
+<li><a href="/read/ai/rag/rag-document-processing.html">RAG 文档处理与切分策略</a>：涵盖文件解析、清洗、结构化、Chunking 策略与多模态内容处理。</li>
+<li><a href="/read/ai/rag/rag-vector-store.html">RAG 向量索引算法和向量数据库</a>：掌握 HNSW、IVFFLAT 等索引算法原理，学会选择合适的向量数据库。</li>
+<li><a href="/read/ai/rag/rag-optimization.html">RAG 优化：从召回、重排到上下文工程</a>：围绕 Chunk 策略、Hybrid Search、Query Rewrite、Rerank、上下文压缩排查召回问题。</li>
+<li><a href="/read/ai/rag/graphrag.html">GraphRAG：用图结构补充向量检索</a>：理解知识图谱驱动的 RAG，掌握实体、关系、社区发现、全局检索与局部检索。</li>
+<li><a href="/read/ai/rag/rag-knowledge-update.html">RAG 知识库文档更新策略</a>：涵盖增量更新、版本回滚、去重与灰度发布。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>RAG 为什么还会幻觉？应该从哪些环节排查？</li>
+<li>Chunk 切大还是切小？如何处理标题、表格、代码块和多模态内容？</li>
+<li>向量检索、关键词检索、混合检索分别适合什么场景？</li>
+<li>Rerank 的作用是什么？什么时候值得引入？</li>
+<li>GraphRAG 和普通 RAG 有什么区别？</li>
+<li>知识库更新如何保证一致性、可回滚和不停机？</li>
+<li>RAG 应用如何评测召回质量和最终回答质量？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/ai/README.html">AI 应用开发知识体系</a></li>
+<li><a href="/read/ai/llm-basis/README.html">大模型基础专题</a></li>
+<li><a href="/read/ai/agent/README.html">AI Agent 专题</a></li>
+<li><a href="/read/ai/interview-questions/README.html">AI 应用开发面试题专题</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,413 @@
+<p>大家好，我是小 G。如果你是 JetBrains IDE 的重度用户，大概率有过这样的纠结：想用 AI 辅助编程，但主流工具——Cursor、Trae、Qoder——大多基于 VS Code。切过去？舍不得 JetBrains 调试和重构体验。不切？又感觉错过了 AI 的效率红利。</p>
+<p>有朋友会说：Claude Code、Gemini CLI 这些终端工具不是挺香的吗？确实香，但说实话，CLI 模式也有明显的短板：没有原生 UI 交互，看代码、审 diff 都不够直观。虽然可以通过一些开源项目（如 vibe kanban、1Code）来缓解，但在做复杂项目时，还是存在一些局限性。</p>
+<p>现在的后端开发者，大致分成了四大阵营：</p>
+<table>
+<thead>
+<tr>
+<th>阵营</th>
+<th>工具组合</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CLI 派</strong></td>
+<td>Claude Code/Gemini CLI/Codex</td>
+<td>终端操作，效率高但 UI 交互弱</td>
+</tr>
+<tr>
+<td><strong>VS Code 派</strong></td>
+<td>VS Code + 插件</td>
+<td>轻量灵活，功能受限</td>
+</tr>
+<tr>
+<td><strong>混合派</strong></td>
+<td>CLI/AI 编程IDE（如 Cursor） 写 → JetBrains 验收</td>
+<td>AI 辅助 + IDEA 兜底</td>
+</tr>
+<tr>
+<td><strong>一体派</strong></td>
+<td><strong>JetBrains + Qoder 插件</strong></td>
+<td><strong>心流专注，一个窗口搞定</strong></td>
+</tr>
+</tbody>
+</table>
+<p>我目前属于“混合使用派”：Claude Code 与 IDEA + Qoder 插件是主要组合。</p>
+<p>对于很多逻辑复杂的项目，IDEA 的掌控感能让人更安心。</p>
+<p>这篇文章我会通过两个真实场景的实战案例，看看 IDEA 搭配 Qoder 在实际开发中的效果，并且分享一些实用的小技巧。</p>
+<h2 id="qoder-jetbrains-插件上手教程" tabindex="-1">Qoder JetBrains 插件上手教程</h2>
+<h3 id="安装与配置" tabindex="-1">安装与配置</h3>
+<p><strong>第一步</strong>：点击 <strong>Settings | Plugins</strong> 搜索 <strong>&quot;qoder&quot;</strong>，选择 Qoder - Agentic AI Coding Platform 并安装。</p>
+<p><img src="/img/plugin-install-interface-b0a2e253.png" alt="" loading="lazy"></p>
+<p><strong>第二步</strong>：安装完成后，点击 Sign In 登录注册。</p>
+<p><img src="/img/login-interface-10639ce9.png" alt="" loading="lazy"></p>
+<p><strong>第三步（可选）</strong>：默认界面为英文，习惯中文可点击右上角 Plugin Settings，将 Display Language 设为简体中文。</p>
+<p><img src="/img/language-settings-interface-5a1e02aa.png" alt="" loading="lazy"></p>
+<p><strong>第四步（可选）</strong>：配置数据库连接。Qoder 支持 <code>@database</code> 上下文，可直接引用数据库表结构。建议提前配置项目相关数据库。</p>
+<p>以 MySQL 为例，打开右侧 Database 工具窗口，点击 <strong>+</strong> 号，选择 <strong>Data Source | MySQL</strong>：</p>
+<p><img src="/img/add-data-source-ecfb4efa.png" alt="" loading="lazy"></p>
+<p>填写连接信息，测试通过后点击 OK。</p>
+<p><img src="/img/database-config-complete-e38cddf5.png" alt="" loading="lazy"></p>
+<p>至此，前期准备工作完成。</p>
+<h3 id="任务一订单查询频繁报错用-qoder-辅助排查深分页" tabindex="-1">任务一：订单查询频繁报错？用 Qoder 辅助排查深分页</h3>
+<h4 id="背景说明" tabindex="-1">背景说明</h4>
+<p>这是一个电商后台管理系统，运营部门每月生成经营分析报表。由于数据量较大（订单表 1000 万+），且开发时间紧张，代码存在多个性能隐患。</p>
+<p>运营反馈订单查询频繁报错，定位到接口：</p>
+<pre class="md-pre"><code class="hljs">curl -X POST http://localhost:8080/api/report/orders \
+  -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;page&quot;: 1000000, &quot;size&quot;: 10}&#x27;</span>
+</code></pre>
+<p>这是一个典型的深分页请求。接口代码逻辑如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Transactional(readOnly = true)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">OrderListResponse</span> <span class="hljs-title function_">getOrderList</span><span class="hljs-params">(OrderListRequest request)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">pageNum</span> <span class="hljs-operator">=</span> request.getPage() == <span class="hljs-literal">null</span> ? <span class="hljs-number">1</span> : request.getPage();
+    <span class="hljs-type">int</span> <span class="hljs-variable">pageSize</span> <span class="hljs-operator">=</span> request.getSize() == <span class="hljs-literal">null</span> ? <span class="hljs-number">10</span> : request.getSize();
+
+    <span class="hljs-comment">// 问题核心：深分页查询</span>
+    <span class="hljs-type">Page</span>&lt;Order&gt; <span class="hljs-variable">pageParam</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Page</span>&lt;&gt;(pageNum, pageSize);
+
+    <span class="hljs-type">LambdaQueryWrapper</span>&lt;Order&gt; <span class="hljs-variable">wrapper</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LambdaQueryWrapper</span>&lt;&gt;();
+    <span class="hljs-keyword">if</span> (request.getStatus() != <span class="hljs-literal">null</span> &amp;&amp; !request.getStatus().isEmpty()) {
+        wrapper.eq(Order::getStatus, request.getStatus());
+    }
+    <span class="hljs-keyword">if</span> (request.getShopId() != <span class="hljs-literal">null</span>) {
+        wrapper.eq(Order::getShopId, request.getShopId());
+    }
+
+    <span class="hljs-comment">// 排序字段可能无索引，触发全表扫描</span>
+    wrapper.orderByDesc(Order::getCreatedAt);
+
+    <span class="hljs-comment">// 深分页：LIMIT 9999990, 10</span>
+    <span class="hljs-type">IPage</span>&lt;Order&gt; <span class="hljs-variable">orderPage</span> <span class="hljs-operator">=</span> orderMapper.selectPage(pageParam, wrapper);
+
+    <span class="hljs-comment">// 关联查询用户、店铺信息...</span>
+}
+</code></pre>
+<p>当 <code>page=1000000</code> 时，MySQL 执行 <code>LIMIT 9999990, 10</code>，需要扫描前 1000 万行后丢弃，性能急剧下降。</p>
+<h4 id="传统方式的困境" tabindex="-1">传统方式的困境</h4>
+<p>按照传统流程，接口调优需要：</p>
+<ol>
+<li>阅读梳理代码逻辑</li>
+<li>分析代码优化空间</li>
+<li>结合日志分析 SQL 执行计划</li>
+<li>输出解决方案并实施</li>
+<li>回归测试与部署上线</li>
+</ol>
+<p>如果从代码、SQL 执行计划一路排查到回归与上线，这类问题通常不是改一行 SQL 就能结束。具体耗时取决于项目熟悉度、数据规模和验证要求。</p>
+<h4 id="qoder-解法从执行者到指挥者" tabindex="-1">Qoder 解法：从执行者到指挥者</h4>
+<p>有了 Qoder 后，我把更多时间放在任务拆解、方案评审和结果验收上。</p>
+<p>只需整理思路，给出明确目标：</p>
+<pre class="md-pre"><code class="hljs">针对订单列表查询接口出现的<span class="hljs-string">&quot;java.net.SocketTimeoutException: Read timed out&quot;</span>超时问题，需要从接口代码逻辑和数据库层面进行分析并提供解决方案。
+
+接口信息：POST http://localhost:8080/api/report/orders
+请求参数：{<span class="hljs-string">&quot;page&quot;</span>: 1000000, <span class="hljs-string">&quot;size&quot;</span>: 10}
+
+请从以下方面给出解决方案：
+1. 分析接口代码逻辑中可能导致超时的因素
+2. 检查数据库层面的问题（索引、查询性能、数据量）
+3. 提出具体的优化措施
+</code></pre>
+<p>为了让 Qoder 更好地完成任务，添加数据库上下文：</p>
+<ol>
+<li>点击 <strong>+Add Context</strong> 按钮</li>
+<li>选择 <strong>@database</strong>，选择对应的数据库 Schema</li>
+</ol>
+<p><img src="/img/add-database-context-1-8556dd7c.png" alt="" loading="lazy"></p>
+<h4 id="问题分析与方案输出" tabindex="-1">问题分析与方案输出</h4>
+<p><strong>定位代码入口和候选原因</strong></p>
+<p>Qoder 很快定位到了代码入口，并列出深分页、排序索引等候选原因。这里的结论仍需结合慢查询日志和 <code>EXPLAIN ANALYZE</code> 验证：</p>
+<p><img src="/img/code-analysis-result-ddf06889.png" alt="" loading="lazy"></p>
+<p><strong>独到之处：代码与数据库联合诊断</strong></p>
+<p>结合数据库 Schema，Qoder 给出了综合分析报告。<code>@database</code> 是 Qoder 当前提供的数据库上下文能力，适合用来补充表结构和索引信息，但它不能替代线上执行计划和真实数据分布：</p>
+<p><img src="/img/comprehensive-analysis-report-9fbdaae0.png" alt="" loading="lazy"></p>
+<p><strong>代码层面优化</strong></p>
+<p>Qoder 给出了三套方案，包括延迟关联查询（子查询只返回 ID，利用覆盖索引快速定位）：</p>
+<p><img src="/img/code-optimization-solution-8552af32.png" alt="" loading="lazy"></p>
+<p><strong>值得注意的方案</strong></p>
+<p>分页查询总记录计算，Qoder 还给出了一个估算方案：通过主键索引页数和页内平均行数估算总量。它只适合允许近似结果的场景，误差会受空洞、页填充率和数据分布影响；账务、结算等要求精确计数的业务不能直接采用：</p>
+<p><img src="/img/database-optimization-suggestion-8d91ce2f.png" alt="" loading="lazy"></p>
+<h4 id="方案实施与验收" tabindex="-1">方案实施与验收</h4>
+<p>审核评估后，选定延迟关联 + 索引优化方案：</p>
+<pre class="md-pre"><code class="hljs">基于审核评估结果，执行以下优化：
+1. 实施延迟关联查询策略，重构深分页查询逻辑
+2. 根据索引建议创建优化索引结构
+3. 编写单元测试，覆盖核心功能点，建立性能基准
+</code></pre>
+<p>Qoder 完成实施后，<code>getOrderList</code> 方法的改造：</p>
+<ul>
+<li>结合生产故障，完成最大页码配置和逻辑限制</li>
+<li>按不同策略完成分页统计和列表查询</li>
+</ul>
+<p>从截图看，重构后的命名和方法拆分更规整。是否完整符合团队规范，还需要通过项目自己的静态检查和 Code Review 确认：</p>
+<p><img src="/img/refactored-code-5dcf4955.png" alt="" loading="lazy"></p>
+<p>索引脚本可直接在 IDE 中执行，整个工作流无需切换窗口：</p>
+<p><img src="/img/index-execution-0961d885.png" alt="" loading="lazy"></p>
+<p><strong>回归测试</strong>：Qoder 完成代码分支梳理，并针对不同场景生成单元测试：</p>
+<p><img src="/img/unit-test-1-bac4cc5d.png" alt="" loading="lazy"></p>
+<p><strong>压测环节</strong>：Qoder 生成了压测代码并加入 JIT 预热。预热只能减少冷启动和即时编译对结果的干扰，并不意味着测试已经贴近生产。要判断优化是否有效，还需要记录硬件、JDK 与 GC、数据分布、缓存状态、并发模型、样本量以及 p95/p99 延迟：</p>
+<p><img src="/img/stress-test-924dd692.png" alt="" loading="lazy"></p>
+<p>最后，Qoder 输出了完整的工作总结，包括技术方案和沟通汇报建议：</p>
+<p><img src="/img/work-summary-31c6da91.png" alt="" loading="lazy"></p>
+<p>在代码提交窗口点击 Qoder，可以根据当前 Diff 生成提交说明。本次演示中，从输入上下文到生成候选改动大约用了 10 分钟；执行计划复核、压测、Code Review 和上线验证不包含在这个时间里。</p>
+<p><img src="/img/commit-message-1fe907a5.png" alt="" loading="lazy"></p>
+<h3 id="任务二梳理并重构一段遗留退款代码" tabindex="-1">任务二：梳理并重构一段遗留退款代码</h3>
+<h4 id="背景一坨不敢动的祖传代码" tabindex="-1">背景：一坨不敢动的“祖传代码”</h4>
+<p>退款模块的 <code>applyRefund</code> 方法，<strong>150+ 行代码，无注释，魔法值遍地，重复逻辑冗余</strong>。新需求来了：新增风控规则——<strong>72 小时内存在未完成订单的用户禁止申请退款</strong>。</p>
+<p><strong>传统方式的困境</strong>：</p>
+<ul>
+<li>代码逻辑复杂，不敢轻易改动</li>
+<li>新增规则需要全量回归测试</li>
+<li>如果补齐特征测试、重构和回归，工作量通常要按项目实际情况评估</li>
+</ul>
+<h4 id="逻辑梳理让-agent-替你读懂祖传代码" tabindex="-1">逻辑梳理：让 Agent 替你读懂祖传代码</h4>
+<p>借助 Qoder 背后模型的上下文推理能力和 Agent 的任务规划与执行能力，可以让它完成业务功能的阅读并重构：</p>
+<pre class="md-pre"><code class="hljs">请结合一个简单的数据流，详细介绍退款申请的完整业务流程，并在代码中补充相应注释
+</code></pre>
+<p>为了减少 Agent 对表结构的猜测，把存量 Schema 作为上下文提交给 Qoder。Schema 只能补充数据库结构，不能保证它对业务规则的理解一定正确：</p>
+<p><img src="/img/add-database-context-2-cda4d3e6.png" alt="" loading="lazy"></p>
+<p>Qoder 收到任务后，从整体概述开始，通过逐个分支梳理注释的方式执行任务：</p>
+<p><img src="/img/logic-analysis-process-c1cdf270.png" alt="" loading="lazy"></p>
+<p>对应注释代码更容易阅读，但注释和数据流仍需逐项对照原实现、测试与产品规则：</p>
+<p><img src="/img/commented-code-example-a82e5f85.png" alt="" loading="lazy"></p>
+<p>任务结束后，Qoder 清晰地归纳了接口逻辑和特殊规则点：</p>
+<p><img src="/img/summary-conclusion-8048fc78.png" alt="" loading="lazy"></p>
+<h4 id="代码重构先建立回归基线" tabindex="-1">代码重构：先建立回归基线</h4>
+<p>完成逻辑梳理后，下达第二条指令，完成功能重构与回归：</p>
+<pre class="md-pre"><code class="hljs">请按照团队编码规范，并参考《重构：改善既有代码的设计》中的重构方法，对退款申请功能模块进行系统性重构。重构前先为现有行为补充特征测试；重构后执行单元测试、集成测试和关键功能测试，覆盖已识别的业务分支与边界条件。输出未覆盖分支和需要人工确认的行为，不得用覆盖率代替新旧实现等价性验证。
+</code></pre>
+<p>在此期间，Qoder 依次完成：</p>
+<ol>
+<li>目标文件查看：定位重构代码段</li>
+<li>代码问题分析：指出魔法值、重复代码、方法过长等问题</li>
+<li>系统重构：依次完成常量创建、重复代码提取、领域建模设计和职责分离</li>
+<li>编写测试代码完成逻辑回归</li>
+</ol>
+<p>最终生成的代码如下。Qoder 没有直接修改原来的 <code>RefundService</code>，而是新建了 <code>RefundServiceRefactored</code>。这给新旧实现对照留出了空间，但新建一个类本身不等于“安全重构”：还需要明确调用路由、灰度或特性开关，使用同一批输入比较新旧结果，并约定旧实现的下线时间，否则两份逻辑很容易长期漂移。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * 退款申请（重构后）
+ */</span>
+<span class="hljs-meta">@Transactional(rollbackFor = Exception.class)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">RefundResponse</span> <span class="hljs-title function_">applyRefund</span><span class="hljs-params">(RefundApplyRequest request)</span> {
+    log.info(<span class="hljs-string">&quot;【退款申请】开始处理: orderId={}, userId={}, amount={}&quot;</span>,
+            request.getOrderId(), request.getUserId(), request.getRefundAmount());
+
+    <span class="hljs-comment">// 1. 查询并校验订单</span>
+    <span class="hljs-type">Order</span> <span class="hljs-variable">order</span> <span class="hljs-operator">=</span> getAndValidateOrder(request.getOrderId(), request.getUserId());
+
+    <span class="hljs-comment">// 2. 判断退款类型并处理</span>
+    <span class="hljs-keyword">if</span> (request.getOrderItemId() != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">return</span> processPartialRefund(request, order);   <span class="hljs-comment">// 部分退款</span>
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">return</span> processFullRefund(request, order);      <span class="hljs-comment">// 全额退款</span>
+    }
+}
+
+<span class="hljs-comment">/**
+ * 处理部分退款
+ */</span>
+<span class="hljs-keyword">private</span> <span class="hljs-type">RefundResponse</span> <span class="hljs-title function_">processPartialRefund</span><span class="hljs-params">(RefundApplyRequest request, Order order)</span> {
+    log.info(<span class="hljs-string">&quot;【退款申请】处理部分退款: orderItemId={}&quot;</span>, request.getOrderItemId());
+
+    <span class="hljs-comment">// 查询并校验订单明细</span>
+    <span class="hljs-type">OrderItem</span> <span class="hljs-variable">orderItem</span> <span class="hljs-operator">=</span> orderItemMapper.selectById(request.getOrderItemId());
+    refundValidator.validateOrderItemBelongsToOrder(orderItem, order.getId());
+
+    <span class="hljs-comment">// 校验退款数量与金额</span>
+    <span class="hljs-type">Integer</span> <span class="hljs-variable">refundQuantity</span> <span class="hljs-operator">=</span> getRefundQuantity(request.getQuantity());
+    refundValidator.validateRefundQuantity(refundQuantity, orderItem.getRefundableQuantity());
+    <span class="hljs-type">BigDecimal</span> <span class="hljs-variable">itemRefundableAmount</span> <span class="hljs-operator">=</span> refundCalculator.calculateItemRefundableAmount(orderItem, refundQuantity);
+    refundValidator.validateRefundAmount(request.getRefundAmount(), itemRefundableAmount);
+
+    <span class="hljs-comment">// 执行风控检查 + 创建退款记录</span>
+    performRiskCheck(order, request.getRefundAmount(), request.getUserId());
+    <span class="hljs-type">Refund</span> <span class="hljs-variable">refund</span> <span class="hljs-operator">=</span> createRefundRecord(request, order, refundQuantity);
+
+    log.info(<span class="hljs-string">&quot;【退款申请】部分退款成功: refundId={}&quot;</span>, refund.getId());
+    <span class="hljs-keyword">return</span> RefundResponse.success(refund.getId());
+}
+</code></pre>
+<p><strong>重构亮点</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>亮点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>方法拆分</strong></td>
+<td>主方法仅 15 行，部分退款/全额退款逻辑分离</td>
+</tr>
+<tr>
+<td><strong>职责分离</strong></td>
+<td><code>refundValidator</code>、<code>refundCalculator</code> 独立处理校验与计算</td>
+</tr>
+<tr>
+<td><strong>注释清晰</strong></td>
+<td>每个步骤都有对应说明</td>
+</tr>
+<tr>
+<td><strong>日志规范</strong></td>
+<td>使用【】标注关键节点，便于追踪</td>
+</tr>
+<tr>
+<td><strong>异常处理</strong></td>
+<td>为受检异常配置事务回滚策略</td>
+</tr>
+</tbody>
+</table>
+<p>这里的单元测试报告显示分支覆盖率约为 80%。它能说明部分路径被执行过，但不能证明重构前后行为完全一致。金额、状态迁移、并发请求和外部依赖失败等关键路径，还需要特征测试、集成测试或新旧结果对照：</p>
+<p><img src="/img/unit-test-verification-463ad5cd.png" alt="" loading="lazy"></p>
+<h4 id="功能迭代一行指令规则上线" tabindex="-1">功能迭代：一行指令，规则上线</h4>
+<p>完成结构调整和回归基线后，可以定位到风控逻辑 <code>validateRiskMaxAmount</code>，再向 Qoder 下达最后一条指令：</p>
+<pre class="md-pre"><code class="hljs">在风控系统中新增一条退款限制规则：当用户在最近 72 小时（3 天）内存在任何未完成状态的订单记录时，系统应自动拒绝该用户提交的退款申请。
+</code></pre>
+<p>对应实现代码如下。可以看到，完成既有逻辑的梳理后，职责单一的校验框架和配套的单元测试已经就位，后续的增量迭代也变得容易处理和回归：</p>
+<p><img src="/img/feature-iteration-implementation-6b76516e.png" alt="" loading="lazy"></p>
+<h4 id="记忆沉淀越用越懂你的编程习惯" tabindex="-1">记忆沉淀：越用越懂你的编程习惯</h4>
+<p>完成任务后，Qoder 形成了针对该项目的记忆。Memory 是当前官方能力，但能否在后续任务中生效，仍取决于记忆是否被正确保存、召回以及是否与现状冲突：</p>
+<ul>
+<li><strong>项目特点记忆</strong>：延迟关联查询优于游标分页、接口优化需配套性能测试</li>
+<li><strong>编码规范记忆</strong>：遵循《阿里巴巴 Java 开发手册》、BigDecimal 使用 <code>compareTo</code> 比较</li>
+<li><strong>业务规则记忆</strong>：退款风控规则（72 小时未完成订单拦截、单笔金额上限等）</li>
+</ul>
+<p>在这次演示里，退款规则和编码约定被写入了记忆列表。后续使用时仍要审查召回内容，及时清理已经失效的规则：</p>
+<p><img src="/img/memory-accumulation-efa8edb5.png" alt="" loading="lazy"></p>
+<h2 id="能力拆解qoder-在这个示例中做了什么" tabindex="-1">能力拆解：Qoder 在这个示例中做了什么</h2>
+<p>通过上面两个实战案例，来拆解一下 Qoder 在实际开发 workflow 中发挥了哪些作用。</p>
+<h3 id="1-工程感知与上下文理解" tabindex="-1">1. 工程感知与上下文理解</h3>
+<p>Qoder 对大型工程项目的理解能力：</p>
+<ul>
+<li>
+<p><strong>数据库 Schema 感知</strong>：在任务一中，Qoder 结合 <code>@database</code> 上下文分析订单表结构和现有索引，给出了候选索引方案。是否采用仍要看完整 SQL、选择性和执行计划。</p>
+</li>
+<li>
+<p><strong>代码逻辑溯源</strong>：在任务二中，面对没有注释的冗长退款代码，Qoder 通过静态分析梳理出业务流程：订单校验 → 金额计算 → 风控检查 → 数据持久化，并标出重复代码、魔法值等代码坏味道。</p>
+</li>
+<li>
+<p><strong>跨文件关联</strong>：Qoder 能够自动感知任务所需的关联文件，如从 <code>RefundService</code> 自动追踪到 <code>OrderMapper</code>、<code>RefundValidator</code> 等依赖组件，无需手动添加上下文。</p>
+</li>
+</ul>
+<h3 id="2-端到端的任务执行能力" tabindex="-1">2. 端到端的任务执行能力</h3>
+<p>Qoder 不只做代码补全，在这个示例中还参与了分析、改动和测试生成：</p>
+<table>
+<thead>
+<tr>
+<th>能力维度</th>
+<th>本文观察到的表现</th>
+<th>仍需人工验证的部分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>工程感知</strong></td>
+<td>分析数据库 Schema、代码依赖关系</td>
+<td>SQL 执行计划、数据分布和业务规则</td>
+</tr>
+<tr>
+<td><strong>任务执行</strong></td>
+<td>参与分析、设计、编码和测试生成</td>
+<td>测试有效性、代码评审与上线验证</td>
+</tr>
+<tr>
+<td><strong>重构辅助</strong></td>
+<td>保留原实现并生成新的实现</td>
+<td>路由切换、新旧对照和旧代码下线</td>
+</tr>
+<tr>
+<td><strong>项目记忆</strong></td>
+<td>保存项目规范与部分业务规则</td>
+<td>记忆召回是否准确、内容是否仍然有效</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-渐进式重构与增量迭代" tabindex="-1">3. 渐进式重构与增量迭代</h3>
+<p>任务二保留了原实现并生成新实现，可以把它作为渐进迁移的起点。</p>
+<ul>
+<li>
+<p><strong>增量式重构</strong>：Qoder 没有直接修改原有的 <code>RefundService</code>，而是创建了新的 <code>RefundServiceRefactored</code> 类。只有补上迁移方案后，这种做法才有以下价值：</p>
+<ul>
+<li>保留原实现用于行为对照</li>
+<li>通过特性开关或灰度路由逐步切换</li>
+<li>验证通过后删除旧实现，避免双份逻辑长期并存</li>
+</ul>
+</li>
+<li>
+<p><strong>职责分离</strong>：Qoder 按照单一职责原则（SRP），将原本混杂在一起的校验逻辑、金额计算、单号生成抽离到独立组件：</p>
+<ul>
+<li><code>RefundValidator</code>：统一业务校验</li>
+<li><code>RefundCalculator</code>：金额计算逻辑</li>
+<li><code>RefundNoGenerator</code>：退款单号生成</li>
+</ul>
+</li>
+<li>
+<p><strong>事务边界</strong>：<code>rollbackFor = Exception.class</code> 只有在方法通过 Spring 代理调用、异常继续抛出且资源参与同一事务时才会生效。自调用、捕获后吞掉异常或跨服务操作，需要另外处理。</p>
+</li>
+</ul>
+<h3 id="4-记忆感知与持续学习" tabindex="-1">4. 记忆感知与持续学习</h3>
+<p>这些记忆可以在后续交互中被召回。涉及业务规则时，建议把正式规则放在可评审、可版本化的项目文档中，Memory 只作为辅助上下文。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>Qoder JetBrains 插件给后端开发者提供了一种新的工作方式：<strong>在保持 JetBrains IDE 使用习惯的同时，利用 AI Agent 的推理分析与编码落地能力</strong>。</p>
+<p>回头看这两个案例：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Qoder 可以提供的帮助</th>
+<th>不能省略的工程环节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>分析</strong></td>
+<td>搜索代码、关联 Schema</td>
+<td>日志、执行计划和业务规则核对</td>
+</tr>
+<tr>
+<td><strong>改动</strong></td>
+<td>生成候选实现与测试</td>
+<td>Code Review、新旧行为对照</td>
+</tr>
+<tr>
+<td><strong>体验</strong></td>
+<td>在 IDEA 内完成大部分交互</td>
+<td>真实环境压测、灰度和上线观察</td>
+</tr>
+<tr>
+<td><strong>沉淀</strong></td>
+<td>保存部分项目记忆</td>
+<td>规则版本管理和过期内容清理</td>
+</tr>
+</tbody>
+</table>
+<h2 id="写在最后" tabindex="-1">写在最后</h2>
+<p>现在的技术环境很像是在盖大楼。AI 和新框架帮你把脚手架搭得飞快，像 Qoder 这样的插件让你在熟悉的 IDE 环境中就能完成这一切，无需切换窗口打断思路。但如果你缺乏底层原理知识和软件架构设计思维，即使 AI 能帮你完成功能落地，你也把控不了系统的交付质量。</p>
+<p>回顾本文的两个案例：</p>
+<ul>
+<li>
+<p><strong>任务一中的延迟关联查询</strong>，基于对数据库索引原理的理解，才能判断 Qoder 给出的方案是否合理。</p>
+</li>
+<li>
+<p><strong>任务二中的代码重构</strong>，熟悉《重构：改善既有代码的设计》和《阿里巴巴 Java 开发手册》中的 SRP、DRY 等原则，才能准确评估 Qoder 重构的质量。</p>
+</li>
+<li>
+<p><strong>性能基准测试中的 JIT 预热</strong>，只能解决基准测试的一部分干扰因素；不了解 JVM、数据与负载模型，结果依然可能失真。</p>
+</li>
+<li>
+<p><strong>方案选择与权衡</strong>，对业务场景和技术边界的把握。比如选择延迟关联查询而非游标分页，是因为后者会影响用户体验——这种判断，AI 无法替你做。</p>
+</li>
+</ul>
+<p>使用 Qoder 处理这类任务时，有三点建议：</p>
+<ol>
+<li>
+<p><strong>保持对底层原理的学习</strong>：数据库索引、JVM 内存模型、并发编程原理——这些“地基”知识不会因 AI 而贬值。</p>
+</li>
+<li>
+<p><strong>阅读经典书籍</strong>：《重构》《设计模式》《高性能 MySQL》《深入理解 Java 虚拟机》——这些经典帮助你建立判断 AI 输出质量的“标尺”。</p>
+</li>
+<li>
+<p><strong>培养架构思维</strong>：把省下来的时间投入到对系统架构、业务本质的思考上。</p>
+</li>
+</ol>
+<p>如果你主要使用 JetBrains IDE，可以把 Qoder 插件作为一个备选方案。它减少了编辑器切换，但最终交付质量仍取决于执行计划、测试、评审和上线验证。</p>

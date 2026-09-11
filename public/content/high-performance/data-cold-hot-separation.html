@@ -1,0 +1,585 @@
+<h2 id="什么是数据冷热分离" tabindex="-1">什么是数据冷热分离？</h2>
+<p>数据冷热分离是指根据数据的<strong>访问频率</strong>和<strong>业务重要性</strong>，将数据划分为冷数据和热数据，并分别存储在不同性能和成本的存储介质中的架构策略。</p>
+<p>这种架构的核心目标有三个：</p>
+<ol>
+<li><strong>提升查询性能</strong>：热数据存储在高性能介质（如 SSD、内存）中，保障核心业务的响应速度。</li>
+<li><strong>降低存储成本</strong>：冷数据迁移至低成本介质（如 HDD、对象存储），大幅削减存储开支。</li>
+<li><strong>满足合规要求</strong>：部分行业（如金融、医疗）要求数据长期归档，冷热分离可兼顾合规与成本。</li>
+</ol>
+<h3 id="冷数据和热数据" tabindex="-1">冷数据和热数据</h3>
+<p><strong>热数据</strong>是指被频繁访问和修改、且需要快速响应的数据；<strong>冷数据</strong>是指访问频率极低、对当前业务价值较小、但需要长期保留的数据。</p>
+<p>冷热数据的区分方法主要有两种：</p>
+<ol>
+<li><strong>时间维度区分</strong>：按照数据的创建时间、更新时间或过期时间划分。例如，订单系统将一段时间前（如 90 天或 1 年）的订单数据标记为冷数据。该方法适用于<strong>数据访问频率与时间强相关</strong>的场景，实现简单、成本低。</li>
+<li><strong>访问频率区分</strong>：将高频访问的数据视为热数据，低频访问的数据视为冷数据。例如，内容系统将<strong>浏览量低于阈值</strong>的文章标记为冷数据。该方法需要额外记录访问频率，适用于<strong>访问频率与数据本身特性强相关</strong>的场景。</li>
+</ol>
+<p><strong>如何选择区分策略？</strong></p>
+<ul>
+<li>若业务数据天然具有时效性（如订单、日志、账单），优先选择<strong>时间维度</strong>，实现成本最低。</li>
+<li>若数据价值与时间无关（如文章、商品、用户画像），需结合<strong>访问频率</strong>进行判定。</li>
+<li>实际项目中，可将两者结合使用：以时间维度为主、访问频率为辅，覆盖更多业务场景。</li>
+</ul>
+<p>冷热判定规则不要只由技术团队拍脑袋决定。订单、账单、审计、客服、运营查询都会影响“冷数据还能不能查、多久能查出来、是否必须查全量”。落地前最好把核心查询路径列出来，再决定冷数据迁移时间点。</p>
+<h3 id="冷热分离的多级分层策略" tabindex="-1">冷热分离的多级分层策略</h3>
+<p>实际落地时，“冷”与“热”往往不是非此即彼的二分法，而是<strong>渐进式多级分层</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>数据特性</th>
+<th>判定规则示例</th>
+<th>存储策略</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>热数据</strong></td>
+<td>高频访问、实时响应</td>
+<td>最近 30 天 + 所有未完成订单</td>
+<td>MySQL 热库（SSD）</td>
+</tr>
+<tr>
+<td><strong>温数据</strong></td>
+<td>中频访问、可能被查询</td>
+<td>30~90 天前的订单</td>
+<td>MySQL 温库（HDD）</td>
+</tr>
+<tr>
+<td><strong>冷数据</strong></td>
+<td>低频访问、偶发查询</td>
+<td>90 天~3 年的历史订单</td>
+<td>独立冷库或对象存储</td>
+</tr>
+<tr>
+<td><strong>归档数据</strong></td>
+<td>极少访问、仅合规留存</td>
+<td>超过 3 年的订单</td>
+<td>对象存储（仅保留汇总）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实践建议</strong>：判定规则应通过<strong>配置中心</strong>动态管理，避免因业务变化导致频繁修改代码。</p>
+<h3 id="冷数据被访问后如何处理" tabindex="-1">冷数据被访问后如何处理？</h3>
+<p>如果冷数据突然被访问（如用户查询 3 年前的订单），是否需要“热升级”？</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>适用场景</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>不回迁</strong></td>
+<td>偶发查询、查询频率极低</td>
+<td>实现简单</td>
+<td>查询速度慢</td>
+</tr>
+<tr>
+<td><strong>缓存层</strong></td>
+<td>中等频率查询</td>
+<td>加速查询、不改变存储</td>
+<td>需要额外缓存组件</td>
+</tr>
+<tr>
+<td><strong>异步回迁</strong></td>
+<td>高频查询、需要持续访问</td>
+<td>彻底解决性能问题</td>
+<td>实现复杂、可能产生一致性问题</td>
+</tr>
+</tbody>
+</table>
+<p><strong>推荐做法</strong>：绝大多数场景采用“<strong>不回迁 + 缓存层</strong>”的组合方案。冷数据查询时，先查缓存，命中则直接返回；未命中则查冷库并将结果写入缓存（针对偶发查询，设置 5~15 分钟的短暂 TTL 即可）。</p>
+<p><strong>⚠️注意</strong>：为防止恶意攻击者利用随机参数频繁查询不存在的数据导致冷库被击穿，可以在缓存层前置<strong>布隆过滤器（Bloom Filter）<strong>或在缓存中设置</strong>空值占位符</strong>，避免恶意请求穿透到冷库。详细介绍参考 <a href="/read/database/redis/redis-questions-02.html">Redis 常见面试题总结(下)</a>（Redis 事务、性能优化、生产问题、集群、使用规范等）。</p>
+<h3 id="冷热分离的思想" tabindex="-1">冷热分离的思想</h3>
+<p>冷热分离的核心思想是<strong>分层存储（Tiered Storage）</strong>，根据数据的访问特性将其分配到不同层级的存储介质中。在企业级存储架构中，通常划分为以下层级：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>数据特性</th>
+<th>典型存储介质</th>
+<th>访问延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hot（热层）</strong></td>
+<td>高频访问、实时响应</td>
+<td>NVMe SSD、内存</td>
+<td>毫秒级</td>
+</tr>
+<tr>
+<td><strong>Warm（温层）</strong></td>
+<td>中频访问、近期数据</td>
+<td>SATA SSD、高速 HDD</td>
+<td>百毫秒级</td>
+</tr>
+<tr>
+<td><strong>Cold（冷层）</strong></td>
+<td>低频访问、历史数据</td>
+<td>大容量 HDD、对象存储</td>
+<td>秒级</td>
+</tr>
+<tr>
+<td><strong>Archive（归档层）</strong></td>
+<td>极少访问、合规留存</td>
+<td>磁带库、冰川存储</td>
+<td>分钟~小时级</td>
+</tr>
+</tbody>
+</table>
+<p>这种分层思想在 IT 基础设施中被广泛应用，不仅限于数据库，还包括文件系统、对象存储、CDN 缓存等场景。</p>
+<h3 id="数据冷热分离的优缺点" tabindex="-1">数据冷热分离的优缺点</h3>
+<p><strong>优点：</strong></p>
+<ul>
+<li><strong>热数据查询性能优化</strong>：热数据集中在高性能存储上，表数据量大幅减少，索引效率显著提升，用户的绝大部分操作体验会更好。</li>
+<li><strong>存储成本大幅降低</strong>：冷数据可迁移至 HDD 或对象存储，<strong>SSD 与 HDD 的单位成本差距可达 5~10 倍</strong>，对于海量数据场景节省效果显著。</li>
+<li><strong>系统可维护性增强</strong>：热库数据量可控，备份恢复速度更快，DDL 操作（如加索引）耗时更短。</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li><strong>系统复杂性增加</strong>：需要额外的迁移组件、路由逻辑和监控体系，数据一致性风险增加。</li>
+<li><strong>跨库查询效率低</strong>：若业务需要同时查询冷热数据（如年度统计报表），需进行跨库关联或数据聚合，查询性能和开发成本均会上升。</li>
+<li><strong>迁移策略维护成本</strong>：冷热数据的判定规则需要持续调优，避免误判导致热数据被错误迁移。</li>
+</ul>
+<h2 id="冷数据迁移" tabindex="-1">冷数据迁移</h2>
+<h3 id="冷数据如何迁移" tabindex="-1">冷数据如何迁移？</h3>
+<p>冷数据迁移是冷热分离的核心环节，主流方案有以下三种：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>实现原理</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>业务层代码实现</strong></td>
+<td>写操作时判断冷热，直接路由到对应库</td>
+<td>实时性高</td>
+<td>侵入业务代码、判定逻辑复杂</td>
+<td>几乎不使用</td>
+</tr>
+<tr>
+<td><strong>任务调度迁移</strong></td>
+<td>定时任务扫描热库，批量迁移符合条件的数据</td>
+<td>实现简单</td>
+<td>存在迁移延迟、扫表可能污染 Buffer Pool</td>
+<td>时间维度区分场景</td>
+</tr>
+<tr>
+<td><strong>Binlog 监听迁移</strong></td>
+<td>监听数据库变更日志，实时或准实时迁移</td>
+<td>实时性好、对业务无侵入</td>
+<td>需要额外组件（如 Canal）、不适合时间维度判定</td>
+<td><strong>访问频率区分场景（推荐）</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>任务调度迁移</strong>是最常用的方案，可借助 XXL-Job、Elastic-Job 等分布式任务调度平台实现。关于任务调度的方案，我也写过文章详细介绍，可以查看这篇文章：<a href="/read/system-design/schedule-task.html">Java 定时任务详解</a> 。</p>
+<blockquote>
+<p>⚠️ <strong>风险提示</strong>：任务调度迁移在大数据量下存在性能隐患。大范围的扫表操作（如 <code>SELECT * FROM orders WHERE create_time &lt; 'xxx' LIMIT 10000</code>）会严重污染 InnoDB Buffer Pool，将真正的业务热数据挤出内存。<strong>生产环境建议</strong>：</p>
+<ul>
+<li>使用<strong>基于主键的范围查询</strong>，避免全表扫描；</li>
+<li>控制<strong>单次迁移批量大小</strong>，分批执行；</li>
+<li>在<strong>业务低峰期</strong>执行迁移任务；</li>
+<li>对于海量数据，优先考虑 <strong>Binlog 监听</strong>方案，将对热库的冲击降到最低。</li>
+</ul>
+</blockquote>
+<p>典型流程如下：</p>
+<p><img src="/img/data-cold-hot-separation-b0e9ec69.png" alt="" loading="lazy"></p>
+<p><strong>实践建议</strong>：若公司有 DBA 支持，可先进行一次<strong>存量冷数据的人工迁移</strong>，将历史数据批量导入冷库；后续再通过任务调度实现<strong>增量迁移</strong>的自动化。</p>
+<h3 id="迁移过程中如何保证数据一致性" tabindex="-1">迁移过程中如何保证数据一致性？</h3>
+<p>数据迁移过程中，最棘手的问题是：<strong>如果数据在迁移过程中被更新，如何处理？</strong></p>
+<h4 id="常见解决方案" tabindex="-1">常见解决方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>实现方式</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>迁移前锁定</strong></td>
+<td>迁移前对记录加写锁，迁移完成后释放</td>
+<td>一致性强</td>
+<td>影响业务写入、吞吐量下降</td>
+</tr>
+<tr>
+<td><strong>版本号乐观锁</strong></td>
+<td>迁移时记录版本，删除前校验版本是否变化</td>
+<td>无锁、性能好</td>
+<td>需要业务表增加版本字段、冲突时需重试</td>
+</tr>
+<tr>
+<td><strong>状态标记 + 幂等</strong></td>
+<td>热库增加迁移状态字段，先标记再迁移</td>
+<td>可追溯、支持回滚</td>
+<td>需要改造业务表</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：冷热库通常是<strong>不同的数据库实例</strong>，<code>INSERT</code>（冷库）和 <code>DELETE</code>（热库）无法放在同一个本地事务中，需要特殊处理跨库原子性问题。</p>
+</blockquote>
+<h4 id="推荐方案状态标记-幂等迁移" tabindex="-1">推荐方案：状态标记 + 幂等迁移</h4>
+<p>在热库表中增加 <code>migrate_status</code> 字段，通过状态机保证迁移的原子性和可追溯性：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">-- 1. 热库表增加迁移状态字段</span>
+<span class="hljs-keyword">ALTER TABLE</span> orders <span class="hljs-keyword">ADD</span> <span class="hljs-keyword">COLUMN</span> migrate_status TINYINT <span class="hljs-keyword">DEFAULT</span> <span class="hljs-number">0</span>
+    COMMENT <span class="hljs-string">&#x27;0-未迁移 1-迁移中 2-已迁移&#x27;</span>;
+</code></pre>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 2. 迁移流程（伪代码，独立冷库场景需在应用层分步执行）</span>
+
+<span class="hljs-comment">// Step 1: 标记为迁移中（热库事务）</span>
+hotDb.execute(<span class="hljs-string">&quot;UPDATE orders SET migrate_status = 1 WHERE id = ? AND migrate_status = 0&quot;</span>, id);
+
+<span class="hljs-comment">// Step 2: 读取热库数据并写入冷库（需切换数据库连接）</span>
+<span class="hljs-type">Order</span> <span class="hljs-variable">order</span> <span class="hljs-operator">=</span> hotDb.query(<span class="hljs-string">&quot;SELECT * FROM orders WHERE id = ?&quot;</span>, id);
+coldDb.execute(<span class="hljs-string">&quot;INSERT IGNORE INTO orders_cold VALUES (?, ?, ...)&quot;</span>, order.id, order.data...);
+
+<span class="hljs-comment">// Step 3: 标记为已迁移（热库事务）</span>
+hotDb.execute(<span class="hljs-string">&quot;UPDATE orders SET migrate_status = 2 WHERE id = ? AND migrate_status = 1&quot;</span>, id);
+
+<span class="hljs-comment">// Step 4: 延迟删除热库数据（可选，确认冷库数据无误后执行）</span>
+hotDb.execute(<span class="hljs-string">&quot;DELETE FROM orders WHERE id = ? AND migrate_status = 2&quot;</span>, id);
+</code></pre>
+<blockquote>
+<p><strong>注意</strong>：独立冷库场景下，标准 MySQL 无法直接执行跨库 <code>INSERT ... SELECT</code>，必须在应用层拆分为“读取热库 → 写入冷库”两步。</p>
+</blockquote>
+<p><strong>方案优势</strong>：</p>
+<ul>
+<li><strong>幂等性</strong>：<code>INSERT IGNORE</code> 保证冷库写入幂等，<code>migrate_status</code> 状态流转保证热库更新幂等。</li>
+<li><strong>可追溯</strong>：通过状态字段可以查询迁移进度，异常时可以人工介入。</li>
+<li><strong>可回滚</strong>：迁移失败时可以将状态重置为 0，重新迁移。</li>
+<li><strong>渐进式删除</strong>：不立即删除热库数据，确认冷库无误后再清理，降低风险。</li>
+</ul>
+<blockquote>
+<p><strong>空间回收</strong>：InnoDB 执行 <code>DELETE</code> 后仅将数据页标记为删除，物理空间不会立即释放给操作系统。需在<strong>业务低峰期</strong>执行 <code>OPTIMIZE TABLE</code> 或 <code>ALTER TABLE ENGINE=InnoDB</code> 重建表，才能真正回收磁盘空间。</p>
+</blockquote>
+<p><strong>兜底机制</strong>：</p>
+<ul>
+<li><strong>定时对账</strong>：定期扫描 <code>migrate_status = 1</code> 超过阈值的记录，自动重置或告警。<strong>注意</strong>：<code>migrate_status</code> 字段区分度极低，必须配合联合索引（如 <code>idx_create_time_migrate_status</code>）限定扫描区间，避免全表扫描。</li>
+<li><strong>高频更新兜底</strong>：对于因频繁更新导致多次跳过的记录，设置最大重试次数，超过后强制迁移或人工介入。</li>
+</ul>
+<h2 id="冷数据如何存储" tabindex="-1">冷数据如何存储？</h2>
+<p>冷数据存储方案的选型原则是：<strong>容量大、成本低、可靠性高，访问速度可适当牺牲</strong>。</p>
+<h3 id="中小厂方案" tabindex="-1">中小厂方案</h3>
+<p>直接使用 <strong>MySQL/PostgreSQL</strong> 即可，保持与热库相同的数据库类型，降低运维复杂度。具体实现方式：</p>
+<ul>
+<li><strong>同库分表</strong>：在同一数据库中新增冷数据表（如 <code>order_history</code>），通过表名区分冷热数据。</li>
+<li><strong>独立冷库</strong>：部署单独的数据库实例作为冷库，热库与冷库通过应用层路由访问。</li>
+</ul>
+<p><strong>⚠️注意</strong>：独立冷库方案涉及<strong>跨库查询</strong>，若业务存在冷热数据联合查询需求，需评估是否引入数据同步或聚合层。</p>
+<h3 id="大厂方案" tabindex="-1">大厂方案</h3>
+<p>大厂通常采用专门针对海量数据优化的存储引擎：</p>
+<table>
+<thead>
+<tr>
+<th>存储方案</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HBase</strong></td>
+<td>列族存储、高吞吐、支持 PB 级数据</td>
+<td>日志、用户行为、IoT 数据归档</td>
+</tr>
+<tr>
+<td><strong>RocksDB</strong></td>
+<td>高性能 KV 存储、LSM-Tree 结构</td>
+<td>嵌入式场景、作为其他系统底层存储</td>
+</tr>
+<tr>
+<td><strong>Doris/ClickHouse</strong></td>
+<td>OLAP 引擎、支持实时分析</td>
+<td>冷数据需要进行聚合分析的场景</td>
+</tr>
+<tr>
+<td><strong>Cassandra</strong></td>
+<td>分布式、高可用、无单点故障</td>
+<td>跨地域部署、高可用要求的归档场景</td>
+</tr>
+<tr>
+<td><strong>对象存储（OSS/S3）</strong></td>
+<td>成本极低、无限扩展</td>
+<td>超大规模冷数据、合规归档</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tidb-方案推荐" tabindex="-1">TiDB 方案（推荐）</h3>
+<p>如果公司技术栈允许，可以直接使用 <strong>TiDB</strong> 这类分布式关系型数据库，原生支持冷热分离，一步到位。</p>
+<p>TiDB 6.0 引入了 <strong>基于 SQL 接口的数据放置框架（Placement Rules in SQL）</strong> 功能，用于通过 SQL 接口配置数据在 TiKV 集群中的放置位置。</p>
+<ul>
+<li><strong>热数据</strong>：通过 Placement Rules 指定存储在 <strong>SSD 节点</strong>上，保障查询性能。</li>
+<li><strong>冷数据</strong>：指定存储在 <strong>HDD 节点</strong>上，降低存储成本。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">-- 创建放置策略：热数据存储在 SSD 节点</span>
+<span class="hljs-keyword">CREATE</span> PLACEMENT POLICY hot_data
+  CONSTRAINTS<span class="hljs-operator">=</span>&quot;[+disk=ssd]&quot;;
+
+<span class="hljs-comment">-- 创建放置策略：冷数据存储在 HDD 节点</span>
+<span class="hljs-keyword">CREATE</span> PLACEMENT POLICY cold_data
+  CONSTRAINTS<span class="hljs-operator">=</span>&quot;[+disk=hdd]&quot;;
+
+<span class="hljs-comment">-- 对表或分区应用放置策略</span>
+<span class="hljs-keyword">ALTER TABLE</span> orders PLACEMENT POLICY <span class="hljs-operator">=</span> hot_data;
+<span class="hljs-keyword">ALTER TABLE</span> orders <span class="hljs-keyword">PARTITION</span> p2022 PLACEMENT POLICY <span class="hljs-operator">=</span> cold_data;
+</code></pre>
+<p>这种方案的优势在于：<strong>业务无需感知冷热分离逻辑</strong>，数据路由由 TiDB 自动完成，大幅降低了应用层的复杂度。</p>
+<blockquote>
+<p><strong>完整实践</strong>：<code>Placement Rules</code> 指定了数据存放的介质类型，但数据如何从“热分区”流转到“冷分区”仍需结合<strong>分区表（Range Partitioning）</strong>。按时间跨度创建分区，为历史分区绑定 HDD 放置策略，为当前活跃分区绑定 SSD 放置策略。随着时间推移，只需维护分区的创建与销毁，底层数据即可在不同介质间自然流转。</p>
+</blockquote>
+<h2 id="冷数据如何查询" tabindex="-1">冷数据如何查询？</h2>
+<p>冷数据虽然访问频率低，但一旦需要查询（如审计、对账、年度报表），如何保证查询效率？</p>
+<h3 id="冷数据查询需求分析" tabindex="-1">冷数据查询需求分析</h3>
+<p>首先需要明确：<strong>业务是否真的需要查询冷数据？</strong></p>
+<ul>
+<li><strong>不需要</strong>：可将冷数据完全移出业务库，仅保留归档（如对象存储），需要时人工提取。</li>
+<li><strong>需要</strong>：需设计合理的查询方案，平衡性能与成本。</li>
+</ul>
+<h3 id="冷数据查询优化方案" tabindex="-1">冷数据查询优化方案</h3>
+<table>
+<thead>
+<tr>
+<th>优化手段</th>
+<th>实现方式</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>冷库独立只读实例</strong></td>
+<td>冷库部署只读副本，避免冷查询影响热库</td>
+<td>高频冷查询场景</td>
+</tr>
+<tr>
+<td><strong>查询路由</strong></td>
+<td>应用层根据时间范围自动路由到热库或冷库</td>
+<td>跨冷热查询场景</td>
+</tr>
+<tr>
+<td><strong>预聚合</strong></td>
+<td>定期对冷数据生成月度/季度报表，查询时直接查聚合结果</td>
+<td>统计分析场景</td>
+</tr>
+<tr>
+<td><strong>列式存储</strong></td>
+<td>冷库采用 ClickHouse、Doris 等 OLAP 引擎</td>
+<td>大规模分析查询</td>
+</tr>
+</tbody>
+</table>
+<p><strong>跨冷热查询的处理</strong>：</p>
+<p>若查询范围同时涉及冷热数据（如“查询近 2 年的订单”），有两种处理方式：</p>
+<ol>
+<li><strong>拆分查询</strong>：分别查询热库和冷库，应用层合并结果。</li>
+<li><strong>限制范围</strong>：提示用户缩小查询范围，避免跨库查询。</li>
+</ol>
+<blockquote>
+<p><strong>防雪崩预警</strong>：若业务包含<strong>全局分页排序</strong>（如 <code>ORDER BY create_time LIMIT 10000, 20</code>），应用层必须从冷热库各拉取 <code>10000 + 20</code> 条记录进行内存归并，偏移量较大时极易引发 <strong>OOM</strong>。<strong>强制要求</strong>：</p>
+<ul>
+<li>限制查询时间范围，避免大跨度跨库查询；</li>
+<li>或引流至底层同步的宽表（如 ClickHouse）进行计算；</li>
+<li>严禁在应用层执行大深度的归并分页。</li>
+</ul>
+</blockquote>
+<h3 id="应用层如何路由冷热数据" tabindex="-1">应用层如何路由冷热数据？</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>实现方式</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>硬编码</strong></td>
+<td>代码中直接判断路由</td>
+<td>实现简单</td>
+<td>维护成本高、规则变更需改代码</td>
+</tr>
+<tr>
+<td><strong>配置中心</strong></td>
+<td>路由规则存入配置中心（如 Nacos、Apollo）</td>
+<td>动态调整、无需重启</td>
+<td>需要额外组件支持</td>
+</tr>
+<tr>
+<td><strong>Proxy 层</strong></td>
+<td>引入 ShardingSphere、ProxySQL 等中间件</td>
+<td>业务无感知</td>
+<td>架构复杂度高</td>
+</tr>
+</tbody>
+</table>
+<p><strong>推荐做法</strong>：中小规模采用<strong>配置中心</strong>方案，大规模采用<strong>Proxy 层</strong>方案。</p>
+<blockquote>
+<p>⚠️ <strong>风险提示</strong>：引入 Proxy 层后，所有跨冷热库的聚合计算（如全局排序、<code>GROUP BY</code> 归并分页）都会压在 Proxy 节点的内存与 CPU 上。需严格限制此类操作的最大返回行数，否则极易导致 Proxy 节点 <strong>OOM（内存溢出）</strong>。</p>
+</blockquote>
+<h2 id="监控与回滚" tabindex="-1">监控与回滚</h2>
+<p>冷热分离上线后，至少要关注这些指标：</p>
+<ul>
+<li><strong>迁移进度</strong>：待迁移数量、迁移成功数、迁移失败数、重试次数。</li>
+<li><strong>迁移延迟</strong>：数据从热库满足冷却条件到真正迁移完成的时间。</li>
+<li><strong>一致性校验</strong>：冷热库记录数、关键字段摘要、金额类字段汇总。</li>
+<li><strong>查询命中分布</strong>：热库查询、冷库查询、跨冷热查询的比例。</li>
+<li><strong>冷库压力</strong>：冷库 QPS、RT、慢查询、连接数、存储增长速度。</li>
+<li><strong>异常回流</strong>：冷数据突然高频访问时，缓存命中率和冷库压力是否异常。</li>
+</ul>
+<p>回滚策略也要提前设计。比较稳妥的做法是迁移初期只复制不删除，等查询路由和一致性校验稳定后，再延迟清理热库数据。这样即使冷库查询链路出问题，也可以临时切回热库。</p>
+<h2 id="冷热分离-vs-数据归档-vs-分区表" tabindex="-1">冷热分离 vs 数据归档 vs 分区表</h2>
+<p>这三个概念容易混淆，需要区分清楚：</p>
+<table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>冷热分离</th>
+<th>数据归档</th>
+<th>分区表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>数据是否可访问</strong></td>
+<td>冷数据仍在业务访问路径上</td>
+<td>归档数据通常移出业务库</td>
+<td>所有分区均可访问</td>
+</tr>
+<tr>
+<td><strong>存储介质</strong></td>
+<td>冷热数据可跨实例、跨存储</td>
+<td>通常迁移到低成本存储</td>
+<td>同一实例内</td>
+</tr>
+<tr>
+<td><strong>实现复杂度</strong></td>
+<td>中等</td>
+<td>低</td>
+<td>低</td>
+</tr>
+<tr>
+<td><strong>典型场景</strong></td>
+<td>订单、日志等有时效性的数据</td>
+<td>合规留存、数据备份</td>
+<td>单表数据量大但无需分离存储</td>
+</tr>
+</tbody>
+</table>
+<p><strong>分区表的局限性</strong>：MySQL 分区表可以按时间分区，但所有分区仍在同一个实例中，<strong>无法实现存储介质的分离</strong>。如果目标是降低存储成本，分区表无法替代冷热分离。</p>
+<h2 id="典型业务场景" tabindex="-1">典型业务场景</h2>
+<blockquote>
+<p><strong>说明</strong>：以下存储策略仅供参考，实际选型需结合数据量、查询需求、团队技术栈和成本预算综合考虑。</p>
+</blockquote>
+<h3 id="订单系统" tabindex="-1">订单系统</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>数据范围</th>
+<th>存储策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>热数据</td>
+<td>最近 90 天 + 未完成订单</td>
+<td>MySQL 热库（SSD）</td>
+<td>高频访问，保障查询性能</td>
+</tr>
+<tr>
+<td>冷数据</td>
+<td>90 天~3 年</td>
+<td>MySQL 冷库（HDD）或 TiDB</td>
+<td>可能需要查询，保持关系型存储</td>
+</tr>
+<tr>
+<td>归档数据</td>
+<td>超过 3 年</td>
+<td>对象存储 / HBase / 仅保留汇总表</td>
+<td>极少查询，优先考虑成本</td>
+</tr>
+</tbody>
+</table>
+<h3 id="日志系统" tabindex="-1">日志系统</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>数据范围</th>
+<th>存储策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>热数据</td>
+<td>近 7 天</td>
+<td>Elasticsearch 热节点</td>
+<td>实时检索、高频查询</td>
+</tr>
+<tr>
+<td>温数据</td>
+<td>7~30 天</td>
+<td>Elasticsearch 温节点</td>
+<td>偶发查询，降低存储成本</td>
+</tr>
+<tr>
+<td>冷数据</td>
+<td>30 天以上</td>
+<td>Elasticsearch 冷节点 / 压缩归档至对象存储 / ClickHouse</td>
+<td>根据查询需求选择，ClickHouse 适合分析场景</td>
+</tr>
+</tbody>
+</table>
+<h3 id="内容系统" tabindex="-1">内容系统</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>数据范围</th>
+<th>存储策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>热数据</td>
+<td>发布后 3 个月内 + 高阅读量</td>
+<td>MySQL 热库</td>
+<td>频繁被访问</td>
+</tr>
+<tr>
+<td>冷数据</td>
+<td>3 个月后 + 低阅读量</td>
+<td>MySQL 冷库 / HBase / 对象存储</td>
+<td>访问频率低，可迁移至低成本存储</td>
+</tr>
+</tbody>
+</table>
+<p><strong>选型建议</strong>：</p>
+<ul>
+<li><strong>需要支持事务或复杂查询</strong>：优先选择 MySQL 冷库或 TiDB</li>
+<li><strong>需要大规模聚合分析</strong>：优先选择 ClickHouse 或 Doris</li>
+<li><strong>仅需偶尔查询明细</strong>：可选择对象存储（如 OSS/S3），查询时临时加载</li>
+<li><strong>数据量极大且访问极低</strong>：HBase 或对象存储是性价比最高的选择</li>
+</ul>
+<h2 id="案例分享" tabindex="-1">案例分享</h2>
+<ul>
+<li><a href="https://www.cnblogs.com/fulongyuanjushi/p/17910420.html" target="_blank" rel="noopener">如何快速优化几千万数据量的订单表 - 程序员济癫 - 2023</a></li>
+<li><a href="https://mp.weixin.qq.com/s/ZKRkZP6rLHuTE1wvnqmAPQ" target="_blank" rel="noopener">海量数据冷热分离方案与实践 - 字节跳动技术团队 - 2022</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

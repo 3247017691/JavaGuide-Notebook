@@ -1,0 +1,71 @@
+<p>Java 新特性不适合按版本机械背诵，更适合抓住“语言表达能力、标准库增强、并发模型、JVM 改进、长期支持版本”这几条主线。日常开发优先掌握 Java 8、11、17、21 等 LTS 版本中的稳定特性，再按需了解后续版本的预览和孵化特性。</p>
+<p>时间比较紧的话，可以先看面试突击版的 <a href="/read/java/new-features/README.html">Java 新特性常见面试题总结</a>，再回到本专题查看对应版本的完整说明。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统了解 Java 8 之后版本变化的 Java 开发者。</li>
+<li>准备 Java 新特性、LTS 版本差异、虚拟线程、Record、模式匹配等面试题的同学。</li>
+<li>负责 JDK 升级，需要判断哪些特性会影响项目代码和运行时表现的工程师。</li>
+<li>已经熟悉 Java 8，但对 Java 11、17、21 之后变化不够清楚的读者。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Java 8 的 Lambda、Stream、Optional、接口默认方法和新日期 API。</li>
+<li>Java 9 的模块化，以及后续版本对语言语法和标准库的持续增强。</li>
+<li>Java 11、17、21 等 LTS 版本中更值得优先掌握的稳定能力。</li>
+<li>var、文本块、Record、Switch 表达式、密封类、模式匹配等语言层变化。</li>
+<li>虚拟线程、结构化并发、分代 ZGC、Foreign Function &amp; Memory API 等运行时和并发相关变化。</li>
+<li>区分正式特性、预览特性、孵化特性，避免在生产升级中误判风险。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/java/new-features/java8-common-new-features.html">Java8 新特性实战</a>：先掌握 Lambda、Stream、Optional、接口默认方法和新日期 API。</li>
+<li><a href="/read/java/new-features/java9.html">Java 9 新特性概览</a>、<a href="/read/java/new-features/java10.html">Java 10 新特性概览</a>：理解模块化和局部变量类型推断等基础变化。</li>
+<li><a href="/read/java/new-features/java11.html">Java 11 新特性概览（重要）</a>：重点关注第一个 8 之后被广泛采用的 LTS 版本。</li>
+<li><a href="/read/java/new-features/java17.html">Java 17 新特性概览（重要）</a>：掌握 Record、密封类、Switch、模式匹配等现代 Java 语法演进。</li>
+<li><a href="/read/java/new-features/java21.html">Java 21 新特性概览(重要)</a>：重点学习虚拟线程、分代 ZGC、模式匹配和字符串模板等变化。</li>
+<li>再按需阅读 <a href="/read/java/new-features/java22-23.html">Java 22 &amp; 23 新特性概览</a>、<a href="/read/java/new-features/java24.html">Java 24 新特性概览</a>、<a href="/read/java/new-features/java25.html">Java 25 新特性概览</a>、<a href="/read/java/new-features/java26.html">Java 26 新特性概览</a>。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="java-8-基础能力" tabindex="-1">Java 8 基础能力</h3>
+<ul>
+<li><a href="/read/java/new-features/java8-common-new-features.html">Java8 新特性实战</a>：掌握 Lambda、函数式接口、Stream、Optional、接口默认方法和新日期 API。</li>
+<li><a href="/read/java/new-features/java8-tutorial-translate.html">《Java8 指南》中文翻译</a>：通过更系统的教程理解 Java 8 常用特性。</li>
+</ul>
+<h3 id="重要-lts-版本" tabindex="-1">重要 LTS 版本</h3>
+<ul>
+<li><a href="/read/java/new-features/java11.html">Java 11 新特性概览（重要）</a>：关注 HTTP Client、字符串 API、集合 API、ZGC 实验特性等变化。</li>
+<li><a href="/read/java/new-features/java17.html">Java 17 新特性概览（重要）</a>：关注 Record、密封类、Switch 表达式、文本块和模式匹配相关能力。</li>
+<li><a href="/read/java/new-features/java21.html">Java 21 新特性概览(重要)</a>：关注虚拟线程、分代 ZGC、Record Pattern、Pattern Matching for switch 等特性。</li>
+</ul>
+<h3 id="按版本追踪" tabindex="-1">按版本追踪</h3>
+<ul>
+<li><a href="/read/java/new-features/java9.html">Java 9 新特性概览</a>：理解模块化系统和 JShell。</li>
+<li><a href="/read/java/new-features/java10.html">Java 10 新特性概览</a>：了解局部变量类型推断和运行时改进。</li>
+<li><a href="/read/java/new-features/java12-13.html">Java 12 &amp; 13 新特性概览</a>：了解 Switch 表达式、文本块等变化。</li>
+<li><a href="/read/java/new-features/java14-15.html">Java 14 &amp; 15 新特性概览</a>：了解 Record、文本块、隐藏类等特性。</li>
+<li><a href="/read/java/new-features/java16.html">Java 16 新特性概览</a>：了解 Record 正式转正、Pattern Matching for instanceof 等变化。</li>
+<li><a href="/read/java/new-features/java18.html">Java 18 新特性概览</a>、<a href="/read/java/new-features/java19.html">Java 19 新特性概览</a>、<a href="/read/java/new-features/java20.html">Java 20 新特性概览</a>：跟进 UTF-8 默认字符集、虚拟线程预览、结构化并发等演进。</li>
+<li><a href="/read/java/new-features/java22-23.html">Java 22 &amp; 23 新特性概览</a>、<a href="/read/java/new-features/java24.html">Java 24 新特性概览</a>、<a href="/read/java/new-features/java25.html">Java 25 新特性概览</a>、<a href="/read/java/new-features/java26.html">Java 26 新特性概览</a>：了解较新版本中的预览、孵化和正式特性。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Java 8 为什么重要？Lambda 和 Stream 分别解决什么问题？</li>
+<li><code>Optional</code> 适合用在哪些场景？为什么不建议滥用？</li>
+<li>Java 9 模块化解决了什么问题？</li>
+<li><code>var</code> 是动态类型吗？它适合在哪些场景使用？</li>
+<li>Record 和普通 JavaBean 有什么区别？</li>
+<li>Switch 表达式和传统 switch 有什么区别？</li>
+<li>密封类适合解决什么问题？</li>
+<li>模式匹配带来了哪些代码简化？</li>
+<li>虚拟线程适合什么场景？和平台线程有什么区别？</li>
+<li>生产升级 JDK 时，如何区分正式特性、预览特性和孵化特性？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/java/README.html">Java 知识体系</a></li>
+<li><a href="/read/java/basis/README.html">Java 基础专题</a></li>
+<li><a href="/read/java/concurrent/README.html">Java 并发编程专题</a></li>
+<li><a href="/read/java/jvm/README.html">JVM 专题</a></li>
+<li><a href="/read/java/io/README.html">Java IO 专题</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,178 @@
+<h2 id="介绍" tabindex="-1">介绍</h2>
+<p><strong>《后端面试高频系统设计&amp;场景题》</strong> 是我的<a href="/read/about-the-author/zhishixingqiu-two-years.html">知识星球</a>的一个内部小册，系统性地总结了后端面试中高频出现的系统设计案例和场景题。</p>
+<h3 id="为什么你需要这份小册" tabindex="-1">为什么你需要这份小册？</h3>
+<p>近年来，国内技术面试“越来越卷”。越来越多的公司（阿里、美团、字节、腾讯等）开始在面试中考察 <strong>系统设计</strong> 和 <strong>场景问题</strong>，以此来更全面地考察求职者的综合能力——不论是校招还是社招。</p>
+<blockquote>
+<p>很多同学八股文背得滚瓜烂熟，但一遇到“如何设计一个秒杀系统？”这类开放性问题就懵了。</p>
+</blockquote>
+<p><strong>系统设计和场景题的考察特点</strong>：</p>
+<ul>
+<li>✅ 没有标准答案，重点考察思维过程和架构能力</li>
+<li>✅ 考察对高并发、高可用、分布式等技术的综合运用</li>
+<li>✅ 考察解决实际问题的能力和工程经验</li>
+<li>⚠️ 正常面试不会全是场景题，一般会穿插 1-2 道来考察你</li>
+</ul>
+<p>于是，<strong>《后端面试高频系统设计&amp;场景题》</strong> 小册就诞生了！</p>
+<h3 id="这份小册能带给你什么" tabindex="-1">这份小册能带给你什么？</h3>
+<p><strong>1. 面试加分项</strong></p>
+<p>系统设计和场景题回答得好，面试官会对你印象非常好！这类问题稍微准备就能脱颖而出。</p>
+<p><strong>2. 提升系统设计思维</strong></p>
+<p>即使不是准备面试，这份小册也能帮助你建立系统设计的思维框架，提升解决实际问题的能力。</p>
+<p><strong>3. 实战落地参考</strong></p>
+<p>涉及到的很多案例都可以直接用到自己的项目上，比如：</p>
+<ul>
+<li>第三方授权登录（微信/QQ 登录）</li>
+<li>Redis 实现延时任务的正确方式</li>
+<li>动态线程池的设计与实现</li>
+<li>分布式锁的多种实现方案</li>
+</ul>
+<h2 id="内容概览" tabindex="-1">内容概览</h2>
+<h3 id="-系统设计案例" tabindex="-1">📐 系统设计案例</h3>
+<table>
+<thead>
+<tr>
+<th>主题</th>
+<th>核心知识点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⭐ <strong>如何设计一个动态线程池？</strong></td>
+<td>线程池参数动态调整、监控告警、拒绝策略、优雅停机</td>
+</tr>
+<tr>
+<td><strong>如何设计一个站内消息系统？</strong></td>
+<td>消息推送、未读数统计、WebSocket、消息队列</td>
+</tr>
+<tr>
+<td><strong>如何设计微博 Feed 流/信息流系统？</strong></td>
+<td>推拉模型、Timeline、智能推荐、读写扩散、缓存策略</td>
+</tr>
+<tr>
+<td><strong>如何设计一个排行榜？</strong></td>
+<td>Redis Sorted Set、实时更新、分页查询、海量数据排序</td>
+</tr>
+<tr>
+<td><strong>几种典型的系统设计案例（整理补充）</strong></td>
+<td>点赞、优惠券、红包等综合案例分享</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-高频场景题" tabindex="-1">🎯 高频场景题</h3>
+<table>
+<thead>
+<tr>
+<th>主题</th>
+<th>核心知识点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⭐ <strong>订单超时自动取消如何实现？</strong></td>
+<td>延时队列、定时任务、状态机、幂等性保障</td>
+</tr>
+<tr>
+<td><strong>如何基于 Redis 实现延时任务？</strong></td>
+<td>过期事件监听 vs Redisson DelayedQueue、时效性、可靠性</td>
+</tr>
+<tr>
+<td>⭐ <strong>如何解决大文件上传问题？</strong></td>
+<td>分片上传、断点续传、秒传、并发上传、文件校验</td>
+</tr>
+<tr>
+<td><strong>如何实现 IP 归属地功能？</strong></td>
+<td>IP 库选择、离线库 vs 在线接口、性能优化</td>
+</tr>
+<tr>
+<td><strong>如何统计网站 UV？</strong></td>
+<td>PV/UV/VV/IP 概念、HyperLogLog、去重统计</td>
+</tr>
+<tr>
+<td>⭐ <strong>几种典型的后端面试场景题（补充）</strong></td>
+<td>限流、幂等、缓存穿透等综合场景</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-认证安全与风控" tabindex="-1">🔐 认证安全与风控</h3>
+<table>
+<thead>
+<tr>
+<th>主题</th>
+<th>核心知识点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⭐ <strong>项目敏感词脱敏是如何实现的？</strong></td>
+<td>脱敏策略、正则匹配、性能优化、动态配置</td>
+</tr>
+<tr>
+<td>⭐ <strong>如何安全传输和存储密码？</strong></td>
+<td>加盐哈希、BCrypt、HTTPS、防重放攻击</td>
+</tr>
+<tr>
+<td><strong>如何实现第三方授权登录？</strong></td>
+<td>OAuth 2.0 协议、授权码模式、Token 机制、JWT</td>
+</tr>
+<tr>
+<td><strong>验证码登录场景怎么设计？</strong></td>
+<td>验证码生成、存储、校验、防刷、有效期管理</td>
+</tr>
+<tr>
+<td><strong>多次输错密码后如何限制登录？</strong></td>
+<td>限流策略、Redis 计数器、滑动窗口、分布式限流</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-大数据量场景" tabindex="-1">📊 大数据量场景</h3>
+<table>
+<thead>
+<tr>
+<th>主题</th>
+<th>核心知识点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⭐ <strong>40 亿个 QQ 号，限制 1G 内存，如何去重？</strong></td>
+<td>位图、布隆过滤器、分治思想、外部排序</td>
+</tr>
+<tr>
+<td>⭐ <strong>日活上亿，如何保证推荐视频不重复？</strong></td>
+<td>布隆过滤器、Redis Set、去重策略、空间优化</td>
+</tr>
+<tr>
+<td>⭐ <strong>大数据 Top K 问题</strong></td>
+<td>堆排序、快速选择、分治、MapReduce</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-并发控制与分布式一致性" tabindex="-1">🔄 并发控制与分布式一致性</h3>
+<table>
+<thead>
+<tr>
+<th>主题</th>
+<th>核心知识点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>多位骑手抢一个订单如何保证不重复？</strong></td>
+<td>分布式锁、乐观锁、Redis SETNX、并发控制</td>
+</tr>
+<tr>
+<td><strong>发生提现失败（退单）时怎么处理？</strong></td>
+<td>补偿机制、幂等设计、状态回滚、对账系统</td>
+</tr>
+</tbody>
+</table>
+<h2 id="内容预览" tabindex="-1">内容预览</h2>
+<p><img src="/img/back-end-interview-high-frequency-system-design--d512d87a.png" alt="" loading="lazy"></p>
+<h2 id="适合人群" tabindex="-1">适合人群</h2>
+<ul>
+<li>🎓 <strong>校招求职者</strong>：应对大厂系统设计面试</li>
+<li>👨‍💻 <strong>社招跳槽者</strong>：提升架构设计能力，拿到更好的 offer</li>
+<li>🔧 <strong>初中级工程师</strong>：学习系统设计思维，提升解决实际问题的能力</li>
+<li>📚 <strong>技术爱好者</strong>：了解常见系统的设计原理</li>
+</ul>
+<!-- @include: @planet2.snippet.md -->

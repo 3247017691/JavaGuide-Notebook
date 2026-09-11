@@ -1,0 +1,82 @@
+<p><strong>Java 10</strong> 发布于 2018 年 3 月 20 日，这是一个非 LTS（长期支持）版本，Oracle 仅提供六个月的支持。</p>
+<p>下图是从 JDK 8 到 JDK 25 每个版本的更新带来的新特性数量和更新时间：</p>
+<p><img src="/img/jdk8-jdk24-a3e32dd5.png" alt="" loading="lazy"></p>
+<p>这篇文章会挑选其中较为重要的一些新特性进行详细介绍：</p>
+<ul>
+<li><a href="https://openjdk.org/jeps/286" target="_blank" rel="noopener">JEP 286: Local-Variable Type Inference（局部变量类型推断）</a></li>
+<li><a href="https://openjdk.org/jeps/304" target="_blank" rel="noopener">JEP 304: Garbage-Collector Interface（垃圾回收器接口）</a></li>
+<li><a href="https://openjdk.org/jeps/307" target="_blank" rel="noopener">JEP 307: Parallel Full GC for G1（G1 并行 Full GC）</a></li>
+<li><a href="https://openjdk.org/jeps/310" target="_blank" rel="noopener">JEP 310: Application Class-Data Sharing（应用程序类数据共享）</a></li>
+<li><a href="https://openjdk.org/jeps/317" target="_blank" rel="noopener">JEP 317: Experimental Java-Based JIT Compiler（实验性的基于 Java 的 JIT 编译器）</a></li>
+</ul>
+<h2 id="jep-286-local-variable-type-inference" tabindex="-1">JEP 286: Local-Variable Type Inference</h2>
+<p>由于太多 Java 开发者希望 Java 中引入局部变量类型推断，于是 Java 10 的时候它来了，也算是众望所归了！</p>
+<p>Java 10 提供了 <code>var</code> 关键字声明局部变量。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">var</span> <span class="hljs-variable">id</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+<span class="hljs-type">var</span> <span class="hljs-variable">codefx</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">URL</span>(<span class="hljs-string">&quot;https://mp.weixin.qq.com/&quot;</span>);
+<span class="hljs-type">var</span> <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+<span class="hljs-type">var</span> <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> List.of(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);
+<span class="hljs-type">var</span> <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;String, String&gt;();
+<span class="hljs-type">var</span> <span class="hljs-variable">p</span> <span class="hljs-operator">=</span> Paths.of(<span class="hljs-string">&quot;src/test/java/Java9FeaturesTest.java&quot;</span>);
+<span class="hljs-type">var</span> <span class="hljs-variable">numbers</span> <span class="hljs-operator">=</span> List.of(<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>, <span class="hljs-string">&quot;c&quot;</span>);
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> n : numbers)
+    System.out.print(n+ <span class="hljs-string">&quot; &quot;</span>);
+</code></pre>
+<p><code>var</code> 只能用于有初始化器的局部变量声明，也可以用于基本或增强 <code>for</code> 循环中的局部变量，以及 <code>try</code>-with-resources 的资源变量。它不能用于字段、方法参数或返回类型。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">var</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>; <span class="hljs-comment">//❌编译不通过，不能声明为 null</span>
+<span class="hljs-type">var</span> <span class="hljs-variable">r</span> <span class="hljs-operator">=</span> () -&gt; Math.random();<span class="hljs-comment">//❌编译不通过，不能声明为 Lambda表达式</span>
+<span class="hljs-type">var</span> <span class="hljs-variable">array</span> <span class="hljs-operator">=</span> {<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>};<span class="hljs-comment">//❌编译不通过，不能声明数组</span>
+</code></pre>
+<p><code>var</code> 并不会改变 Java 是一门静态类型语言的事实，编译器负责推断出类型。</p>
+<p>另外，Scala 和 Kotlin 中已经有了 <code>val</code> 关键字 ( <code>final var</code> 组合关键字)。</p>
+<h2 id="jep-304-garbage-collector-interface" tabindex="-1">JEP 304: Garbage-Collector Interface</h2>
+<p>在早期的 JDK 结构中，组成垃圾收集器 (GC) 实现的组件分散在代码库的各个部分。 Java 10 通过引入一套纯净的垃圾收集器接口来将不同垃圾收集器的源代码分隔开。</p>
+<h2 id="jep-307-parallel-full-gc-for-g1" tabindex="-1">JEP 307: Parallel Full GC for G1</h2>
+<p>从 Java 9 开始 G1 就成了默认的垃圾回收器，G1 是以一种低延时的垃圾回收器来设计的，旨在避免进行 Full GC，但是 Java 9 的 G1 的 Full GC 依然是使用单线程去完成标记清除算法，这可能会导致垃圾回收器在无法回收内存的时候触发 Full GC。</p>
+<p>为了减少 Full GC 造成的应用停顿，从 Java 10 开始，G1 的 Full GC 改为使用多个并行工作线程执行标记、清除和压缩。这个变化缩短的是 Full GC 的停顿时间，并不会直接减少 Full GC 的触发次数。</p>
+<h2 id="jep-310-应用程序类数据共享扩展-cds-功能" tabindex="-1">JEP 310: <strong>应用程序类数据共享（扩展 CDS 功能）</strong></h2>
+<p>Java 5 已经引入类数据共享机制（Class Data Sharing，简称 CDS），允许将一组系统类预处理为共享归档文件，以便在运行时进行内存映射，从而减少 Java 程序的启动时间和多个 JVM 的内存占用。将应用类加入共享归档的 AppCDS 此前只在 Oracle JDK 中作为商业特性提供。</p>
+<p>Java 10 在现有 CDS 功能基础上进一步扩展并开放 AppCDS，允许应用类放入共享归档。典型流程是先生成应用类列表，再根据类列表创建共享归档，后续启动时通过内存映射加载该归档；类列表文本本身并不是 JVM 在后续启动时直接加载的缓存。</p>
+<h2 id="jep-317-实验性的基于-java-的-jit-编译器" tabindex="-1">JEP 317: <strong>实验性的基于 Java 的 JIT 编译器</strong></h2>
+<p>Graal 是一个基于 Java 语言编写的 JIT 编译器，是 JDK 9 中引入的实验性 Ahead-of-Time (AOT) 编译器的基础。</p>
+<p>Oracle 的 HotSpot VM 便附带两个用 C++ 实现的 JIT compiler：C1 及 C2。在 Java 10 (Linux/x64, macOS/x64) 中，默认情况下 HotSpot 仍使用 C2，但通过向 java 命令添加 <code>-XX:+UnlockExperimentalVMOptions -XX:+UseJVMCICompiler</code> 参数便可将 C2 替换成 Graal。</p>
+<h2 id="api-增强" tabindex="-1">API 增强</h2>
+<p>并不是所有的 API 改动都会通过 JEP（Java Enhancement Proposal）来发布。</p>
+<p>在 JDK 的开发流程中：<strong>JEP</strong> 通常用于重大的改变，例如引入新的语言特性（如 <code>var</code>）、新的 JVM 机制（如 ZGC）或者大规模的库重构。像 <code>List.copyOf()</code> 这种在现有类中增加几个静态方法的操作，通常被视为常规的库维护。它们由 JDK 开发者直接通过 <strong>JBS (JDK Bug System)</strong> 的工单（Ticket）进行提交和评审，然后随版本直接发布。</p>
+<h3 id="集合增强" tabindex="-1">集合增强</h3>
+<p><code>List</code>，<code>Set</code>，<code>Map</code> 提供了静态方法 <code>copyOf()</code> 返回入参集合的一个不可变拷贝。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> &lt;E&gt; <span class="hljs-type">List</span>&lt;E&gt; <span class="hljs-title function_">copyOf</span><span class="hljs-params">(Collection&lt;? extends E&gt; coll)</span> {
+    <span class="hljs-keyword">return</span> ImmutableCollections.listCopy(coll);
+}
+</code></pre>
+<p>使用 <code>copyOf()</code> 创建的集合为不可变集合，不能进行添加、删除、替换、 排序等操作，不然会报 <code>java.lang.UnsupportedOperationException</code> 异常。 IDEA 也会有相应的提示。</p>
+<p><img src="/img/image-20210816154125579-18a6d393.png" alt="" loading="lazy"></p>
+<p>并且，<code>java.util.stream.Collectors</code> 中新增了静态方法，用于将流中的元素收集为不可变的集合。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">var</span> <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+list.stream().collect(Collectors.toUnmodifiableList());
+list.stream().collect(Collectors.toUnmodifiableSet());
+</code></pre>
+<h3 id="optional-增强" tabindex="-1">Optional 增强</h3>
+<p><code>Optional</code> 新增了一个无参的 <code>orElseThrow()</code> 方法，作为带参数的 <code>orElseThrow(Supplier&lt;? extends X&gt; exceptionSupplier)</code> 的简化版本，在没有值时默认抛出一个 NoSuchElementException 异常。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Optional</span>&lt;String&gt; <span class="hljs-variable">optional</span> <span class="hljs-operator">=</span> Optional.empty();
+<span class="hljs-type">String</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> optional.orElseThrow();
+</code></pre>
+<h2 id="其他" tabindex="-1">其他</h2>
+<ul>
+<li><strong>线程-局部管控</strong>：Java 10 中线程管控引入 JVM 安全点的概念，将允许在不运行全局 JVM 安全点的情况下实现线程回调，由线程本身或者 JVM 线程来执行，同时保持线程处于阻塞状态，这种方式使得停止单个线程变成可能，而不是只能启用或停止所有线程</li>
+<li><strong>备用存储装置上的堆分配</strong>：Java 10 中将使得 JVM 能够使用适用于不同类型的存储机制的堆，在可选内存设备上进行堆内存分配</li>
+<li>……</li>
+</ul>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>
+<p>Java 10 Features and Enhancements : <a href="https://howtodoinjava.com/java10/java10-features/" target="_blank" rel="noopener">https://howtodoinjava.com/java10/java10-features/</a></p>
+</li>
+<li>
+<p>Guide to Java10 : <a href="https://www.baeldung.com/java-10-overview" target="_blank" rel="noopener">https://www.baeldung.com/java-10-overview</a></p>
+</li>
+<li>
+<p>4 Class Data Sharing : <a href="https://docs.oracle.com/javase/10/vm/class-data-sharing.htm#JSJVM-GUID-7EAA3411-8CF0-4D19-BD05-DF5E1780AA91" target="_blank" rel="noopener">https://docs.oracle.com/javase/10/vm/class-data-sharing.htm#JSJVM-GUID-7EAA3411-8CF0-4D19-BD05-DF5E1780AA91</a></p>
+</li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

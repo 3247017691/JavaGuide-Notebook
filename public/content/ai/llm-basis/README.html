@@ -1,0 +1,46 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>大模型 API 看起来只是一段请求和一段返回，实际落地时问题都藏在细节里：Token 怎么花掉、上下文为什么塞不下、采样参数会不会让答案飘、结构化输出为什么偶发失败、上线前怎么证明效果真的变好了。</p>
+<p>这份 <strong>大模型基础专题</strong> 面向 AI 应用开发入门和工程落地，先把这些基础问题讲清楚，再进入 Agent、RAG 和系统设计会顺很多。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在学习 LLM 基础概念和大模型 API 调用的开发者。</li>
+<li>做过 Prompt Demo，但对生产级调用链路、结构化输出和评测不熟的工程师。</li>
+<li>准备大模型基础、Function Calling、Tool Calling、AI 应用评测相关面试题的同学。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Token、上下文窗口、Temperature、Top P、停止词等参数如何影响模型输出。</li>
+<li>生产级大模型 API 调用需要处理流式响应、超时、重试、限流、fallback、日志和审计。</li>
+<li>结构化输出不能只靠 Prompt，还要结合 JSON Schema、Function Calling、Tool Calling 和服务端校验；即便这样，也要准备失败兜底。</li>
+<li>AI 应用评测要区分离线 Golden Set、LLM-as-Judge、线上灰度、Trace 回放和持续回归。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/ai/llm-basis/llm-operation-mechanism.html">LLM 运行机制：Token、上下文窗口与采样参数怎么影响输出</a>：先理解 Token、上下文窗口和采样参数。</li>
+<li><a href="/read/ai/llm-basis/llm-api-engineering.html">大模型 API 调用工程实践</a>：再看大模型调用如何接入真实后端链路。</li>
+<li><a href="/read/ai/llm-basis/structured-output-function-calling.html">大模型结构化输出详解</a>：补齐结构化返回和工具调用基础。</li>
+<li><a href="/read/ai/llm-basis/llm-evaluation.html">AI 应用评测体系</a>：最后建立质量评估和上线回归方法。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/ai/llm-basis/llm-operation-mechanism.html">LLM 运行机制：Token、上下文窗口与采样参数怎么影响输出</a>：把 Token、上下文窗口、Temperature 等概念还原为可观察、可调试的工程参数。</li>
+<li><a href="/read/ai/llm-basis/llm-api-engineering.html">大模型 API 调用工程实践</a>：拆解 AI 应用调用大模型 API 的生产链路，覆盖流式输出、重试、限流、结构化返回与后端工程落地。</li>
+<li><a href="/read/ai/llm-basis/structured-output-function-calling.html">大模型结构化输出详解</a>：讲清 JSON Schema、Function Calling、Tool Calling 与 MCP 在一次工具调用里分别负责什么。</li>
+<li><a href="/read/ai/llm-basis/llm-evaluation.html">AI 应用评测体系</a>：从 Golden Set、LLM-as-Judge、RAG/Agent 指标、Trace 回放到 CI 回归，说明 AI 应用该怎么验收。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>为什么同一个 Prompt 每次输出不一样？</li>
+<li>上下文窗口变大是不是就一定更好？</li>
+<li>为什么结构化输出会偶发失败？如何做兜底和校验？</li>
+<li>Function Calling、Tool Calling、MCP 分别解决什么问题？</li>
+<li>AI 应用上线前如何证明“效果变好了”而不是只凭感觉？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/ai/README.html">AI 应用开发知识体系</a></li>
+<li><a href="/read/ai/agent/README.html">AI Agent 专题</a></li>
+<li><a href="/read/ai/rag/README.html">RAG 专题</a></li>
+<li><a href="/read/ai/interview-questions/README.html">AI 应用开发面试题专题</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

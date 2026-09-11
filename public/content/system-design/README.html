@@ -1,0 +1,86 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>这份 <strong>系统设计知识体系</strong> 面向后端学习、工程实践和面试复习，围绕“把业务需求拆成稳定、可维护、可扩展的工程方案”整理本站系统设计相关文章。</p>
+<p>系统设计不是只背秒杀、短链、Feed 流这类场景题。真正落到后端开发里，还需要理解 API 设计、代码质量、设计模式、框架原理、认证授权、数据安全、定时任务和实时消息推送等基础能力。</p>
+<p>如果你时间有限，建议先看 <a href="/read/system-design/system-design-questions.html">系统设计常见面试题总结</a>，快速建立高频问题清单；如果想系统补基础，可以按下面的阅读顺序推进。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在系统学习后端系统设计的开发者。</li>
+<li>准备校招、社招、中大厂后端面试的同学。</li>
+<li>想把“会写业务代码”进一步提升到“能设计模块和方案”的工程师。</li>
+<li>已经接触 Spring、MyBatis、权限系统、定时任务等技术，但缺少系统化梳理的读者。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>系统设计面试中，如何从需求澄清、核心流程、数据模型、接口设计、扩展性和风险点组织答案？</li>
+<li>RESTful API、命名、重构、单元测试这些工程基础，如何影响长期维护成本？</li>
+<li>设计模式不是背 UML 图，而是理解常见变化点如何被封装。</li>
+<li>Spring、MyBatis、Netty 等框架分别解决了哪些工程复杂度？</li>
+<li>认证授权、JWT、SSO、权限系统和数据安全分别覆盖安全链路的哪些部分？</li>
+<li>定时任务和实时消息推送在生产环境里有哪些选型和稳定性问题？</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/system-design/system-design-questions.html">系统设计常见面试题总结</a>：先建立系统设计场景题和高频问题清单。</li>
+<li><a href="/read/system-design/basis/README.html">系统设计基础专题</a>：补齐 RESTful API、软件工程、代码命名、代码重构和单元测试。</li>
+<li><a href="/read/system-design/design-pattern.html">设计模式常见面试题总结</a>：理解常见设计模式适合解决哪些变化点。</li>
+<li><a href="/read/system-design/framework/spring/README.html">Spring &amp; Spring Boot 专题</a>：掌握 IoC、AOP、事务、自动装配、常用注解和框架设计模式。</li>
+<li><a href="/read/system-design/security/README.html">认证授权与数据安全专题</a>：系统理解认证授权、JWT、SSO、权限系统、加密、脱敏和数据校验。</li>
+<li>再根据项目需要阅读 <a href="/read/system-design/schedule-task.html">Java 定时任务详解</a> 和 <a href="/read/system-design/web-real-time-message-push.html">Web 实时消息推送详解</a>。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="系统设计与工程基础" tabindex="-1">系统设计与工程基础</h3>
+<ul>
+<li><a href="/read/system-design/system-design-questions.html">系统设计常见面试题总结</a>：覆盖短链系统、秒杀系统、海量数据处理等系统设计场景题。</li>
+<li><a href="/read/system-design/basis/README.html">系统设计基础专题</a>：从 RESTful API、软件工程讲到代码命名、代码重构和单元测试。</li>
+<li><a href="/read/system-design/basis/RESTfulAPI.html">RestFul API 简明教程</a>：理解资源建模、HTTP 方法、状态码和接口设计规范。</li>
+<li><a href="/read/system-design/basis/refactoring.html">代码重构指南</a>：理解代码坏味道、重构原则和常见重构手法。</li>
+<li><a href="/read/system-design/basis/unit-test.html">单元测试到底是什么？应该怎么做？</a>：理解单元测试、Mock、Stub、测试金字塔和 JUnit 基础。</li>
+<li><a href="/read/system-design/design-pattern.html">设计模式常见面试题总结</a>：梳理单例、工厂、代理、责任链、策略、观察者等常见设计模式。</li>
+</ul>
+<h3 id="常用框架" tabindex="-1">常用框架</h3>
+<ul>
+<li><a href="/read/system-design/framework/spring/README.html">Spring &amp; Spring Boot 专题</a>：串联 Spring、Spring MVC、Spring Boot 的常见问题。</li>
+<li><a href="/read/system-design/framework/spring/spring-knowledge-and-questions-summary.html">Spring常见面试题总结</a>：覆盖 IoC、AOP、Bean 生命周期、依赖注入等核心问题。</li>
+<li><a href="/read/system-design/framework/spring/springboot-knowledge-and-questions-summary.html">SpringBoot常见面试题总结</a>：覆盖自动配置、Starter、配置加载和 Actuator 等问题。</li>
+<li><a href="/read/system-design/framework/mybatis/mybatis-interview.html">MyBatis常见面试题总结</a>：理解 <code>#{}</code>、<code>${}</code>、动态 SQL、缓存、分页插件和 Mapper 映射。</li>
+<li><a href="/read/system-design/framework/netty.html">Netty常见面试题总结</a>：了解高性能网络编程、Reactor 模型、事件循环和 ChannelPipeline。</li>
+</ul>
+<h3 id="认证授权与数据安全" tabindex="-1">认证授权与数据安全</h3>
+<ul>
+<li><a href="/read/system-design/security/README.html">认证授权与数据安全专题</a>：围绕认证授权、JWT、SSO、权限系统、加密、脱敏和数据校验展开。</li>
+<li><a href="/read/system-design/security/basis-of-authority-certification.html">认证授权基础概念详解</a>：理解认证、授权、Session、Token、OAuth2 等基础概念。</li>
+<li><a href="/read/system-design/security/jwt-intro.html">JWT 基础概念详解</a>：理解 JWT 组成、签名、工作流程和登录鉴权场景。</li>
+<li><a href="/read/system-design/security/design-of-authority-system.html">权限系统设计详解</a>：理解 RBAC 权限模型和权限系统设计。</li>
+<li><a href="/read/system-design/security/encryption-algorithms.html">常见加密算法总结</a>：理解对称加密、非对称加密、哈希算法和常见应用场景。</li>
+<li><a href="/read/system-design/security/data-desensitization.html">数据脱敏方案总结</a>：理解常见敏感数据脱敏规则和工程实现。</li>
+</ul>
+<h3 id="任务调度与消息推送" tabindex="-1">任务调度与消息推送</h3>
+<ul>
+<li><a href="/read/system-design/schedule-task.html">Java 定时任务详解</a>：梳理 Timer、ScheduledThreadPoolExecutor、DelayQueue、时间轮、Spring @Scheduled 和分布式任务调度框架。</li>
+<li><a href="/read/system-design/web-real-time-message-push.html">Web 实时消息推送详解</a>：理解短轮询、长轮询、SSE、WebSocket 和消息推送选型。</li>
+<li><a href="/read/system-design/J2EE基础知识.html">J2EE 基础知识</a>：回顾 Servlet、请求转发与重定向、Session 和 Cookie 等 Java Web 基础。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>系统设计题应该按什么结构回答？</li>
+<li>RESTful API 设计里，资源路径、HTTP 方法和状态码应该如何使用？</li>
+<li>代码命名、重构和单元测试为什么会影响系统可维护性？</li>
+<li>常见设计模式分别解决什么问题？在 Spring 里有哪些应用？</li>
+<li>Spring IoC、AOP、Bean 生命周期和事务机制怎么理解？</li>
+<li>Spring Boot 自动装配的核心流程是什么？</li>
+<li>MyBatis 的 <code>#{}</code> 和 <code>${}</code> 有什么区别？一级缓存和二级缓存如何工作？</li>
+<li>认证和授权有什么区别？Session、Token、JWT、OAuth2 分别适合什么场景？</li>
+<li>RBAC 权限系统应该如何设计？</li>
+<li>数据脱敏、数据校验和加密算法分别解决什么安全问题？</li>
+<li>定时任务框架应该如何选型？分布式任务调度要注意哪些问题？</li>
+<li>Web 实时消息推送有哪些方案？短轮询、SSE 和 WebSocket 如何取舍？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统知识体系</a></li>
+<li><a href="/read/distributed-system/README.html">分布式系统知识体系</a></li>
+<li><a href="/read/database/README.html">数据库</a></li>
+<li><a href="/read/cs-basics/network/other-network-questions.html">计算机网络</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

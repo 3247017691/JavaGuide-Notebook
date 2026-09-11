@@ -1,0 +1,281 @@
+<p>Java 21（JDK 21）于 2023 年 9 月 19 日正式发布，是 Oracle 认定的长期支持（LTS）版本。</p>
+<p>按照 Oracle 2026 年 4 月更新的 Java SE 支持路线图，Oracle JDK 21 的 Premier Support 持续到 2028 年 9 月，Extended Support 持续到 2031 年 9 月。不同 JDK 发行版的免费更新和商业支持周期可能不同。</p>
+<p>JDK 21 共有 15 个新特性，这篇文章会挑选其中较为重要的一些新特性进行详细介绍：</p>
+<ul>
+<li><a href="https://openjdk.org/jeps/430" target="_blank" rel="noopener">JEP 430: String Templates（字符串模板）</a>（预览）</li>
+<li><a href="https://openjdk.org/jeps/431" target="_blank" rel="noopener">JEP 431: Sequenced Collections（有序集合）</a></li>
+<li><a href="https://openjdk.org/jeps/439" target="_blank" rel="noopener">JEP 439: Generational ZGC（分代 ZGC）</a></li>
+<li><a href="https://openjdk.org/jeps/440" target="_blank" rel="noopener">JEP 440: Record Patterns（记录模式）</a></li>
+<li><a href="https://openjdk.org/jeps/441" target="_blank" rel="noopener">JEP 441: Pattern Matching for switch（switch 的模式匹配）</a></li>
+<li><a href="https://openjdk.org/jeps/442" target="_blank" rel="noopener">JEP 442: Foreign Function &amp; Memory API（外部函数和内存 API）</a>（第三次预览）</li>
+<li><a href="https://openjdk.org/jeps/443" target="_blank" rel="noopener">JEP 443: Unnamed Patterns and Variables（未命名模式和变量）</a>（预览）</li>
+<li><a href="https://openjdk.org/jeps/444" target="_blank" rel="noopener">JEP 444: Virtual Threads（虚拟线程）</a></li>
+<li><a href="https://openjdk.org/jeps/445" target="_blank" rel="noopener">JEP 445: Unnamed Classes and Instance Main Methods（未命名类和实例 main 方法）</a>（预览）</li>
+</ul>
+<p>如果主要关注生产升级，可以先看 Sequenced Collections、分代 ZGC 和虚拟线程。String Templates 只在 JDK 21、22 中提供过预览实现，后续提案已经撤回，当前 JDK 不再提供这套 API 和语法。</p>
+<p>下图是从 JDK 8 到 JDK 24 每个版本的更新带来的新特性数量和更新时间：</p>
+<p><img src="/img/jdk8-jdk24-a3e32dd5.png" alt="" loading="lazy"></p>
+<h2 id="jep-430-string-templates字符串模板预览" tabindex="-1">JEP 430: String Templates（字符串模板，预览）</h2>
+<p>String Templates（字符串模板）是 JDK 21 中的预览功能。该功能在 JDK 22 中进行了第二次预览，随后被撤回，因此当前 JDK 中不再提供这套 API 和语法。</p>
+<p>String Templates 提供了一种更简洁、更直观的方式来动态构建字符串。JDK 21 的预览语法使用 <code>\{表达式}</code> 作为嵌入式表达式，并由模板处理器处理模板。表达式支持局部变量、静态或非静态字段、方法调用和计算结果等。</p>
+<p>实际上，String Templates（字符串模板）在大多数编程语言中都存在:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-string">&quot;Greetings {{ name }}!&quot;</span>;  <span class="hljs-comment">//Angular</span>
+<span class="hljs-string">`Greetings <span class="hljs-subst">${ name }</span>!`</span>;    <span class="hljs-comment">//Typescript</span>
+$<span class="hljs-string">&quot;Greetings { name }!&quot;</span>    <span class="hljs-comment">//Visual basic</span>
+f<span class="hljs-string">&quot;Greetings { name }!&quot;</span>    <span class="hljs-comment">//Python</span>
+</code></pre>
+<p>Java 在没有 String Templates 之前，我们通常使用字符串拼接或格式化方法来构建字符串：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//concatenation</span>
+message = <span class="hljs-string">&quot;Greetings &quot;</span> + name + <span class="hljs-string">&quot;!&quot;</span>;
+
+<span class="hljs-comment">//String.format()</span>
+message = String.format(<span class="hljs-string">&quot;Greetings %s!&quot;</span>, name);  <span class="hljs-comment">//concatenation</span>
+
+<span class="hljs-comment">//MessageFormat</span>
+message = <span class="hljs-keyword">new</span> <span class="hljs-title class_">MessageFormat</span>(<span class="hljs-string">&quot;Greetings {0}!&quot;</span>).format(name);
+
+<span class="hljs-comment">//StringBuilder</span>
+message = <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>().append(<span class="hljs-string">&quot;Greetings &quot;</span>).append(name).append(<span class="hljs-string">&quot;!&quot;</span>).toString();
+</code></pre>
+<p>这些方法或多或少都存在一些缺点，比如难以阅读、冗长、复杂。</p>
+<p>Java 使用 String Templates 进行字符串拼接，可以直接在字符串中嵌入表达式，而无需进行额外的处理：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">message</span> <span class="hljs-operator">=</span> STR.<span class="hljs-string">&quot;Greetings \{name}!&quot;</span>;
+</code></pre>
+<p>在上面的模板表达式中：</p>
+<ul>
+<li>STR 是模板处理器。</li>
+<li><code>\{name}</code> 为表达式，运行时，这些表达式将被相应的变量值替换。</li>
+</ul>
+<p>Java 目前支持三种模板处理器：</p>
+<ul>
+<li>STR：自动执行字符串插值，即将模板中的每个嵌入式表达式替换为其值（转换为字符串）。</li>
+<li>FMT：和 STR 类似，但是它还可以接受格式说明符，这些格式说明符出现在嵌入式表达式的左边，用来控制输出的样式。</li>
+<li>RAW：不会像 STR 和 FMT 模板处理器那样自动处理字符串模板，而是返回一个 <code>StringTemplate</code> 对象，这个对象包含了模板中的文本和表达式的信息。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">name</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Lokesh&quot;</span>;
+
+<span class="hljs-comment">//STR</span>
+<span class="hljs-type">String</span> <span class="hljs-variable">message</span> <span class="hljs-operator">=</span> STR.<span class="hljs-string">&quot;Greetings \{name}.&quot;</span>;
+
+<span class="hljs-comment">//FMT</span>
+<span class="hljs-type">String</span> <span class="hljs-variable">message</span> <span class="hljs-operator">=</span> FMT.<span class="hljs-string">&quot;Greetings %-12s\{name}.&quot;</span>;
+
+<span class="hljs-comment">//RAW</span>
+<span class="hljs-type">StringTemplate</span> <span class="hljs-variable">st</span> <span class="hljs-operator">=</span> RAW.<span class="hljs-string">&quot;Greetings \{name}.&quot;</span>;
+<span class="hljs-type">String</span> <span class="hljs-variable">message</span> <span class="hljs-operator">=</span> STR.process(st);
+</code></pre>
+<p>除了 JDK 自带的三种模板处理器外，你还可以实现 <code>StringTemplate.Processor</code> 接口来创建自己的模板处理器，只需要继承 <code>StringTemplate.Processor</code> 接口，然后实现 <code>process</code> 方法即可。</p>
+<p>我们可以使用局部变量、静态/非静态字段甚至方法作为嵌入表达式：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//variable</span>
+message = STR.<span class="hljs-string">&quot;Greetings \{name}!&quot;</span>;
+
+<span class="hljs-comment">//method</span>
+message = STR.<span class="hljs-string">&quot;Greetings \{getName()}!&quot;</span>;
+
+<span class="hljs-comment">//field</span>
+message = STR.<span class="hljs-string">&quot;Greetings \{this.name}!&quot;</span>;
+</code></pre>
+<p>还可以在表达式中执行计算并打印结果：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> <span class="hljs-number">10</span>, y = <span class="hljs-number">20</span>;
+<span class="hljs-type">String</span> <span class="hljs-variable">s</span> <span class="hljs-operator">=</span> STR.<span class="hljs-string">&quot;\{x} + \{y} = \{x + y}&quot;</span>;  <span class="hljs-comment">//&quot;10 + 20 = 30&quot;</span>
+</code></pre>
+<p>为了提高可读性，我们可以将嵌入的表达式分成多行:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">time</span> <span class="hljs-operator">=</span> STR.<span class="hljs-string">&quot;The current time is \{
+    //sample comment - current time in HH:mm:ss
+    DateTimeFormatter
+      .ofPattern(&quot;</span>HH:mm:ss<span class="hljs-string">&quot;)
+      .format(LocalTime.now())
+  }.&quot;</span>;
+</code></pre>
+<h2 id="jep-431-sequenced-collections有序集合" tabindex="-1">JEP 431: Sequenced Collections（有序集合）</h2>
+<p>JDK 21 引入了一组新的集合接口：<strong>Sequenced Collections（有序集合）</strong>。这类集合具有确定的遍历顺序（encounter order），并提供访问集合首尾元素以及获取反向视图的方法。</p>
+<p>Sequenced Collections 包括以下三个接口：</p>
+<ul>
+<li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/SequencedCollection.html" target="_blank" rel="noopener"><code>SequencedCollection</code></a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/SequencedSet.html" target="_blank" rel="noopener"><code>SequencedSet</code></a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/SequencedMap.html" target="_blank" rel="noopener"><code>SequencedMap</code></a></li>
+</ul>
+<p><code>SequencedCollection</code> 接口继承了 <code>Collection</code> 接口， 提供了在集合两端访问、添加或删除元素以及获取集合的反向视图的方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">SequencedCollection</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Collection</span>&lt;E&gt; {
+
+  <span class="hljs-comment">// New Method</span>
+
+  <span class="hljs-type">SequencedCollection</span>&lt;E&gt; <span class="hljs-title function_">reversed</span><span class="hljs-params">()</span>;
+
+  <span class="hljs-comment">// Promoted methods from Deque&lt;E&gt;</span>
+
+  <span class="hljs-type">void</span> <span class="hljs-title function_">addFirst</span><span class="hljs-params">(E)</span>;
+  <span class="hljs-type">void</span> <span class="hljs-title function_">addLast</span><span class="hljs-params">(E)</span>;
+
+  <span class="hljs-type">E</span> <span class="hljs-title function_">getFirst</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">E</span> <span class="hljs-title function_">getLast</span><span class="hljs-params">()</span>;
+
+  <span class="hljs-type">E</span> <span class="hljs-title function_">removeFirst</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">E</span> <span class="hljs-title function_">removeLast</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p><code>List</code> 和 <code>Deque</code> 接口继承了 <code>SequencedCollection</code> 接口。</p>
+<p>这里以 <code>ArrayList</code> 为例，演示一下实际使用效果：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">ArrayList</span>&lt;Integer&gt; <span class="hljs-variable">arrayList</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+
+arrayList.add(<span class="hljs-number">1</span>);   <span class="hljs-comment">// List contains: [1]</span>
+
+arrayList.addFirst(<span class="hljs-number">0</span>);  <span class="hljs-comment">// List contains: [0, 1]</span>
+arrayList.addLast(<span class="hljs-number">2</span>);   <span class="hljs-comment">// List contains: [0, 1, 2]</span>
+
+<span class="hljs-type">Integer</span> <span class="hljs-variable">firstElement</span> <span class="hljs-operator">=</span> arrayList.getFirst();  <span class="hljs-comment">// 0</span>
+<span class="hljs-type">Integer</span> <span class="hljs-variable">lastElement</span> <span class="hljs-operator">=</span> arrayList.getLast();  <span class="hljs-comment">// 2</span>
+
+<span class="hljs-type">List</span>&lt;Integer&gt; <span class="hljs-variable">reversed</span> <span class="hljs-operator">=</span> arrayList.reversed();
+System.out.println(reversed); <span class="hljs-comment">// Prints [2, 1, 0]</span>
+</code></pre>
+<p><code>SequencedSet</code> 接口直接继承了 <code>SequencedCollection</code> 接口并重写了 <code>reversed()</code> 方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">SequencedSet</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">SequencedCollection</span>&lt;E&gt;, Set&lt;E&gt; {
+
+    <span class="hljs-type">SequencedSet</span>&lt;E&gt; <span class="hljs-title function_">reversed</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p><code>SortedSet</code> 接口继承了 <code>SequencedSet</code> 接口，<code>LinkedHashSet</code> 实现了 <code>SequencedSet</code> 接口。</p>
+<p>这里以 <code>LinkedHashSet</code> 为例，演示一下实际使用效果：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">LinkedHashSet</span>&lt;Integer&gt; <span class="hljs-variable">linkedHashSet</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedHashSet</span>&lt;&gt;(List.of(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>));
+
+<span class="hljs-type">Integer</span> <span class="hljs-variable">firstElement</span> <span class="hljs-operator">=</span> linkedHashSet.getFirst();   <span class="hljs-comment">// 1</span>
+<span class="hljs-type">Integer</span> <span class="hljs-variable">lastElement</span> <span class="hljs-operator">=</span> linkedHashSet.getLast();    <span class="hljs-comment">// 3</span>
+
+linkedHashSet.addFirst(<span class="hljs-number">0</span>);  <span class="hljs-comment">//List contains: [0, 1, 2, 3]</span>
+linkedHashSet.addLast(<span class="hljs-number">4</span>);   <span class="hljs-comment">//List contains: [0, 1, 2, 3, 4]</span>
+
+System.out.println(linkedHashSet.reversed());   <span class="hljs-comment">//Prints [4, 3, 2, 1, 0]</span>
+</code></pre>
+<p><code>SequencedMap</code> 接口继承了 <code>Map</code> 接口， 提供了在集合两端访问、添加或删除键值对、获取包含 key 的 <code>SequencedSet</code>、包含 value 的 <code>SequencedCollection</code>、包含 entry（键值对） 的 <code>SequencedSet</code> 以及获取集合的反向视图的方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">SequencedMap</span>&lt;K,V&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Map</span>&lt;K,V&gt; {
+
+  <span class="hljs-comment">// New Methods</span>
+
+  <span class="hljs-type">SequencedMap</span>&lt;K,V&gt; <span class="hljs-title function_">reversed</span><span class="hljs-params">()</span>;
+
+  <span class="hljs-type">SequencedSet</span>&lt;K&gt; <span class="hljs-title function_">sequencedKeySet</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">SequencedCollection</span>&lt;V&gt; <span class="hljs-title function_">sequencedValues</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">SequencedSet</span>&lt;Entry&lt;K,V&gt;&gt; <span class="hljs-title function_">sequencedEntrySet</span><span class="hljs-params">()</span>;
+
+  <span class="hljs-type">V</span> <span class="hljs-title function_">putFirst</span><span class="hljs-params">(K, V)</span>;
+  <span class="hljs-type">V</span> <span class="hljs-title function_">putLast</span><span class="hljs-params">(K, V)</span>;
+
+
+  <span class="hljs-comment">// Promoted Methods from NavigableMap&lt;K, V&gt;</span>
+
+  <span class="hljs-type">Entry</span>&lt;K, V&gt; <span class="hljs-title function_">firstEntry</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">Entry</span>&lt;K, V&gt; <span class="hljs-title function_">lastEntry</span><span class="hljs-params">()</span>;
+
+  <span class="hljs-type">Entry</span>&lt;K, V&gt; <span class="hljs-title function_">pollFirstEntry</span><span class="hljs-params">()</span>;
+  <span class="hljs-type">Entry</span>&lt;K, V&gt; <span class="hljs-title function_">pollLastEntry</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p><code>SortedMap</code> 接口继承了 <code>SequencedMap</code> 接口，<code>LinkedHashMap</code> 实现了 <code>SequencedMap</code> 接口。</p>
+<p>这里以 <code>LinkedHashMap</code> 为例，演示一下实际使用效果：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">LinkedHashMap</span>&lt;Integer, String&gt; <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedHashMap</span>&lt;&gt;();
+
+map.put(<span class="hljs-number">1</span>, <span class="hljs-string">&quot;One&quot;</span>);
+map.put(<span class="hljs-number">2</span>, <span class="hljs-string">&quot;Two&quot;</span>);
+map.put(<span class="hljs-number">3</span>, <span class="hljs-string">&quot;Three&quot;</span>);
+
+map.firstEntry();   <span class="hljs-comment">//1=One</span>
+map.lastEntry();    <span class="hljs-comment">//3=Three</span>
+
+System.out.println(map);  <span class="hljs-comment">//{1=One, 2=Two, 3=Three}</span>
+
+Map.<span class="hljs-type">Entry</span>&lt;Integer, String&gt; <span class="hljs-variable">first</span> <span class="hljs-operator">=</span> map.pollFirstEntry();   <span class="hljs-comment">//1=One</span>
+Map.<span class="hljs-type">Entry</span>&lt;Integer, String&gt; <span class="hljs-variable">last</span> <span class="hljs-operator">=</span> map.pollLastEntry();    <span class="hljs-comment">//3=Three</span>
+
+System.out.println(map);  <span class="hljs-comment">//{2=Two}</span>
+
+map.putFirst(<span class="hljs-number">1</span>, <span class="hljs-string">&quot;One&quot;</span>);     <span class="hljs-comment">//{1=One, 2=Two}</span>
+map.putLast(<span class="hljs-number">3</span>, <span class="hljs-string">&quot;Three&quot;</span>);    <span class="hljs-comment">//{1=One, 2=Two, 3=Three}</span>
+
+System.out.println(map);  <span class="hljs-comment">//{1=One, 2=Two, 3=Three}</span>
+System.out.println(map.reversed());   <span class="hljs-comment">//{3=Three, 2=Two, 1=One}</span>
+</code></pre>
+<h2 id="jep-439-generational-zgc分代-zgc" tabindex="-1">JEP 439: Generational ZGC（分代 ZGC）</h2>
+<p>JDK21 中对 ZGC 进行了功能扩展，增加了分代 GC 功能。不过，默认是关闭的，需要通过配置打开：</p>
+<pre class="md-pre"><code class="hljs">// 启用分代ZGC
+java -XX:+UseZGC -XX:+ZGenerational ...
+</code></pre>
+<p>在未来的版本中，官方会把 ZGenerational 设为默认值，即默认打开 ZGC 的分代 GC。在更晚的版本中，非分代 ZGC 就被移除。</p>
+<blockquote>
+<p>In a future release we intend to make Generational ZGC the default, at which point -XX:-ZGenerational will select non-generational ZGC. In an even later release we intend to remove non-generational ZGC, at which point the ZGenerational option will become obsolete.</p>
+<p>在将来的版本中，我们打算将 Generational ZGC 作为默认选项，此时-XX:-ZGenerational 将选择非分代 ZGC。在更晚的版本中，我们打算移除非分代 ZGC，此时 ZGenerational 选项将变得过时。</p>
+</blockquote>
+<p>分代 ZGC 在保持 ZGC 低暂停目标的同时，主要通过更频繁地回收年轻对象来降低分配停顿风险、减少所需堆内存并提高吞吐量。</p>
+<h2 id="jep-440-record-patterns记录模式" tabindex="-1">JEP 440: Record Patterns（记录模式）</h2>
+<p>记录模式在 Java 19 进行了第一次预览， 由 <a href="https://openjdk.org/jeps/405" target="_blank" rel="noopener">JEP 405</a> 提出。JDK 20 中是第二次预览，由 <a href="https://openjdk.org/jeps/432" target="_blank" rel="noopener">JEP 432</a> 提出。最终，记录模式在 JDK21 顺利转正。</p>
+<p><a href="/read/java/new-features/java20.html">Java 20 新特性概览</a>已经详细介绍过记录模式，这里就不重复了。</p>
+<h2 id="jep-441-pattern-matching-for-switchswitch-的模式匹配" tabindex="-1">JEP 441: Pattern Matching for switch（switch 的模式匹配）</h2>
+<p>增强 Java 中的 switch 表达式和语句，允许在 case 标签中使用模式。当模式匹配时，执行 case 标签对应的代码。</p>
+<p>在下面的代码中，switch 表达式使用了类型模式来进行匹配。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> <span class="hljs-type">String</span> <span class="hljs-title function_">formatterPatternSwitch</span><span class="hljs-params">(Object obj)</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">switch</span> (obj) {
+        <span class="hljs-keyword">case</span> Integer i -&gt; String.format(<span class="hljs-string">&quot;int %d&quot;</span>, i);
+        <span class="hljs-keyword">case</span> Long l    -&gt; String.format(<span class="hljs-string">&quot;long %d&quot;</span>, l);
+        <span class="hljs-keyword">case</span> Double d  -&gt; String.format(<span class="hljs-string">&quot;double %f&quot;</span>, d);
+        <span class="hljs-keyword">case</span> String s  -&gt; String.format(<span class="hljs-string">&quot;String %s&quot;</span>, s);
+        <span class="hljs-keyword">default</span>        -&gt; obj.toString();
+    };
+}
+</code></pre>
+<h2 id="jep-442-foreign-function-memory-api外部函数和内存-api第三次预览" tabindex="-1">JEP 442: Foreign Function &amp; Memory API（外部函数和内存 API，第三次预览）</h2>
+<p>Java 程序可以通过该 API 与 Java 运行时之外的代码和数据进行互操作。通过高效地调用外部函数（即 JVM 之外的代码）和安全地访问外部内存（即不受 JVM 管理的内存），该 API 使 Java 程序能够调用本机库并处理本机数据，而不会像 JNI 那样危险和脆弱。</p>
+<p>外部函数和内存 API 在 Java 17 中进行了第一轮孵化，由 <a href="https://openjdk.java.net/jeps/412" target="_blank" rel="noopener">JEP 412</a> 提出。Java 18 中进行了第二次孵化，由<a href="https://openjdk.org/jeps/419" target="_blank" rel="noopener">JEP 419</a> 提出。Java 19 中是第一次预览，由 <a href="https://openjdk.org/jeps/424" target="_blank" rel="noopener">JEP 424</a> 提出。JDK 20 中是第二次预览，由 <a href="https://openjdk.org/jeps/434" target="_blank" rel="noopener">JEP 434</a> 提出。JDK 21 中是第三次预览，由 <a href="https://openjdk.org/jeps/442" target="_blank" rel="noopener">JEP 442</a> 提出。</p>
+<p>在 <a href="/read/java/new-features/java19.html">Java 19 新特性概览</a> 中，我有详细介绍到外部函数和内存 API，这里就不再做额外的介绍了。</p>
+<h2 id="jep-443-unnamed-patterns-and-variables未命名模式和变量预览" tabindex="-1">JEP 443: Unnamed Patterns and Variables（未命名模式和变量，预览）</h2>
+<p>未命名模式和变量使得我们可以使用下划线 <code>_</code> 表示未命名的变量以及模式匹配时不使用的组件，旨在提高代码的可读性和可维护性。</p>
+<p>未命名变量的典型场景是 <code>try-with-resources</code> 语句、 <code>catch</code> 子句中的异常变量和 <code>for</code> 循环。当变量不需要使用的时候就可以使用下划线 <code>_</code> 代替，这样清晰标识未被使用的变量。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">var</span> <span class="hljs-variable">_</span> <span class="hljs-operator">=</span> ScopedContext.acquire()) {
+  <span class="hljs-comment">// No use of acquired resource</span>
+}
+<span class="hljs-keyword">try</span> { ... }
+<span class="hljs-keyword">catch</span> (Exception _) { ... }
+<span class="hljs-keyword">catch</span> (Throwable _) { ... }
+
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>, _ = runOnce(); i &lt; arr.length; i++) {
+  ...
+}
+</code></pre>
+<p>未命名模式是一个无条件的模式，并不绑定任何值。未命名模式变量出现在类型模式中。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">if</span> (r <span class="hljs-type">instanceof</span> <span class="hljs-title function_">ColoredPoint</span><span class="hljs-params">(_, Color c)</span>) { ... c ... }
+
+<span class="hljs-keyword">switch</span> (b) {
+    <span class="hljs-type">case</span> <span class="hljs-title function_">Box</span><span class="hljs-params">(RedBall _)</span>, Box(BlueBall _) -&gt; processBox(b);
+    <span class="hljs-type">case</span> <span class="hljs-title function_">Box</span><span class="hljs-params">(GreenBall _)</span>                -&gt; stopProcessing();
+    <span class="hljs-type">case</span> <span class="hljs-title function_">Box</span><span class="hljs-params">(_)</span>                          -&gt; pickAnotherBox();
+}
+</code></pre>
+<h2 id="jep-444-virtual-threads虚拟线程" tabindex="-1">JEP 444: Virtual Threads（虚拟线程）</h2>
+<p>虚拟线程是一项重量级的更新，一定一定要重视！</p>
+<p>虚拟线程在 Java 19 中进行了第一次预览，由<a href="https://openjdk.org/jeps/425" target="_blank" rel="noopener">JEP 425</a>提出。JDK 20 中是第二次预览。最终，虚拟线程在 JDK21 顺利转正。</p>
+<p><a href="/read/java/new-features/java20.html">Java 20 新特性概览</a>已经详细介绍过虚拟线程，这里就不重复了。</p>
+<h2 id="jep-445-unnamed-classes-and-instance-main-methods未命名类和实例-main-方法预览" tabindex="-1">JEP 445: Unnamed Classes and Instance Main Methods（未命名类和实例 main 方法，预览）</h2>
+<p>这个特性主要简化了 <code>main</code> 方法的声明。对于 Java 初学者来说，这个 <code>main</code> 方法的声明引入了太多的 Java 语法概念，不利于初学者快速上手。</p>
+<p>没有使用该特性之前定义一个 <code>main</code> 方法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HelloWorld</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        System.out.println(<span class="hljs-string">&quot;Hello, World!&quot;</span>);
+    }
+}
+</code></pre>
+<p>使用该新特性之后定义一个 <code>main</code> 方法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">HelloWorld</span> {
+    <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;Hello, World!&quot;</span>);
+    }
+}
+</code></pre>
+<p>进一步精简（未命名的类允许我们不定义类名）：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> {
+   System.out.println(<span class="hljs-string">&quot;Hello, World!&quot;</span>);
+}
+</code></pre>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>Java 21 String Templates：<a href="https://howtodoinjava.com/java/java-string-templates/" target="_blank" rel="noopener">https://howtodoinjava.com/java/java-string-templates/</a></li>
+<li>Java 21 Sequenced Collections：<a href="https://howtodoinjava.com/java/sequenced-collections/" target="_blank" rel="noopener">https://howtodoinjava.com/java/sequenced-collections/</a></li>
+</ul>

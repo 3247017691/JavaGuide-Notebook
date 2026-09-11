@@ -1,0 +1,67 @@
+<p>你好，我是 Guide！欢迎来到 JavaGuide 的“开源实验室”。</p>
+<p>参与开源项目的维护，不仅是一次技术实战，更是一场“技术反哺”的修行。</p>
+<p>在这里，你的每一行文字和代码，都会被全球几十万的开发者看到。</p>
+<h2 id="为什么要参与-javaguide-的维护" tabindex="-1">为什么要参与 JavaGuide 的维护？</h2>
+<p>很多小伙伴觉得开源社区门槛高，其实不然。参与 JavaGuide 维护的收益非常务实：</p>
+<ol>
+<li><strong>深度对齐知识点</strong>：在纠错或完善内容的过程中，你会强迫自己进行“穿透式学习”，这种记忆远比死记硬背八股文要深刻。</li>
+<li><strong>影响力背书</strong>：JavaGuide 已经接近 160k Star 了。如果你的 <code>PR</code> 被采纳，你的名字将永久留在 <code>Contributor</code> 列表中。这在求职面试时，是一份非常有说服力的**“开源实战证明”**。</li>
+<li><strong>实物奖励</strong>：我会不定期给高频贡献的小伙伴寄送耳机、机械键盘等硬核周边，甚至还有直接的现金激励。</li>
+</ol>
+<h2 id="可以从哪些方向进行贡献" tabindex="-1">可以从哪些方向进行贡献？</h2>
+<p>你可以根据自己的精力，选择以下三个维度的贡献：</p>
+<ul>
+<li><strong>纠错（初级）</strong>：发现文档中的错别字、标点误用或代码格式混乱。这类贡献最简单，但最有温度。</li>
+<li><strong>完善（进阶）</strong>：对现有的面试题答案进行重构。比如某篇文章的逻辑有断层，或者缺少了最新的技术特性分析。</li>
+<li><strong>新增（专家）</strong>：根据大厂最新的面试动向，新增高频面试题详解或硬核知识点的深度剖析。</li>
+</ul>
+<h2 id="如何丝滑地提交贡献" tabindex="-1">如何丝滑地提交贡献？</h2>
+<h3 id="极简模式点击编辑此页3-分钟上手" tabindex="-1">极简模式：点击“编辑此页”（3 分钟上手）</h3>
+<p>本站每个页面的<strong>左下角</strong>都有一个 <strong>「编辑此页」</strong> 按钮。</p>
+<ol>
+<li><strong>点击跳转</strong>：直接进入 GitHub 在线编辑界面。</li>
+<li><strong>在线修改</strong>：在浏览器里直接改内容，省去 <code>git clone</code> 的麻烦。</li>
+<li><strong>提交申请</strong>：填写提交信息（Commit Message），点击提交即可自动触发 <code>Pull Request</code>。</li>
+</ol>
+<p>这种方式最适合修正笔误或小范围的内容优化。</p>
+<p><img src="/img/javaguide-contribution-edit-page-3823f3c9.png" alt="" loading="lazy"></p>
+<h3 id="进阶模式fork-pr标准开源流程" tabindex="-1">进阶模式：Fork + PR（标准开源流程）</h3>
+<p>如果你想进行大篇幅的重构或新增内容，建议走标准的 GitHub 工作流：</p>
+<ol>
+<li><strong>Fork 仓库</strong>：点击<a href="https://github.com/Snailclimb/JavaGuide" target="_blank" rel="noopener">原仓库</a>右上角的 <code>Fork</code>，将 JavaGuide 复制一份副本到你的账户名下。</li>
+<li><strong>本地开发</strong>：你可以将项目克隆到本地，在本地自由修改，编写内容。内容修改或者编写完成之后，直接提交到副本仓库即可。</li>
+<li><strong>发起 PR</strong>：提交完成后，点击 <code>New Pull Request</code>，将你的修改请求合并到 JavaGuide 的主分支。</li>
+</ol>
+<p><img src="/img/javaguide-contribution-pr-534b8d52.png" alt="" loading="lazy"></p>
+<p>Git 相关的技能非常重要，建议在正式工作之前一定要熟练掌握。</p>
+<p>我写过两篇相关的文章，推荐看看：</p>
+<ul>
+<li><a href="/read/tools/git/git-intro.html">Git 核心概念总结</a></li>
+<li><a href="/read/tools/git/github-tips.html">Github 实用小技巧总结</a></li>
+</ul>
+<h3 id="提交-issue-开启讨论" tabindex="-1">提交 Issue 开启讨论</h3>
+<p>如果你发现某些地方需要改进，但暂时没空写代码，或者想提议新增某个专题，请直接通过 <strong>Issue</strong> 发起讨论。</p>
+<p>推荐的模板如下：</p>
+<blockquote>
+<p><strong>标题</strong>：建议新增 Redis 与数据库双写一致性方案的对比与选型指南</p>
+<p><strong>内容描述</strong>：缓存一致性是面试和实战中的重难点，目前文档中缺乏系统性的方案对比。建议补充：</p>
+<ol>
+<li><strong>方案对比</strong>：详细对比“先更新数据库再删缓存”、“延迟双删”、“订阅 binlog 异步删除”等方案的优缺点。</li>
+<li><strong>极端场景分析</strong>：分析在主从延迟或网络抖动下，如何最大程度保障最终一致性。</li>
+</ol>
+<p><strong>认领意向</strong>：我对该领域有深入研究，并整理了一份对比表格和流程图，希望能将其贡献到 JavaGuide。</p>
+</blockquote>
+<h2 id="贡献要求" tabindex="-1">贡献要求</h2>
+<h3 id="排版是第一生产力" tabindex="-1">排版是第一生产力</h3>
+<p>中英文之间要加空格，标点符号要规范。请参考（任选一篇阅读即可）：</p>
+<ul>
+<li><a href="https://github.com/sparanoid/chinese-copywriting-guidelines" target="_blank" rel="noopener">中文文案排版指北</a></li>
+<li><a href="https://github.com/yikeke/zh-style-guide/" target="_blank" rel="noopener">中文技术文档写作风格指南</a></li>
+<li><a href="https://dawner.top/posts/chinese-copywriting-rules/" target="_blank" rel="noopener">中文文案排版细则 - Dawner</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/20506092" target="_blank" rel="noopener">写给大家看的中文排版指南 - 知乎</a></li>
+</ul>
+<h3 id="内容原创" tabindex="-1">内容原创</h3>
+<p>你可以参考学习别人的文章，但<strong>一定、一定、一定不要复制粘贴</strong>！</p>
+<p>你要做的不是“信息的搬运工”，而是“知识的过滤器”。用你自己的话讲出来，努力写得比别人更通俗易懂，突出核心重点。<strong>这种“穿透式”的表达，才是对读者最大的负责。</strong></p>
+<h2 id="写在最后" tabindex="-1">写在最后</h2>
+<p>开源不是一个人的单打独斗，而是一群人的砥砺前行。 <strong>准备 Java 面试，首选 JavaGuide！</strong> 期待在 Contributor 列表中看到你的名字。</p>

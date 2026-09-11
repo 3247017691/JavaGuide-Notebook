@@ -1,0 +1,325 @@
+<p>双指针和滑动窗口经常放在一起复习，但它们解决的问题不完全一样。双指针更像一种移动策略，滑动窗口则强调维护一个连续区间里的状态。</p>
+<p>一个实用判断：如果题目关心两个位置之间的关系，先想双指针；如果题目关心连续子数组或连续子串，并且窗口内有条件要维护，先想滑动窗口。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能区分左右指针、快慢指针、读写指针。</li>
+<li>能维护滑动窗口里的计数、和、最大值或匹配情况。</li>
+<li>能解释为什么指针只向一个方向移动，时间复杂度是 <code>O(n)</code>。</li>
+<li>能处理空数组、单元素、重复元素和窗口收缩边界。</li>
+</ul>
+<h2 id="两者到底有什么区别" tabindex="-1">两者到底有什么区别？</h2>
+<p>双指针是一种更宽泛的写法，只要用两个指针协作推进，都可以叫双指针。滑动窗口更具体，它维护的是一个连续区间 <code>[left, right]</code>，窗口里通常有一组状态，比如字符计数、元素和、最大值、匹配数量。</p>
+<table>
+<thead>
+<tr>
+<th>问题特征</th>
+<th>更可能使用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>有序数组里找两个数</td>
+<td>左右指针</td>
+</tr>
+<tr>
+<td>链表找环、找中点、找倒数第 K 个节点</td>
+<td>快慢指针</td>
+</tr>
+<tr>
+<td>原地删除或覆盖元素</td>
+<td>读写指针</td>
+</tr>
+<tr>
+<td>连续子数组/子串的最长、最短、计数</td>
+<td>滑动窗口</td>
+</tr>
+</tbody>
+</table>
+<p>面试时先把指针含义说出来，比直接写代码更稳。比如“<code>left</code> 表示窗口左边界，<code>right</code> 表示正在尝试加入窗口的字符”，后面收缩窗口就不会乱。</p>
+<h2 id="左右指针" tabindex="-1">左右指针</h2>
+<p>左右指针常用于有序数组或两端收缩问题：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-title function_">twoSumSorted</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length - <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> nums[left] + nums[right];
+        <span class="hljs-keyword">if</span> (sum == target) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {left, right};
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (sum &lt; target) {
+            left++;
+        } <span class="hljs-keyword">else</span> {
+            right--;
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {-<span class="hljs-number">1</span>, -<span class="hljs-number">1</span>};
+}
+</code></pre>
+<p>如果数组无序，通常先排序，再用左右指针。排序后要记得复杂度变成 <code>O(nlogn)</code>。</p>
+<p>左右指针能工作的原因，是每次比较后可以排除一部分答案。以有序数组两数之和为例：</p>
+<ul>
+<li>当前和太小，说明左指针指向的数太小，右指针再往左只会更小，所以只能左指针右移。</li>
+<li>当前和太大，说明右指针指向的数太大，左指针再往右只会更大，所以只能右指针左移。</li>
+</ul>
+<p>三数之和也是同一个思路，只是先固定一个数，再在剩余区间里做两数之和。难点在去重：固定数要去重，左右指针找到答案后也要跳过重复值。</p>
+<h2 id="快慢指针" tabindex="-1">快慢指针</h2>
+<p>快慢指针常用于链表：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">boolean</span> <span class="hljs-title function_">hasCycle</span><span class="hljs-params">(ListNode head)</span> {
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">slow</span> <span class="hljs-operator">=</span> head;
+    <span class="hljs-type">ListNode</span> <span class="hljs-variable">fast</span> <span class="hljs-operator">=</span> head;
+    <span class="hljs-keyword">while</span> (fast != <span class="hljs-literal">null</span> &amp;&amp; fast.next != <span class="hljs-literal">null</span>) {
+        slow = slow.next;
+        fast = fast.next.next;
+        <span class="hljs-keyword">if</span> (slow == fast) {
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+}
+</code></pre>
+<p>链表题的重点不是代码长，而是指针含义稳定。<code>fast != null &amp;&amp; fast.next != null</code> 的顺序也不能反。</p>
+<p>快慢指针常见有两种速度差：</p>
+<ul>
+<li><code>fast</code> 每次走 2 步，<code>slow</code> 每次走 1 步：用于环检测和找链表中点。</li>
+<li>一个指针先走 <code>k</code> 步，另一个指针再一起走：用于找倒数第 <code>k</code> 个节点。</li>
+</ul>
+<p>找倒数第 <code>k</code> 个节点时，两个指针之间保持 <code>k</code> 个节点的距离。当前面的指针走到链表末尾，后面的指针刚好停在目标位置。删除倒数第 <code>N</code> 个节点时，通常会加虚拟头节点，避免删除头节点时单独处理。</p>
+<h2 id="读写指针" tabindex="-1">读写指针</h2>
+<p>读写指针常用于原地修改数组：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">removeDuplicates</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums)</span> {
+    <span class="hljs-keyword">if</span> (nums.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">write</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">read</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; read &lt; nums.length; read++) {
+        <span class="hljs-keyword">if</span> (nums[read] != nums[read - <span class="hljs-number">1</span>]) {
+            nums[write] = nums[read];
+            write++;
+        }
+    }
+    <span class="hljs-keyword">return</span> write;
+}
+</code></pre>
+<p><code>read</code> 负责扫描原数组，<code>write</code> 指向下一个可写入位置。面试里最好先把这两个变量的含义说出来。</p>
+<p>读写指针的核心是“读完整个数组，只把需要保留的内容写回前面”。这类题经常要求原地修改，返回新长度，而不是创建新数组。</p>
+<p>判断写入时机时，可以问自己：当前 <code>read</code> 指向的元素是否应该保留？如果应该保留，就写到 <code>write</code>，然后 <code>write++</code>；如果不应该保留，只移动 <code>read</code>。</p>
+<h2 id="可变滑动窗口" tabindex="-1">可变滑动窗口</h2>
+<p>以“无重复字符的最长子串”为例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">lengthOfLongestSubstring</span><span class="hljs-params">(String s)</span> {
+    <span class="hljs-type">Map</span>&lt;Character, Integer&gt; <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">ans</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; right &lt; s.length(); right++) {
+        <span class="hljs-type">char</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> s.charAt(right);
+        count.put(c, count.getOrDefault(c, <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
+        <span class="hljs-keyword">while</span> (count.get(c) &gt; <span class="hljs-number">1</span>) {
+            <span class="hljs-type">char</span> <span class="hljs-variable">d</span> <span class="hljs-operator">=</span> s.charAt(left);
+            count.put(d, count.get(d) - <span class="hljs-number">1</span>);
+            left++;
+        }
+        ans = Math.max(ans, right - left + <span class="hljs-number">1</span>);
+    }
+    <span class="hljs-keyword">return</span> ans;
+}
+</code></pre>
+<p>这个模板里，右指针负责扩大窗口，左指针负责在窗口不合法时收缩。每个字符最多进窗口一次、出窗口一次，所以时间复杂度是 <code>O(n)</code>。</p>
+<p>可变窗口一般有一个固定节奏：</p>
+<ol>
+<li>右指针加入新元素，更新窗口状态。</li>
+<li>当窗口不满足条件时，不断移动左指针，并同步更新状态。</li>
+<li>在窗口满足题意的位置更新答案。</li>
+</ol>
+<p>最长问题和最短问题的更新时机不一样：</p>
+<ul>
+<li>求最长合法窗口：通常在窗口恢复合法后更新答案。</li>
+<li>求最短满足条件窗口：通常在窗口已经满足条件时更新答案，然后继续收缩左边界。</li>
+</ul>
+<p>比如“最小覆盖子串”里，窗口一旦覆盖了目标字符，就要先更新答案，再尝试缩小窗口；“最长无重复子串”里，窗口有重复字符时要先缩到合法，再更新答案。</p>
+<h2 id="固定滑动窗口" tabindex="-1">固定滑动窗口</h2>
+<p>固定窗口适合“长度为 k 的子数组/子串”：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">maxSum</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">window</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; k; i++) {
+        window += nums[i];
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">ans</span> <span class="hljs-operator">=</span> window;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> k; right &lt; nums.length; right++) {
+        window += nums[right];
+        window -= nums[right - k];
+        ans = Math.max(ans, window);
+    }
+    <span class="hljs-keyword">return</span> ans;
+}
+</code></pre>
+<p>固定窗口的重点是右侧进一个元素，左侧出一个元素。</p>
+<p>固定窗口不用 <code>while</code> 收缩，因为窗口长度始终固定。它更像一个滚动统计：</p>
+<ul>
+<li>新元素进入窗口。</li>
+<li>离开窗口的旧元素被移除。</li>
+<li>更新当前窗口答案。</li>
+</ul>
+<p>如果窗口里还要维护最大值或最小值，普通变量不够用，通常要用单调队列。比如“滑动窗口最大值”中，队列里存可能成为最大值的下标，队首就是当前窗口最大值。</p>
+<h2 id="面试手写路径" tabindex="-1">面试手写路径</h2>
+<p>双指针和滑动窗口题，面试里最怕指针含义写到一半变了。建议按这个顺序写：</p>
+<ol>
+<li>先判断题型：是两端收缩、快慢追赶、原地覆盖，还是连续窗口。</li>
+<li>明确指针含义：<code>left</code>、<code>right</code>、<code>slow</code>、<code>fast</code>、<code>write</code> 分别指向哪里。</li>
+<li>明确窗口状态：窗口内维护的是和、计数、最大值，还是匹配数量。</li>
+<li>明确移动条件：什么时候右指针扩张，什么时候左指针收缩。</li>
+<li>明确答案更新时机：合法后更新最长，满足条件时更新最短。</li>
+</ol>
+<p>一句话区分最长和最短：<strong>最长题通常先修复窗口再更新答案，最短题通常先记录答案再继续收缩。</strong></p>
+<h2 id="代表题精讲最小覆盖子串" tabindex="-1">代表题精讲：最小覆盖子串</h2>
+<p><a href="https://leetcode.cn/problems/minimum-window-substring/" target="_blank" rel="noopener">76. 最小覆盖子串</a> 是滑动窗口里最能考细节的一题。题目要求在 <code>s</code> 中找到最短子串，使它覆盖 <code>t</code> 中所有字符和对应次数。</p>
+<p>这题的关键不是会不会用窗口，而是能不能说清两个计数：</p>
+<ul>
+<li><code>need</code>：目标字符串 <code>t</code> 里每个字符需要多少个。</li>
+<li><code>window</code>：当前窗口里每个字符已经有多少个。</li>
+<li><code>valid</code>：有多少种字符已经满足所需次数。</li>
+</ul>
+<p>当 <code>valid == need.size()</code> 时，说明当前窗口已经覆盖 <code>t</code>，这时要更新答案，并尝试收缩左边界。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-title function_">minWindow</span><span class="hljs-params">(String s, String t)</span> {
+    <span class="hljs-type">Map</span>&lt;Character, Integer&gt; <span class="hljs-variable">need</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-type">Map</span>&lt;Character, Integer&gt; <span class="hljs-variable">window</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">char</span> c : t.toCharArray()) {
+        need.put(c, need.getOrDefault(c, <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
+    }
+
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">valid</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">minLen</span> <span class="hljs-operator">=</span> Integer.MAX_VALUE;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; right &lt; s.length(); right++) {
+        <span class="hljs-type">char</span> <span class="hljs-variable">in</span> <span class="hljs-operator">=</span> s.charAt(right);
+        <span class="hljs-keyword">if</span> (need.containsKey(in)) {
+            window.put(in, window.getOrDefault(in, <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
+            <span class="hljs-keyword">if</span> (window.get(in).equals(need.get(in))) {
+                valid++;
+            }
+        }
+
+        <span class="hljs-keyword">while</span> (valid == need.size()) {
+            <span class="hljs-keyword">if</span> (right - left + <span class="hljs-number">1</span> &lt; minLen) {
+                start = left;
+                minLen = right - left + <span class="hljs-number">1</span>;
+            }
+            <span class="hljs-type">char</span> <span class="hljs-variable">out</span> <span class="hljs-operator">=</span> s.charAt(left);
+            left++;
+            <span class="hljs-keyword">if</span> (need.containsKey(out)) {
+                <span class="hljs-keyword">if</span> (window.get(out).equals(need.get(out))) {
+                    valid--;
+                }
+                window.put(out, window.get(out) - <span class="hljs-number">1</span>);
+            }
+        }
+    }
+
+    <span class="hljs-keyword">return</span> minLen == Integer.MAX_VALUE ? <span class="hljs-string">&quot;&quot;</span> : s.substring(start, start + minLen);
+}
+</code></pre>
+<p>这里有两个容易写错的点：</p>
+<ul>
+<li><code>valid--</code> 要发生在减少 <code>window[out]</code> 之前，因为此时窗口还刚好满足条件。</li>
+<li>更新答案要放在 <code>while (valid == need.size())</code> 里面，因为只有当前窗口已经覆盖 <code>t</code>，才有资格参与最短答案比较。</li>
+</ul>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>以“无重复字符的最长子串”为例，字符串 <code>abba</code> 的窗口变化如下：</p>
+<table>
+<thead>
+<tr>
+<th>右指针字符</th>
+<th>加入后窗口</th>
+<th>是否合法</th>
+<th>左指针怎么动</th>
+<th>当前最长</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a</code></td>
+<td><code>a</code></td>
+<td>合法</td>
+<td>不动</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>b</code></td>
+<td><code>ab</code></td>
+<td>合法</td>
+<td>不动</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>b</code></td>
+<td><code>abb</code></td>
+<td>不合法</td>
+<td>移走 <code>a</code> 后仍不合法，再移走第一个 <code>b</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td><code>ba</code></td>
+<td>合法</td>
+<td>不动</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>滑动窗口建议至少检查这些边界：</p>
+<table>
+<thead>
+<tr>
+<th>输入</th>
+<th>重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>空字符串或空数组</td>
+<td>是否直接返回 0</td>
+</tr>
+<tr>
+<td>全部字符相同</td>
+<td>左边界是否持续收缩</td>
+</tr>
+<tr>
+<td>没有重复字符</td>
+<td>答案是否能更新到整个长度</td>
+</tr>
+<tr>
+<td>最优窗口在开头或结尾</td>
+<td>更新答案的时机是否正确</td>
+</tr>
+</tbody>
+</table>
+<p>常见错误写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">if</span> (count.get(c) &gt; <span class="hljs-number">1</span>) {
+    left++; <span class="hljs-comment">// 错：只移动一次不一定能恢复合法窗口</span>
+}
+</code></pre>
+<p>可变窗口收缩时通常要用 <code>while</code>，直到窗口重新满足条件。只移动一次，遇到 <code>abba</code>、<code>aaabc</code> 这类输入就容易错。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>双指针题先明确两个指针的含义，不要边写边猜。</li>
+<li>滑动窗口里，更新答案的时机要看题目问的是最长还是最短。</li>
+<li>窗口收缩时，窗口内的计数、和、匹配数都要同步更新。</li>
+<li>链表快慢指针要先判断 <code>fast</code> 和 <code>fast.next</code>。</li>
+<li>三数之和这类题，排序后的去重要单独处理。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>为什么双指针题通常是 <code>O(n)</code>，而不是两层循环的 <code>O(n^2)</code>？</li>
+<li>三数之和为什么需要排序？去重分别发生在哪几个位置？</li>
+<li>快慢指针找链表中点时，偶数长度返回前中点还是后中点？</li>
+<li>滑动窗口什么时候用 <code>if</code> 收缩，什么时候必须用 <code>while</code> 收缩？</li>
+<li>最长窗口和最短窗口的答案更新时机有什么区别？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/remove-duplicates-from-sorted-array/" target="_blank" rel="noopener">26. 删除有序数组中的重复项</a></li>
+<li><a href="https://leetcode.cn/problems/3sum/" target="_blank" rel="noopener">15. 三数之和</a></li>
+<li><a href="https://leetcode.cn/problems/linked-list-cycle/" target="_blank" rel="noopener">141. 环形链表</a></li>
+<li><a href="https://leetcode.cn/problems/longest-substring-without-repeating-characters/" target="_blank" rel="noopener">3. 无重复字符的最长子串</a></li>
+<li><a href="https://leetcode.cn/problems/minimum-window-substring/" target="_blank" rel="noopener">76. 最小覆盖子串</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

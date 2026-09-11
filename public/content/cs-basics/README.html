@@ -1,0 +1,103 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>这份 <strong>计算机基础知识体系</strong> 面向后端学习和面试复习，按“计算机网络 -&gt; 操作系统 -&gt; 数据结构 -&gt; 算法”的顺序整理本站计算机基础相关文章。</p>
+<p>如果你时间有限，建议先看 <a href="/read/cs-basics/network/other-network-questions.html">计算机网络常见面试题总结</a> 和 <a href="/read/cs-basics/operating-system/operating-system-basic-questions-01.html">操作系统常见面试题总结</a>，快速建立高频问题清单；如果你想系统补基础，可以按下面的专题顺序推进。</p>
+<p>整站配有 <strong>300+ 张技术配图</strong>，用图解的方式把抽象概念讲清楚，不是干巴巴的文字堆砌。</p>
+<p><img src="/img/cs-basics-overview-34f37343.png" alt="" loading="lazy"></p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在系统补齐计算机基础的后端开发者。</li>
+<li>准备校招、社招、中大厂后端面试的同学。</li>
+<li>想把网络、操作系统、数据结构和算法串成完整知识体系的读者。</li>
+<li>已经写过业务代码，但对 TCP/IP、HTTP、进程线程、内存管理、树图、排序等基础不够扎实的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>计算机网络重点理解分层模型、TCP/UDP、HTTP/HTTPS、DNS、ARP、NAT 和常见网络安全问题。</li>
+<li>操作系统重点理解进程线程、锁与同步、内存管理、虚拟内存、零拷贝、I/O 多路复用、文件系统、Linux 基础和 Shell 使用。</li>
+<li>数据结构重点理解数组、链表、栈、队列、哈希表、树、图、堆、Trie、并查集、跳表、红黑树、布隆过滤器和 LRU 的特点与适用场景。</li>
+<li>算法重点理解复杂度分析、二分、双指针、滑动窗口、DFS/BFS、回溯、动态规划、贪心、Top K、排序、字符串、链表和 LeetCode 高频题。</li>
+<li>面试中要能把“概念 -&gt; 原理 -&gt; 对比 -&gt; 场景 -&gt; 常见问题”串成完整回答。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/cs-basics/network/README.html">计算机网络专题</a>：先从分层模型、HTTP、TCP、DNS 和常见网络面试题入手，建立网络通信的整体认知。</li>
+<li><a href="/read/cs-basics/operating-system/README.html">操作系统专题</a>：理解进程线程、内存、文件系统、Linux 和 Shell，为并发编程、JVM、数据库打基础。</li>
+<li><a href="/read/cs-basics/data-structure/README.html">数据结构专题</a>：掌握线性表、哈希表、树、图、堆、Trie、并查集、跳表、红黑树、布隆过滤器、LRU 等常见结构。</li>
+<li><a href="/read/cs-basics/algorithms/README.html">算法专题</a>：结合复杂度分析、核心算法模板和 LeetCode 高频题进行练习。</li>
+<li>回到面试题做查缺补漏：重点复盘网络和操作系统高频问题，再把数据结构与算法题按类型刷一遍。</li>
+</ol>
+<p>如果你的目标公司比较重算法，建议把第 3 步和第 4 步合在一起复习：先看一个数据结构，再刷对应题型。例如，看完 <a href="/read/cs-basics/data-structure/hash-table.html">哈希表</a> 就刷两数之和、前缀和；看完 <a href="/read/cs-basics/data-structure/heap.html">堆</a> 就刷 <a href="/read/cs-basics/algorithms/top-k.html">Top K</a>；看完 <a href="/read/cs-basics/data-structure/tree.html">树</a> 和 <a href="/read/cs-basics/data-structure/graph.html">图</a> 后，再集中练 <a href="/read/cs-basics/algorithms/dfs-bfs.html">DFS 与 BFS</a>、<a href="/read/cs-basics/algorithms/backtracking.html">回溯</a> 和 <a href="/read/cs-basics/algorithms/dynamic-programming.html">动态规划</a>。</p>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="计算机网络" tabindex="-1">计算机网络</h3>
+<ul>
+<li><a href="/read/cs-basics/network/README.html">计算机网络专题</a>：按协议层梳理计算机网络核心知识和面试高频题。</li>
+<li><a href="/read/cs-basics/network/other-network-questions.html">计算机网络常见面试题总结（上）</a>：覆盖 OSI/TCP-IP 模型、HTTP、HTTPS、DNS 等基础问题。</li>
+<li><a href="/read/cs-basics/network/other-network-questions2.html">计算机网络常见面试题总结（下）</a>：继续补充 TCP、UDP、网络安全、Socket 等常见问题。</li>
+<li><a href="/read/cs-basics/network/osi-and-tcp-ip-model.html">OSI 七层模型与 TCP/IP 四层模型详解</a>：建立网络分层和协议职责认知。</li>
+<li><a href="/read/cs-basics/network/the-whole-process-of-accessing-web-pages.html">从输入 URL 到页面展示到底发生了什么？</a>：用一次完整请求串联 DNS、TCP、HTTP、浏览器渲染等知识点。</li>
+<li><a href="/read/cs-basics/network/http-vs-https.html">HTTP vs HTTPS</a>、<a href="/read/cs-basics/network/http1.0-vs-http1.1.html">HTTP 1.0 vs HTTP 1.1</a>、<a href="/read/cs-basics/network/http-status-codes.html">HTTP 常见状态码总结</a>：集中理解 HTTP 相关高频考点。</li>
+<li><a href="/read/cs-basics/network/tcp-connection-and-disconnection.html">TCP 三次握手和四次挥手</a>、<a href="/read/cs-basics/network/tcp-reliability-guarantee.html">TCP 传输可靠性保障</a>：掌握 TCP 最核心的连接管理和可靠传输机制。</li>
+</ul>
+<h3 id="操作系统" tabindex="-1">操作系统</h3>
+<ul>
+<li><a href="/read/cs-basics/operating-system/README.html">操作系统专题</a>：从操作系统基础讲到 Linux 常见问题。</li>
+<li><a href="/read/cs-basics/operating-system/operating-system-basic-questions-01.html">操作系统常见面试题总结（上）</a>：覆盖操作系统基础、进程线程、死锁、内存管理等问题。</li>
+<li><a href="/read/cs-basics/operating-system/operating-system-basic-questions-02.html">操作系统常见面试题总结（下）</a>：继续整理文件系统、I/O、Linux 等面试考点。</li>
+<li><a href="/read/cs-basics/operating-system/process-and-thread.html">进程与线程详解：区别、状态、通信、上下文切换与虚拟线程</a>：讲清进程和线程的资源边界、状态转换、上下文切换和 Java 虚拟线程。</li>
+<li><a href="/read/cs-basics/operating-system/ipc.html">进程间通信（IPC）详解：管道、消息队列、共享内存、Socket 与 Binder</a>：对比管道、消息队列、共享内存、Socket、Binder 等 IPC 机制。</li>
+<li><a href="/read/cs-basics/operating-system/os-lock-and-sync.html">操作系统锁与同步机制详解：mutex、semaphore、condition variable、spinlock 与 futex</a>：讲清临界区、互斥锁、信号量、条件变量、自旋锁和 futex。</li>
+<li><a href="/read/cs-basics/operating-system/memory-management.html">操作系统内存管理详解：分页、分段、页面置换、Swap 与 OOM</a>：讲清内存分配、内存碎片、页表、TLB、页面置换、Swap 和 OOM。</li>
+<li><a href="/read/cs-basics/operating-system/virtual-memory.html">虚拟内存详解：地址转换、TLB、缺页异常与页面置换</a>：讲清分页、页表、TLB、缺页异常和页面置换。</li>
+<li><a href="/read/cs-basics/operating-system/file-system.html">操作系统文件系统详解：inode、VFS、Page Cache 与日志机制</a>：讲清 inode、dentry、文件描述符、VFS、Page Cache 和日志机制。</li>
+<li><a href="/read/cs-basics/operating-system/io-multiplexing.html">I/O 多路复用详解：select、poll、epoll 原理与区别</a>：讲清 select、poll、epoll 的实现原理、性能差异和适用场景。</li>
+<li><a href="/read/cs-basics/operating-system/zero-copy.html">零拷贝详解：mmap、sendfile 与 splice</a>：讲清传统 I/O、mmap、sendfile、splice 的拷贝路径和工程应用。</li>
+<li><a href="/read/cs-basics/operating-system/linux-intro.html">Linux 基础知识总结</a>：掌握 Linux 目录、文件权限、常用命令和系统基础。</li>
+<li><a href="/read/cs-basics/operating-system/shell-intro.html">Shell 编程基础知识总结</a>：补齐脚本编写、变量、流程控制和常用命令能力。</li>
+</ul>
+<h3 id="数据结构" tabindex="-1">数据结构</h3>
+<ul>
+<li><a href="/read/cs-basics/data-structure/README.html">数据结构专题</a>：按结构类型整理常见数据结构及图解。</li>
+<li><a href="/read/cs-basics/data-structure/linear-data-structure.html">线性数据结构详解</a>：理解数组、链表、栈、队列的存储特点和操作复杂度。</li>
+<li><a href="/read/cs-basics/data-structure/hash-table.html">哈希表面试题总结</a>：理解哈希函数、哈希冲突、扩容和 Java <code>HashMap</code> 关联。</li>
+<li><a href="/read/cs-basics/data-structure/tree.html">树结构详解</a>：掌握二叉树、二叉搜索树、AVL、B 树、B+ 树等常见树结构。</li>
+<li><a href="/read/cs-basics/data-structure/graph.html">图详解</a>：理解图的表示、DFS、BFS 和最短路径等基础算法。</li>
+<li><a href="/read/cs-basics/data-structure/heap.html">堆详解</a>、<a href="/read/cs-basics/data-structure/red-black-tree.html">红黑树详解</a>、<a href="/read/cs-basics/data-structure/bloom-filter.html">布隆过滤器详解</a>：补齐高频工程结构和面试考点。</li>
+<li><a href="/read/cs-basics/data-structure/trie.html">Trie 前缀树面试题总结</a>、<a href="/read/cs-basics/data-structure/union-find.html">并查集面试题总结</a>、<a href="/read/cs-basics/data-structure/skip-list.html">跳表面试题总结</a>、<a href="/read/cs-basics/data-structure/lru-cache.html">LRU 缓存面试题总结</a>：补齐字符串集合、连通性、Redis ZSet 和缓存淘汰等高频场景。</li>
+</ul>
+<p>复习数据结构时，可以同步回看 Java 和数据库专题：数组/链表/哈希表对应 <a href="/read/java/collection/README.html">Java 集合</a>，B+ 树对应 <a href="/read/database/mysql/mysql-index.html">MySQL 索引</a>，跳表对应 <a href="/read/database/redis/redis-skiplist.html">Redis 跳表</a>，LRU 和布隆过滤器对应缓存场景。</p>
+<h3 id="算法" tabindex="-1">算法</h3>
+<ul>
+<li><a href="/read/cs-basics/algorithms/README.html">算法专题</a>：整理常见算法思想、LeetCode 高频题和经典排序。</li>
+<li><a href="/read/cs-basics/algorithms/complexity-analysis.html">时间复杂度和空间复杂度面试指南</a>：掌握 Big O、递归复杂度和常见复杂度误判。</li>
+<li><a href="/read/cs-basics/algorithms/binary-search.html">二分查找面试题总结</a>、<a href="/read/cs-basics/algorithms/two-pointers-and-sliding-window.html">双指针与滑动窗口面试题总结</a>：掌握数组、字符串、链表题里最常见的手写模板。</li>
+<li><a href="/read/cs-basics/algorithms/dfs-bfs.html">DFS 与 BFS 面试题总结</a>、<a href="/read/cs-basics/algorithms/backtracking.html">回溯算法面试题总结</a>：掌握树、图、矩阵搜索、排列组合和路径枚举。</li>
+<li><a href="/read/cs-basics/algorithms/dynamic-programming.html">动态规划面试题总结</a>、<a href="/read/cs-basics/algorithms/greedy.html">贪心算法面试题总结</a>、<a href="/read/cs-basics/algorithms/top-k.html">Top K 问题面试题总结</a>：补齐最优值、区间贪心、堆和数据流相关题型。</li>
+<li><a href="/read/cs-basics/algorithms/classical-algorithm-problems-recommendations.html">经典算法思想总结</a>：覆盖二分、双指针、滑动窗口、回溯、动态规划等常见思想。</li>
+<li><a href="/read/cs-basics/algorithms/common-data-structures-leetcode-recommendations.html">常见数据结构经典 LeetCode 题目推荐</a>：按数据结构类型整理刷题路线。</li>
+<li><a href="/read/cs-basics/algorithms/string-algorithm-problems.html">几道常见的字符串算法题</a>、<a href="/read/cs-basics/algorithms/linkedlist-algorithm-problems.html">几道常见的链表算法题</a>：集中练习高频题型。</li>
+<li><a href="/read/cs-basics/algorithms/the-sword-refers-to-offer.html">剑指 Offer 部分编程题</a>、<a href="/read/cs-basics/algorithms/10-classical-sorting-algorithms.html">十大经典排序算法总结</a>：适合面试前复盘。</li>
+</ul>
+<p>算法刷题建议先把每类模板写稳，再做题单：<a href="/read/cs-basics/algorithms/classical-algorithm-problems-recommendations.html">经典算法思想总结</a> 适合按题型刷，<a href="/read/cs-basics/algorithms/common-data-structures-leetcode-recommendations.html">常见数据结构经典 LeetCode 题目推荐</a> 适合按结构刷。</p>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>OSI 七层模型和 TCP/IP 四层模型分别是什么？每层解决什么问题？</li>
+<li>从输入 URL 到页面展示，中间经历了哪些步骤？</li>
+<li>HTTP 和 HTTPS 有什么区别？HTTPS 为什么更安全？</li>
+<li>TCP 三次握手、四次挥手分别解决什么问题？TIME_WAIT 为什么存在？</li>
+<li>TCP 如何保证可靠传输？TCP 和 UDP 如何选型？</li>
+<li>进程和线程有什么区别？什么是死锁，如何避免？</li>
+<li>操作系统内存管理、虚拟内存、分页和分段分别是什么？</li>
+<li>数组、链表、栈、队列、树、图、堆分别适合什么场景？</li>
+<li>哈希表、红黑树、B+ 树、跳表、布隆过滤器、LRU 在工程中常用在哪里？</li>
+<li>刷算法题时如何按题型建立解题模板？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/java/README.html">Java 知识体系</a></li>
+<li><a href="/read/database/README.html">数据库知识体系</a></li>
+<li><a href="/read/distributed-system/README.html">分布式系统知识体系</a></li>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+<li><a href="/read/system-design/README.html">系统设计</a></li>
+<li><a href="/read/books/cs-basics.html">计算机基础书籍推荐</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

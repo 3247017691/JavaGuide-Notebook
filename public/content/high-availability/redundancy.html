@@ -1,0 +1,321 @@
+<p>不管是硬件故障、机房断电，还是某个服务突然挂掉，单点永远是系统里最脆弱的环节。想让系统在各种意外情况下还能扛得住，最基本也最有效的办法就是 <strong>冗余</strong>——关键资源多备几份，坏了一份还有其他的顶上。</p>
+<p>这篇文章会把冗余设计的核心概念和常见方案梳理一遍：从 RTO/RPO 这两个容灾指标，到高可用集群、同城灾备、异地多活，再到 Redis Sentinel、Keepalived 这些具体的故障转移方案。</p>
+<h2 id="什么是冗余" tabindex="-1">什么是冗余？</h2>
+<p><strong>冗余（Redundancy）</strong> 是提升系统可用性和数据持久性的常见手段，其核心思想是 <strong>通过部署多份相同的资源，当某一份资源出现故障时，其他资源可以接管其工作，从而保证系统的持续可用</strong>。</p>
+<p>冗余是提升系统可用性的基础手段，但冗余本身不等于高可用。只有配合故障检测、流量切换、数据复制、恢复演练和监控告警，才能真正降低故障影响。</p>
+<p>冗余设计可以从以下几个维度来理解：</p>
+<p><img src="/img/redundancy-optimized-redundancy-types-5701d503.png" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>冗余类型</th>
+<th>说明</th>
+<th>典型实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>硬件冗余</strong></td>
+<td>关键硬件设备部署多份</td>
+<td>双电源、双网卡、RAID</td>
+</tr>
+<tr>
+<td><strong>软件冗余</strong></td>
+<td>应用服务部署多个实例</td>
+<td>集群部署、容器化多副本</td>
+</tr>
+<tr>
+<td><strong>数据冗余</strong></td>
+<td>数据存储多份副本</td>
+<td>数据库主从复制、分布式存储多副本</td>
+</tr>
+<tr>
+<td><strong>网络冗余</strong></td>
+<td>网络链路和设备冗余</td>
+<td>多运营商接入、双核心交换机、双链路、负载均衡主备或多实例部署</td>
+</tr>
+<tr>
+<td><strong>地域冗余</strong></td>
+<td>在不同地理位置部署系统</td>
+<td>同城灾备、异地灾备、同城多活、异地多活</td>
+</tr>
+</tbody>
+</table>
+<p><strong>服务冗余</strong>：同一个服务部署两个或多个实例，故障时自动切换到健康实例，大大减少系统的不可用时间，提高系统的可用性。</p>
+<p><strong>数据冗余</strong>：同一数据存储多份副本，任一副本丢失仍可从其他副本恢复，从而提升数据持久性与可用性。</p>
+<p>实际上，日常生活中也有很多冗余设计的例子。拿我自己来说，我对于重要文件的保存方法就是冗余思想的应用。我日常所使用的重要文件都会同步一份在 GitHub 以及个人云盘上，这样就可以保证即使电脑硬盘损坏，我也可以通过 GitHub 或者个人云盘找回自己的重要文件。</p>
+<h2 id="容灾核心指标rto-和-rpo" tabindex="-1">容灾核心指标：RTO 和 RPO</h2>
+<p>在讨论容灾架构之前，需要先理解两个核心指标：</p>
+<p><img src="/img/redundancy-optimized-rto-rpo-timeline-a78b1bd9.png" alt="" loading="lazy"></p>
+<ul>
+<li><strong>RPO（Recovery Point Objective，恢复点目标）</strong>：系统在灾难发生后可接受的数据丢失窗口，也可以理解为恢复时数据最多允许回退到多久之前。RPO 越小，对同步复制、日志复制、跨站点一致性和写入延迟的要求越高。RPO = 0 通常意味着写入必须在多个故障域确认后才能返回，或者有等价的强一致提交机制；代价是写入延迟上升，并且在网络分区时需要在可用性和一致性之间做取舍。</li>
+<li><strong>RTO（Recovery Time Objective，恢复时间目标）</strong>：可容忍的 <strong>最大恢复时间</strong>，即从故障发生到系统恢复正常服务的时间。RTO=0 表示目标上不允许可感知中断，但在真实系统中更常见的表述是接近 0 或用户无感切换，仍要看故障检测、流量切换和客户端重试行为。</li>
+</ul>
+<blockquote>
+<p><strong>RTO/RPO 是目标，不是结果</strong>。它们是业务对容灾能力的约束，实际恢复能力取决于故障检测速度、切换自动化程度、数据复制延迟、人工流程和运维能力。声明了某个 RPO/RTO 不等于生产环境一定能做到，必须通过定期演练和压测来验证。另外，不同业务链路可以有不同的 RTO/RPO 要求，不必全站统一。</p>
+</blockquote>
+<p>下面的 RPO/RTO 是典型配置下的 <strong>量级参考</strong>，实际结果取决于复制方式（同步/异步）、故障检测阈值、切换自动化程度和团队运维能力。多活是否能做到秒级 RTO/RPO，取决于流量调度、数据复制、故障检测、客户端重试、冲突解决和演练成熟度。</p>
+<table>
+<thead>
+<tr>
+<th>架构方案</th>
+<th>RPO</th>
+<th>RTO</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单机无备份</td>
+<td>可能全部丢失</td>
+<td>不可预估</td>
+<td>低</td>
+</tr>
+<tr>
+<td>本地备份</td>
+<td>取决于备份周期</td>
+<td>小时级</td>
+<td>低</td>
+</tr>
+<tr>
+<td>同城灾备</td>
+<td>秒级～分钟级</td>
+<td>分钟～小时级</td>
+<td>中</td>
+</tr>
+<tr>
+<td>异地灾备</td>
+<td>分钟～小时级</td>
+<td>小时级</td>
+<td>中高</td>
+</tr>
+<tr>
+<td>同城多活</td>
+<td>秒级</td>
+<td>秒级</td>
+<td>高</td>
+</tr>
+<tr>
+<td>异地多活</td>
+<td>秒级</td>
+<td>秒级</td>
+<td>很高</td>
+</tr>
+</tbody>
+</table>
+<h2 id="冗余架构方案对比" tabindex="-1">冗余架构方案对比</h2>
+<p>高可用集群（High Availability Cluster，简称 HA Cluster）、同城灾备、异地灾备、同城多活和异地多活是冗余思想在高可用系统设计中最典型的应用。</p>
+<p><img src="/img/redundancy-optimized-disaster-recovery-compariso-fd419394.png" alt="" loading="lazy"></p>
+<h3 id="高可用集群" tabindex="-1">高可用集群</h3>
+<p><strong>高可用集群</strong> 是指同一个服务部署两个或多个实例，当正在使用的服务突然挂掉的话，可以切换到另外一台服务，从而保证服务的高可用。</p>
+<p>高可用集群有两种常见模式：</p>
+<p><img src="/img/redundancy-optimized-ha-cluster-modes-ef6854b0.png" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>说明</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>主备模式（Active-Standby）</strong></td>
+<td>主节点提供服务，备节点待命</td>
+<td>实现简单，单主写入易控制</td>
+<td>资源利用率低，备节点闲置</td>
+</tr>
+<tr>
+<td><strong>主主模式（Active-Active）</strong></td>
+<td>多个节点同时提供服务</td>
+<td>资源利用率高，无单点故障</td>
+<td>写入冲突需要应用层解决；自增 ID、唯一约束等可能冲突</td>
+</tr>
+</tbody>
+</table>
+<p>主备模式通常更容易控制写入路径；如果是同步复制，一致性更好但写延迟更高；如果是异步复制，切换时可能丢失尚未复制的数据。高可用集群单纯是服务的冗余，<strong>并没有强调地域</strong>。同城灾备、异地灾备、同城多活和异地多活实现了地域上的冗余。</p>
+<h3 id="同城灾备" tabindex="-1">同城灾备</h3>
+<p><strong>同城灾备</strong> 不是简单地将服务冗余部署在同一个机房内，而是将主服务和备用服务分别部署在 <strong>同一个城市的不同机房</strong> 中。同城灾备通常指主备站点位于同一城市不同机房，常见形态是 active/passive：主站点处理生产流量，备站点平时不承载或只承载少量验证流量，故障时接管。具体是冷备、温备还是热备，要看成本和 RTO 要求。</p>
+<p>这样可以避免单个机房出现停电、火灾等故障时导致服务完全不可用。</p>
+<ul>
+<li><strong>适用场景</strong>：对 RTO 要求较高（分钟级），成本有限的企业。</li>
+<li><strong>典型配置</strong>：同城双机房距离和延迟没有统一标准，通常需要通过专线时延、故障域隔离、供电和运营商路径独立性来评估。同步复制是否可接受，要以实际 RTT 和写入延迟预算为准。</li>
+</ul>
+<h3 id="异地灾备" tabindex="-1">异地灾备</h3>
+<p><strong>异地灾备</strong> 类似于同城灾备，不同的是，相同服务部署在 <strong>异地（通常距离较远，甚至是在不同的城市或者国家）的不同机房中</strong>。</p>
+<ul>
+<li><strong>适用场景</strong>：需要防范区域性灾难（地震、洪水）的核心业务系统。</li>
+<li><strong>挑战</strong>：网络延迟较大，数据同步通常采用异步方式，可能存在数据丢失。</li>
+</ul>
+<h3 id="同城多活" tabindex="-1">同城多活</h3>
+<p><strong>同城多活</strong> 类似于同城灾备，但不再区分纯主备，多个同城机房都可以承载生产流量，这样可以充分利用系统资源，提高系统的并发。</p>
+<ul>
+<li><strong>适用场景</strong>：对性能和可用性都有较高要求的系统。</li>
+<li><strong>技术要点</strong>：需要解决数据同步、流量调度、会话管理等问题。</li>
+</ul>
+<h3 id="异地多活" tabindex="-1">异地多活</h3>
+<p><strong>异地多活</strong> 将服务部署在 <strong>异地的不同机房</strong> 中，并且，它们可以 <strong>同时对外提供服务</strong>。</p>
+<p>和传统的灾备设计相比，同城多活和异地多活最明显的改变在于 <strong>&quot;多活&quot;</strong>，即所有站点都是同时在对外提供服务的。异地多活是为了应对突发状况，比如火灾、地震等自然或者人为灾害，以及区域性网络中断、机房级故障、合规要求等场景。</p>
+<p>同城和异地的主要区别在于 <strong>机房之间的距离</strong>。异地通常距离较远，甚至是在不同的城市或者国家。</p>
+<h3 id="冷备-温备-热备-多活的层次" tabindex="-1">冷备 / 温备 / 热备 / 多活的层次</h3>
+<p>从容灾等级来看，从低到高可以形成如下连续光谱：</p>
+<p><img src="/img/redundancy-optimized-dr-level-spectrum-ffbca4d2.png" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>容灾等级</th>
+<th>资源状态</th>
+<th>恢复速度</th>
+<th>成本</th>
+<th>典型场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>冷备</strong></td>
+<td>备用资源未运行，需手动启动</td>
+<td>小时～天</td>
+<td>低</td>
+<td>非核心业务</td>
+</tr>
+<tr>
+<td><strong>温备</strong></td>
+<td>部分资源常驻运行，需扩容接管</td>
+<td>分钟级</td>
+<td>中</td>
+<td>一般业务容灾</td>
+</tr>
+<tr>
+<td><strong>热备</strong></td>
+<td>资源和数据持续同步，可快速切换</td>
+<td>秒～分钟</td>
+<td>高</td>
+<td>核心业务</td>
+</tr>
+<tr>
+<td><strong>多活</strong></td>
+<td>多站点同时承载生产流量</td>
+<td>接近实时</td>
+<td>很高</td>
+<td>对可用性要求极高的核心业务</td>
+</tr>
+</tbody>
+</table>
+<p>不同业务可以采用不同等级，不必全系统追求多活。关键在于根据业务影响面、故障概率和建设成本做取舍。</p>
+<h2 id="故障转移机制" tabindex="-1">故障转移机制</h2>
+<p>光有冗余还不够，还需要配合 <strong>故障转移（Failover）</strong> 机制。所谓故障转移，简单来说就是 <strong>将流量从故障节点快速切换到健康节点</strong>。</p>
+<p>故障转移可以是自动的，也可以是自动检测后人工确认。对无状态服务和缓存系统，通常追求自动切换；对数据库主切、跨地域切流、资金链路等高风险场景，很多团队会保留人工确认或审批步骤。</p>
+<p>故障转移通常包含以下几个步骤：</p>
+<p><img src="/img/redundancy-optimized-failover-process-18fc28c1.png" alt="" loading="lazy"></p>
+<ol>
+<li><strong>故障检测</strong>：通过心跳检测、健康检查等机制发现故障节点。检测阈值要权衡误判和漏判，太敏感容易误切，太保守会延长故障时间。</li>
+<li><strong>故障确认</strong>：避免误判，通常需要多次检测确认，并通过多数派投票、仲裁节点或租约机制防止脑裂。</li>
+<li><strong>故障切换</strong>：将流量切换到备用节点。</li>
+<li><strong>故障通知</strong>：发送告警通知运维人员。</li>
+<li><strong>故障恢复</strong>：故障节点恢复后重新加入集群。</li>
+</ol>
+<p>对于有状态系统，还需要 <strong>fencing 机制</strong>，确保旧主在失联或恢复后不能继续对共享资源写入。否则即使新主切换成功，也可能出现双主写入和脑裂问题。常见手段包括 fencing token、STONITH（Shoot The Other Node In The Head）、写入令牌和租约。故障恢复后旧主不能直接重新加入写路径，需要先同步数据并通过仲裁确认。</p>
+<p><img src="/img/redundancy-optimized-stateful-failover-fencing-424a72da.png" alt="" loading="lazy"></p>
+<h3 id="redis-哨兵模式示例" tabindex="-1">Redis 哨兵模式示例</h3>
+<p>Redis Sentinel 可以监控 primary（旧文档中也常称 master）节点，在多数 Sentinel 判断 primary 故障后选举并提升某个 replica（旧文档中也常称 slave）为新的 primary；但它不保证 RPO=0。由于 Redis 复制通常是异步的，故障切换时可能丢失尚未复制到 replica 的数据。</p>
+<p>生产常见部署至少 3 个 Sentinel。需要注意 quorum 只表示多少 Sentinel 同意 primary 客观下线；实际发起 failover 还涉及 Sentinel 多数派和 leader 选举，因此不要把 quorum 简单理解成 Sentinel 总数的一半。重点关注 <code>down-after-milliseconds</code>（实例不可达多久后被认为下线）、<code>failover-timeout</code>（failover 超时时间）等参数。</p>
+<p>生产环境使用 Redis Sentinel 时，建议关注以下观测指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标类别</th>
+<th>具体指标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>复制延迟</td>
+<td>replica 相对 primary 的 replication lag</td>
+</tr>
+<tr>
+<td>故障检测</td>
+<td><code>down-after-milliseconds</code> 触发次数</td>
+</tr>
+<tr>
+<td>切换耗时</td>
+<td>failover 从触发到完成的时间</td>
+</tr>
+<tr>
+<td>客户端感知</td>
+<td>客户端重连耗时、主从切换期间写失败率</td>
+</tr>
+<tr>
+<td>集群状态</td>
+<td>Sentinel quorum / majority 状态、Sentinel 节点存活</td>
+</tr>
+</tbody>
+</table>
+<p><img src="/img/redundancy-optimized-redis-sentinel-955a1816.png" alt="" loading="lazy"></p>
+<h3 id="nginx-keepalived-示例" tabindex="-1">Nginx + Keepalived 示例</h3>
+<p>Nginx 可以结合 Keepalived 来实现高可用。Keepalived 基于 VRRP 管理 VIP，可以让 VIP 在主备节点之间漂移，解决入口 IP 高可用问题。如果 Nginx 主服务器宕机的话，Keepalived 可以基于 VRRP 协议自动进行故障转移，备用 Nginx 服务器升级为主服务。由于使用的是 <strong>虚拟 IP（VIP）</strong>，对外 IP 不会改变。</p>
+<p>需要注意的是：</p>
+<ul>
+<li><strong>Keepalived 不保证已有 TCP 连接无损迁移</strong>，切换还受 ARP / 邻居表刷新、二层网络、云厂商 VIP 支持和健康检查脚本影响。</li>
+<li>适合单机房或同二层网络下 VIP 漂移，不适合直接解决跨地域流量调度。</li>
+<li>云环境下要确认是否支持自定义 VIP 和 ARP / 路由切换。</li>
+<li>健康检查脚本要检查 Nginx 进程和业务端口，而不只是 Keepalived 进程本身。</li>
+<li>生产中还要根据业务选择抢占或非抢占模式，避免主节点恢复后发生不必要的二次切换。</li>
+</ul>
+<p><img src="/img/redundancy-optimized-nginx-keepalived-45d4dcb9.png" alt="" loading="lazy"></p>
+<h2 id="异地多活的挑战" tabindex="-1">异地多活的挑战</h2>
+<p>异地多活架构实施起来非常难，需要考虑的因素非常多：</p>
+<p><img src="/img/redundancy-optimized-geo-active-active-challenge-dd9ac717.png" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>挑战</th>
+<th>说明</th>
+<th>解决思路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>数据一致性</strong></td>
+<td>多个机房数据如何保持一致</td>
+<td>单元化路由、最终一致性、TCC/Saga、冲突解决机制</td>
+</tr>
+<tr>
+<td><strong>网络延迟</strong></td>
+<td>异地机房之间网络延迟较大</td>
+<td>就近接入、数据分区</td>
+</tr>
+<tr>
+<td><strong>流量调度</strong></td>
+<td>如何将用户请求分配到合适的机房</td>
+<td>DNS 智能解析、GSLB</td>
+</tr>
+<tr>
+<td><strong>会话管理</strong></td>
+<td>用户会话如何在多机房之间共享</td>
+<td>优先做无状态设计或按用户单元路由固定到同一站点；跨地域共享 session 虽然可行，但会引入延迟、一致性和故障隔离问题</td>
+</tr>
+<tr>
+<td><strong>成本</strong></td>
+<td>多机房建设和运维成本高</td>
+<td>按业务重要性分级部署</td>
+</tr>
+</tbody>
+</table>
+<p>异地多活的核心取舍可以用 CAP 来理解：跨地域网络延迟和分区不可避免，系统必须在强一致性和可用性之间取舍。但异地多活的工程难点不仅限于 CAP，还包括跨地域延迟、流量调度、数据分片、冲突解决、成本、合规和演练复杂度。常见做法是按用户或地域做单元化分片，让大部分读写落在同一机房；跨单元操作再通过 TCC / Saga、对账补偿或业务冲突解决保证最终一致。</p>
+<p><strong>并不是所有业务都需要异地多活</strong>。以下类型的业务要慎重评估：</p>
+<ul>
+<li>强一致写入频繁且跨地域冲突多的业务</li>
+<li>无法按用户 / 地域 / 租户切分的数据模型</li>
+<li>对账补偿能力不足的资金链路</li>
+<li>团队没有演练和运维能力支撑</li>
+<li>建设成本高于故障损失预期的系统</li>
+</ul>
+<p>通常要按业务影响面、故障概率、建设成本综合评估。</p>
+<p>如果你想要深入学习异地多活相关的知识，推荐以下资料：</p>
+<ul>
+<li><a href="https://mp.weixin.qq.com/s/T6mMDdtTfBuIiEowCpqu6Q" target="_blank" rel="noopener">搞懂异地多活，看这篇就够了 - 水滴与银弹 - 2021</a></li>
+<li><a href="https://mp.weixin.qq.com/s/hMD-IS__4JE5_nQhYPYSTg" target="_blank" rel="noopener">四步构建异地多活</a></li>
+<li><a href="http://gk.link/a/10pKZ" target="_blank" rel="noopener">《从零开始学架构》— 28 | 业务高可用的保障：异地多活架构</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

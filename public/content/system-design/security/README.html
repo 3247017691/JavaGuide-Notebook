@@ -1,0 +1,69 @@
+<p>认证授权与数据安全专题关注后端系统里非常基础、但出错成本很高的一条链路：用户如何登录、身份如何传递、权限如何判断、敏感数据如何保护、输入数据如何校验。</p>
+<p>安全不是某一个框架或某一个注解能兜住的事情。它需要从认证、授权、传输、存储、展示、输入校验和审计等多个环节一起设计。</p>
+<p>时间比较紧的话，可以先看面试突击版的 <a href="/read/system-design/security/README.html">认证与授权常见面试题总结</a> 和 <a href="/read/system-design/security/README.html">Web 安全常见面试题总结</a>，再回到本专题补完整原理和实现方案。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在学习登录鉴权、权限系统和数据安全的后端开发者。</li>
+<li>准备认证授权、JWT、SSO、RBAC、数据脱敏相关面试题的同学。</li>
+<li>项目中需要设计后台权限、用户体系、敏感数据展示或数据校验方案的工程师。</li>
+<li>已经用过 Spring Security、Sa-Token、Shiro 等框架，但想补齐底层概念的读者。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>认证解决“你是谁”，授权解决“你能做什么”，两者不能混为一谈。</li>
+<li>Session、Token、JWT、OAuth2、SSO 适合的场景不同，不能只用“无状态”判断优劣。</li>
+<li>JWT 的优势和问题都很明显，重点在失效控制、续期、泄露风险和服务端治理。</li>
+<li>权限系统通常要从用户、角色、权限、资源、组织、数据范围等维度建模。</li>
+<li>数据安全既包括加密存储，也包括脱敏展示、输入校验、敏感词过滤和密码安全。</li>
+<li>安全方案必须考虑落地成本、用户体验、可审计性和事故处置能力。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/system-design/security/basis-of-authority-certification.html">认证授权基础概念详解</a>：先区分认证、授权、Session、Token、OAuth2 等概念。</li>
+<li><a href="/read/system-design/security/jwt-intro.html">JWT 基础概念详解</a> 和 <a href="/read/system-design/security/advantages-and-disadvantages-of-jwt.html">JWT 身份认证优缺点分析</a>：理解 JWT 的工作方式、优势和局限。</li>
+<li><a href="/read/system-design/security/sso-intro.html">SSO 单点登录详解</a>：理解统一认证中心、跨系统登录和登录态同步。</li>
+<li><a href="/read/system-design/security/design-of-authority-system.html">权限系统设计详解</a>：把认证授权落到 RBAC 权限系统设计。</li>
+<li><a href="/read/system-design/security/encryption-algorithms.html">常见加密算法总结</a>、<a href="/read/system-design/security/data-desensitization.html">数据脱敏方案总结</a>、<a href="/read/system-design/security/data-validation.html">为什么前后端都要做数据校验？</a>：补齐数据安全基础。</li>
+<li>再根据业务场景阅读 <a href="/read/system-design/security/sentive-words-filter.html">敏感词过滤方案总结</a> 和 <a href="/read/system-design/security/why-password-reset-instead-of-retrieval.html">为什么忘记密码时只能重置，不能告诉你原密码？</a>。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="认证授权" tabindex="-1">认证授权</h3>
+<ul>
+<li><a href="/read/system-design/security/basis-of-authority-certification.html">认证授权基础概念详解</a>：讲解 Authentication、Authorization、Session、Token、OAuth2 等核心知识。</li>
+<li><a href="/read/system-design/security/jwt-intro.html">JWT 基础概念详解</a>：讲解 JSON Web Token 的组成结构、签名算法、工作原理及登录鉴权应用。</li>
+<li><a href="/read/system-design/security/advantages-and-disadvantages-of-jwt.html">JWT 身份认证优缺点分析</a>：分析 JWT 无法主动失效、Token 续期等问题及解决方案。</li>
+<li><a href="/read/system-design/security/sso-intro.html">SSO 单点登录详解</a>：讲解统一认证中心、CAS 协议、跨域登录实现及登录态同步机制。</li>
+<li><a href="/read/system-design/security/design-of-authority-system.html">权限系统设计详解</a>：基于 RBAC 讲解权限系统建模、访问控制和后台管理设计。</li>
+</ul>
+<h3 id="数据安全" tabindex="-1">数据安全</h3>
+<ul>
+<li><a href="/read/system-design/security/encryption-algorithms.html">常见加密算法总结</a>：梳理 AES、RSA、MD5、SHA 等算法的原理与应用场景。</li>
+<li><a href="/read/system-design/security/sentive-words-filter.html">敏感词过滤方案总结</a>：从暴力匹配到 Trie 树、AC 自动机，讲解敏感词过滤算法演进和工程实践。</li>
+<li><a href="/read/system-design/security/data-desensitization.html">数据脱敏方案总结</a>：讲解手机号、身份证、银行卡等敏感数据脱敏规则和实现方法。</li>
+<li><a href="/read/system-design/security/data-validation.html">为什么前后端都要做数据校验？</a>：解释参数校验、权限校验的重要性，以及如何防止绕过前端校验。</li>
+<li><a href="/read/system-design/security/why-password-reset-instead-of-retrieval.html">为什么忘记密码时只能重置，不能告诉你原密码？</a>：解释密码哈希、加盐、Bcrypt 和密码传输安全。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>认证和授权有什么区别？</li>
+<li>Session 和 Token 有什么区别？</li>
+<li>JWT 由哪几部分组成？签名解决了什么问题？</li>
+<li>JWT 为什么无法天然主动失效？有哪些解决方案？</li>
+<li>OAuth2 和 JWT 是什么关系？</li>
+<li>SSO 单点登录的核心流程是什么？</li>
+<li>RBAC 权限模型如何设计？用户、角色、权限、资源之间是什么关系？</li>
+<li>对称加密、非对称加密和哈希算法分别适合什么场景？</li>
+<li>为什么密码不能明文存储？为什么忘记密码只能重置？</li>
+<li>数据脱敏应该在存储层、服务层还是展示层做？</li>
+<li>为什么后端必须做数据校验？</li>
+<li>敏感词过滤有哪些常见实现方案？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/system-design/README.html">系统设计知识体系</a></li>
+<li><a href="/read/system-design/basis/README.html">系统设计基础专题</a></li>
+<li><a href="/read/system-design/framework/spring/README.html">Spring &amp; Spring Boot 专题</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统知识体系</a></li>
+<li><a href="/read/cs-basics/network/network-attack-means.html">计算机网络安全</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

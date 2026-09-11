@@ -1,0 +1,330 @@
+<h2 id="atomic-原子类介绍" tabindex="-1">Atomic 原子类介绍</h2>
+<p><code>Atomic</code> 翻译成中文是“原子”的意思。在化学上，原子是构成物质的最小单位，在化学反应中不可分割。在编程中，<code>Atomic</code> 指的是一个操作具有原子性，即该操作不可分割、不可中断。即使在多个线程同时执行时，该操作要么全部执行完成，要么不执行，不会被其他线程看到部分完成的状态。</p>
+<p>原子类简单来说就是具有原子性操作特征的类。</p>
+<p><code>java.util.concurrent.atomic</code> 包中的 <code>Atomic</code> 原子类提供了一种线程安全的方式来操作单个变量。</p>
+<p><code>Atomic</code> 类依赖于 CAS（Compare-And-Swap，比较并交换）乐观锁来保证其方法的原子性，而不需要使用传统的锁机制（如 <code>synchronized</code> 块或 <code>ReentrantLock</code>）。</p>
+<p>这篇文章我们只介绍 Atomic 原子类的概念，具体实现原理可以阅读笔者写的这篇文章：<a href="/read/java/concurrent/cas.html">CAS 详解</a>。</p>
+<p><img src="/img/JUC原子类概览-064976d1.png" alt="" loading="lazy"></p>
+<p>根据操作的数据类型，可以将 JUC 包中的原子类分为 4 类：</p>
+<p><strong>1、基本类型</strong></p>
+<p>使用原子的方式更新基本类型</p>
+<ul>
+<li><code>AtomicInteger</code>：整型原子类</li>
+<li><code>AtomicLong</code>：长整型原子类</li>
+<li><code>AtomicBoolean</code>：布尔型原子类</li>
+</ul>
+<p><strong>2、数组类型</strong></p>
+<p>使用原子的方式更新数组里的某个元素</p>
+<ul>
+<li><code>AtomicIntegerArray</code>：整型数组原子类</li>
+<li><code>AtomicLongArray</code>：长整型数组原子类</li>
+<li><code>AtomicReferenceArray</code>：引用类型数组原子类</li>
+</ul>
+<p><strong>3、引用类型</strong></p>
+<ul>
+<li><code>AtomicReference</code>：引用类型原子类</li>
+<li><code>AtomicMarkableReference</code>：原子更新带有标记的引用类型。该类将 boolean 标记与引用关联起来，可以检测由业务约定的两种状态之间的变化，但一个比特的标记无法记录任意次数的版本变化。</li>
+<li><code>AtomicStampedReference</code>：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，可用于解决原子的更新数据和数据的版本号，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题。</li>
+</ul>
+<p>与之相比，<code>AtomicStampedReference</code> 使用整数版本号，更适合检测引用在两次读取之间是否经历过多次变化。</p>
+<p><strong>4、对象的属性修改类型</strong></p>
+<ul>
+<li><code>AtomicIntegerFieldUpdater</code>:原子更新整型字段的更新器</li>
+<li><code>AtomicLongFieldUpdater</code>：原子更新长整型字段的更新器</li>
+<li><code>AtomicReferenceFieldUpdater</code>：原子更新引用类型里的字段</li>
+</ul>
+<h2 id="基本类型原子类" tabindex="-1">基本类型原子类</h2>
+<p>使用原子的方式更新基本类型</p>
+<ul>
+<li><code>AtomicInteger</code>：整型原子类</li>
+<li><code>AtomicLong</code>：长整型原子类</li>
+<li><code>AtomicBoolean</code>：布尔型原子类</li>
+</ul>
+<p>上面三个类提供的方法几乎相同，所以我们这里以 <code>AtomicInteger</code> 为例子来介绍。</p>
+<p><strong><code>AtomicInteger</code> 类常用方法</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">get</span><span class="hljs-params">()</span> <span class="hljs-comment">//获取当前的值</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndSet</span><span class="hljs-params">(<span class="hljs-type">int</span> newValue)</span><span class="hljs-comment">//获取当前的值，并设置新的值</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndIncrement</span><span class="hljs-params">()</span><span class="hljs-comment">//获取当前的值，并自增</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndDecrement</span><span class="hljs-params">()</span> <span class="hljs-comment">//获取当前的值，并自减</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndAdd</span><span class="hljs-params">(<span class="hljs-type">int</span> delta)</span> <span class="hljs-comment">//获取当前的值，并加上预期的值</span>
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSet</span><span class="hljs-params">(<span class="hljs-type">int</span> expect, <span class="hljs-type">int</span> update)</span> <span class="hljs-comment">//如果输入的数值等于预期值，则以原子方式将该值设置为输入值（update）</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">void</span> <span class="hljs-title function_">lazySet</span><span class="hljs-params">(<span class="hljs-type">int</span> newValue)</span><span class="hljs-comment">//最终设置为newValue, lazySet 提供了一种比 set 方法更弱的语义，可能导致其他线程在之后的一小段时间内还是可以读到旧的值，但可能更高效。</span>
+</code></pre>
+<p><strong><code>AtomicInteger</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 初始化 AtomicInteger 对象，初始值为 0</span>
+<span class="hljs-type">AtomicInteger</span> <span class="hljs-variable">atomicInt</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicInteger</span>(<span class="hljs-number">0</span>);
+
+<span class="hljs-comment">// 使用 getAndSet 方法获取当前值，并设置新值为 3</span>
+<span class="hljs-type">int</span> <span class="hljs-variable">tempValue</span> <span class="hljs-operator">=</span> atomicInt.getAndSet(<span class="hljs-number">3</span>);
+System.out.println(<span class="hljs-string">&quot;tempValue: &quot;</span> + tempValue + <span class="hljs-string">&quot;; atomicInt: &quot;</span> + atomicInt);
+
+<span class="hljs-comment">// 使用 getAndIncrement 方法获取当前值，并自增 1</span>
+tempValue = atomicInt.getAndIncrement();
+System.out.println(<span class="hljs-string">&quot;tempValue: &quot;</span> + tempValue + <span class="hljs-string">&quot;; atomicInt: &quot;</span> + atomicInt);
+
+<span class="hljs-comment">// 使用 getAndAdd 方法获取当前值，并增加指定值 5</span>
+tempValue = atomicInt.getAndAdd(<span class="hljs-number">5</span>);
+System.out.println(<span class="hljs-string">&quot;tempValue: &quot;</span> + tempValue + <span class="hljs-string">&quot;; atomicInt: &quot;</span> + atomicInt);
+
+<span class="hljs-comment">// 使用 compareAndSet 方法进行原子性条件更新，期望值为 9，更新值为 10</span>
+<span class="hljs-type">boolean</span> <span class="hljs-variable">updateSuccess</span> <span class="hljs-operator">=</span> atomicInt.compareAndSet(<span class="hljs-number">9</span>, <span class="hljs-number">10</span>);
+System.out.println(<span class="hljs-string">&quot;Update Success: &quot;</span> + updateSuccess + <span class="hljs-string">&quot;; atomicInt: &quot;</span> + atomicInt);
+
+<span class="hljs-comment">// 获取当前值</span>
+<span class="hljs-type">int</span> <span class="hljs-variable">currentValue</span> <span class="hljs-operator">=</span> atomicInt.get();
+System.out.println(<span class="hljs-string">&quot;Current value: &quot;</span> + currentValue);
+
+<span class="hljs-comment">// 使用 lazySet 方法设置新值为 15</span>
+atomicInt.lazySet(<span class="hljs-number">15</span>);
+System.out.println(<span class="hljs-string">&quot;After lazySet, atomicInt: &quot;</span> + atomicInt);
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">tempValue: <span class="hljs-number">0</span>; atomicInt: <span class="hljs-number">3</span>
+tempValue: <span class="hljs-number">3</span>; atomicInt: <span class="hljs-number">4</span>
+tempValue: <span class="hljs-number">4</span>; atomicInt: <span class="hljs-number">9</span>
+Update Success: <span class="hljs-literal">true</span>; atomicInt: <span class="hljs-number">10</span>
+Current value: <span class="hljs-number">10</span>
+After lazySet, atomicInt: <span class="hljs-number">15</span>
+</code></pre>
+<h2 id="数组类型原子类" tabindex="-1">数组类型原子类</h2>
+<p>使用原子的方式更新数组里的某个元素</p>
+<ul>
+<li><code>AtomicIntegerArray</code>：整形数组原子类</li>
+<li><code>AtomicLongArray</code>：长整形数组原子类</li>
+<li><code>AtomicReferenceArray</code>：引用类型数组原子类</li>
+</ul>
+<p>上面三个类提供的方法几乎相同，所以我们这里以 <code>AtomicIntegerArray</code> 为例子来介绍。</p>
+<p><strong><code>AtomicIntegerArray</code> 类常用方法</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-type">int</span> i)</span> <span class="hljs-comment">//获取 index=i 位置元素的值</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndSet</span><span class="hljs-params">(<span class="hljs-type">int</span> i, <span class="hljs-type">int</span> newValue)</span><span class="hljs-comment">//返回 index=i 位置的当前的值，并将其设置为新值：newValue</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndIncrement</span><span class="hljs-params">(<span class="hljs-type">int</span> i)</span><span class="hljs-comment">//获取 index=i 位置元素的值，并让该位置的元素自增</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndDecrement</span><span class="hljs-params">(<span class="hljs-type">int</span> i)</span> <span class="hljs-comment">//获取 index=i 位置元素的值，并让该位置的元素自减</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndAdd</span><span class="hljs-params">(<span class="hljs-type">int</span> i, <span class="hljs-type">int</span> delta)</span> <span class="hljs-comment">//获取 index=i 位置元素的值，并加上预期的值</span>
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSet</span><span class="hljs-params">(<span class="hljs-type">int</span> i, <span class="hljs-type">int</span> expect, <span class="hljs-type">int</span> update)</span> <span class="hljs-comment">//如果输入的数值等于预期值，则以原子方式将 index=i 位置的元素值设置为输入值（update）</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">void</span> <span class="hljs-title function_">lazySet</span><span class="hljs-params">(<span class="hljs-type">int</span> i, <span class="hljs-type">int</span> newValue)</span><span class="hljs-comment">//最终 将index=i 位置的元素设置为newValue,使用 lazySet 设置之后可能导致其他线程在之后的一小段时间内还是可以读到旧的值。</span>
+</code></pre>
+<p><strong><code>AtomicIntegerArray</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-variable">nums</span> <span class="hljs-operator">=</span> {<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>};
+<span class="hljs-comment">// 创建 AtomicIntegerArray</span>
+<span class="hljs-type">AtomicIntegerArray</span> <span class="hljs-variable">atomicArray</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicIntegerArray</span>(nums);
+
+<span class="hljs-comment">// 打印 AtomicIntegerArray 中的初始值</span>
+System.out.println(<span class="hljs-string">&quot;Initial values in AtomicIntegerArray:&quot;</span>);
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; j &lt; nums.length; j++) {
+    System.out.print(<span class="hljs-string">&quot;Index &quot;</span> + j + <span class="hljs-string">&quot;: &quot;</span> + atomicArray.get(j) + <span class="hljs-string">&quot; &quot;</span>);
+}
+
+<span class="hljs-comment">// 使用 getAndSet 方法将索引 0 处的值设置为 2，并返回旧值</span>
+<span class="hljs-type">int</span> <span class="hljs-variable">tempValue</span> <span class="hljs-operator">=</span> atomicArray.getAndSet(<span class="hljs-number">0</span>, <span class="hljs-number">2</span>);
+System.out.println(<span class="hljs-string">&quot;\nAfter getAndSet(0, 2):&quot;</span>);
+System.out.println(<span class="hljs-string">&quot;Returned value: &quot;</span> + tempValue);
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; j &lt; atomicArray.length(); j++) {
+    System.out.print(<span class="hljs-string">&quot;Index &quot;</span> + j + <span class="hljs-string">&quot;: &quot;</span> + atomicArray.get(j) + <span class="hljs-string">&quot; &quot;</span>);
+}
+
+<span class="hljs-comment">// 使用 getAndIncrement 方法将索引 0 处的值加 1，并返回旧值</span>
+tempValue = atomicArray.getAndIncrement(<span class="hljs-number">0</span>);
+System.out.println(<span class="hljs-string">&quot;\nAfter getAndIncrement(0):&quot;</span>);
+System.out.println(<span class="hljs-string">&quot;Returned value: &quot;</span> + tempValue);
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; j &lt; atomicArray.length(); j++) {
+    System.out.print(<span class="hljs-string">&quot;Index &quot;</span> + j + <span class="hljs-string">&quot;: &quot;</span> + atomicArray.get(j) + <span class="hljs-string">&quot; &quot;</span>);
+}
+
+<span class="hljs-comment">// 使用 getAndAdd 方法将索引 0 处的值增加 5，并返回旧值</span>
+tempValue = atomicArray.getAndAdd(<span class="hljs-number">0</span>, <span class="hljs-number">5</span>);
+System.out.println(<span class="hljs-string">&quot;\nAfter getAndAdd(0, 5):&quot;</span>);
+System.out.println(<span class="hljs-string">&quot;Returned value: &quot;</span> + tempValue);
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; j &lt; atomicArray.length(); j++) {
+    System.out.print(<span class="hljs-string">&quot;Index &quot;</span> + j + <span class="hljs-string">&quot;: &quot;</span> + atomicArray.get(j) + <span class="hljs-string">&quot; &quot;</span>);
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attribute">Initial</span> values in AtomicIntegerArray:
+<span class="hljs-attribute">Index</span> <span class="hljs-number">0</span>: <span class="hljs-number">1</span> Index <span class="hljs-number">1</span>: <span class="hljs-number">2</span> Index <span class="hljs-number">2</span>: <span class="hljs-number">3</span> Index <span class="hljs-number">3</span>: <span class="hljs-number">4</span> Index <span class="hljs-number">4</span>: <span class="hljs-number">5</span> Index <span class="hljs-number">5</span>: <span class="hljs-number">6</span>
+<span class="hljs-attribute">After</span> getAndSet(<span class="hljs-number">0</span>, <span class="hljs-number">2</span>):
+<span class="hljs-attribute">Returned</span> value: <span class="hljs-number">1</span>
+<span class="hljs-attribute">Index</span> <span class="hljs-number">0</span>: <span class="hljs-number">2</span> Index <span class="hljs-number">1</span>: <span class="hljs-number">2</span> Index <span class="hljs-number">2</span>: <span class="hljs-number">3</span> Index <span class="hljs-number">3</span>: <span class="hljs-number">4</span> Index <span class="hljs-number">4</span>: <span class="hljs-number">5</span> Index <span class="hljs-number">5</span>: <span class="hljs-number">6</span>
+<span class="hljs-attribute">After</span> getAndIncrement(<span class="hljs-number">0</span>):
+<span class="hljs-attribute">Returned</span> value: <span class="hljs-number">2</span>
+<span class="hljs-attribute">Index</span> <span class="hljs-number">0</span>: <span class="hljs-number">3</span> Index <span class="hljs-number">1</span>: <span class="hljs-number">2</span> Index <span class="hljs-number">2</span>: <span class="hljs-number">3</span> Index <span class="hljs-number">3</span>: <span class="hljs-number">4</span> Index <span class="hljs-number">4</span>: <span class="hljs-number">5</span> Index <span class="hljs-number">5</span>: <span class="hljs-number">6</span>
+<span class="hljs-attribute">After</span> getAndAdd(<span class="hljs-number">0</span>, <span class="hljs-number">5</span>):
+<span class="hljs-attribute">Returned</span> value: <span class="hljs-number">3</span>
+<span class="hljs-attribute">Index</span> <span class="hljs-number">0</span>: <span class="hljs-number">8</span> Index <span class="hljs-number">1</span>: <span class="hljs-number">2</span> Index <span class="hljs-number">2</span>: <span class="hljs-number">3</span> Index <span class="hljs-number">3</span>: <span class="hljs-number">4</span> Index <span class="hljs-number">4</span>: <span class="hljs-number">5</span> Index <span class="hljs-number">5</span>: <span class="hljs-number">6</span>
+</code></pre>
+<h2 id="引用类型原子类" tabindex="-1">引用类型原子类</h2>
+<p>基本类型原子类只能更新一个变量，如果需要原子更新多个变量，需要使用 引用类型原子类。</p>
+<ul>
+<li><code>AtomicReference</code>：引用类型原子类</li>
+<li><code>AtomicStampedReference</code>：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，可用于解决原子的更新数据和数据的版本号，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题。</li>
+<li><code>AtomicMarkableReference</code>：原子更新带有标记的引用类型。该类将 boolean 标记与引用关联起来，<s>也可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题。</s></li>
+</ul>
+<p>上面三个类提供的方法几乎相同，所以我们这里以 <code>AtomicReference</code> 为例子来介绍。</p>
+<p><strong><code>AtomicReference</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// Person 类</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">private</span> String name;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> age;
+    <span class="hljs-comment">//省略getter/setter和toString</span>
+}
+
+
+<span class="hljs-comment">// 创建 AtomicReference 对象并设置初始值</span>
+<span class="hljs-type">AtomicReference</span>&lt;Person&gt; <span class="hljs-variable">ar</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicReference</span>&lt;&gt;(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;SnailClimb&quot;</span>, <span class="hljs-number">22</span>));
+
+<span class="hljs-comment">// 打印初始值</span>
+System.out.println(<span class="hljs-string">&quot;Initial Person: &quot;</span> + ar.get().toString());
+
+<span class="hljs-comment">// 更新值</span>
+<span class="hljs-type">Person</span> <span class="hljs-variable">updatePerson</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;Daisy&quot;</span>, <span class="hljs-number">20</span>);
+ar.compareAndSet(ar.get(), updatePerson);
+
+<span class="hljs-comment">// 打印更新后的值</span>
+System.out.println(<span class="hljs-string">&quot;Updated Person: &quot;</span> + ar.get().toString());
+
+<span class="hljs-comment">// 尝试再次更新</span>
+<span class="hljs-type">Person</span> <span class="hljs-variable">anotherUpdatePerson</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;John&quot;</span>, <span class="hljs-number">30</span>);
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdated</span> <span class="hljs-operator">=</span> ar.compareAndSet(updatePerson, anotherUpdatePerson);
+
+<span class="hljs-comment">// 打印是否更新成功及最终值</span>
+System.out.println(<span class="hljs-string">&quot;Second Update Success: &quot;</span> + isUpdated);
+System.out.println(<span class="hljs-string">&quot;Final Person: &quot;</span> + ar.get().toString());
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Person</span>: <span class="hljs-title class_">Person</span>{name=<span class="hljs-string">&#x27;SnailClimb&#x27;</span>, age=<span class="hljs-number">22</span>}
+<span class="hljs-title class_">Updated</span> <span class="hljs-title class_">Person</span>: <span class="hljs-title class_">Person</span>{name=<span class="hljs-string">&#x27;Daisy&#x27;</span>, age=<span class="hljs-number">20</span>}
+<span class="hljs-title class_">Second</span> <span class="hljs-title class_">Update</span> <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">true</span>
+<span class="hljs-title class_">Final</span> <span class="hljs-title class_">Person</span>: <span class="hljs-title class_">Person</span>{name=<span class="hljs-string">&#x27;John&#x27;</span>, age=<span class="hljs-number">30</span>}
+</code></pre>
+<p><strong><code>AtomicStampedReference</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 创建一个 AtomicStampedReference 对象，初始值为 &quot;SnailClimb&quot;，初始版本号为 1</span>
+<span class="hljs-type">AtomicStampedReference</span>&lt;String&gt; <span class="hljs-variable">asr</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicStampedReference</span>&lt;&gt;(<span class="hljs-string">&quot;SnailClimb&quot;</span>, <span class="hljs-number">1</span>);
+
+<span class="hljs-comment">// 打印初始值和版本号</span>
+<span class="hljs-type">int</span>[] <span class="hljs-variable">initialStamp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">initialRef</span> <span class="hljs-operator">=</span> asr.get(initialStamp);
+System.out.println(<span class="hljs-string">&quot;Initial Reference: &quot;</span> + initialRef + <span class="hljs-string">&quot;, Initial Stamp: &quot;</span> + initialStamp[<span class="hljs-number">0</span>]);
+
+<span class="hljs-comment">// 更新值和版本号</span>
+<span class="hljs-type">int</span> <span class="hljs-variable">oldStamp</span> <span class="hljs-operator">=</span> initialStamp[<span class="hljs-number">0</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">oldRef</span> <span class="hljs-operator">=</span> initialRef;
+<span class="hljs-type">String</span> <span class="hljs-variable">newRef</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Daisy&quot;</span>;
+<span class="hljs-type">int</span> <span class="hljs-variable">newStamp</span> <span class="hljs-operator">=</span> oldStamp + <span class="hljs-number">1</span>;
+
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdated</span> <span class="hljs-operator">=</span> asr.compareAndSet(oldRef, newRef, oldStamp, newStamp);
+System.out.println(<span class="hljs-string">&quot;Update Success: &quot;</span> + isUpdated);
+
+<span class="hljs-comment">// 打印更新后的值和版本号</span>
+<span class="hljs-type">int</span>[] <span class="hljs-variable">updatedStamp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">updatedRef</span> <span class="hljs-operator">=</span> asr.get(updatedStamp);
+System.out.println(<span class="hljs-string">&quot;Updated Reference: &quot;</span> + updatedRef + <span class="hljs-string">&quot;, Updated Stamp: &quot;</span> + updatedStamp[<span class="hljs-number">0</span>]);
+
+<span class="hljs-comment">// 尝试用错误的版本号更新</span>
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdatedWithWrongStamp</span> <span class="hljs-operator">=</span> asr.compareAndSet(newRef, <span class="hljs-string">&quot;John&quot;</span>, oldStamp, newStamp + <span class="hljs-number">1</span>);
+System.out.println(<span class="hljs-string">&quot;Update with Wrong Stamp Success: &quot;</span> + isUpdatedWithWrongStamp);
+
+<span class="hljs-comment">// 打印最终的值和版本号</span>
+<span class="hljs-type">int</span>[] <span class="hljs-variable">finalStamp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">finalRef</span> <span class="hljs-operator">=</span> asr.get(finalStamp);
+System.out.println(<span class="hljs-string">&quot;Final Reference: &quot;</span> + finalRef + <span class="hljs-string">&quot;, Final Stamp: &quot;</span> + finalStamp[<span class="hljs-number">0</span>]);
+</code></pre>
+<p>输出结果如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Stamp</span>: <span class="hljs-number">1</span>
+<span class="hljs-title class_">Update</span> <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">true</span>
+<span class="hljs-title class_">Updated</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">Daisy</span>, <span class="hljs-title class_">Updated</span> <span class="hljs-title class_">Stamp</span>: <span class="hljs-number">2</span>
+<span class="hljs-title class_">Update</span> <span class="hljs-keyword">with</span> <span class="hljs-title class_">Wrong</span> <span class="hljs-title class_">Stamp</span> <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">false</span>
+<span class="hljs-title class_">Final</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">Daisy</span>, <span class="hljs-title class_">Final</span> <span class="hljs-title class_">Stamp</span>: <span class="hljs-number">2</span>
+</code></pre>
+<p><strong><code>AtomicMarkableReference</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 创建一个 AtomicMarkableReference 对象，初始值为 &quot;SnailClimb&quot;，初始标记为 false</span>
+<span class="hljs-type">AtomicMarkableReference</span>&lt;String&gt; <span class="hljs-variable">amr</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicMarkableReference</span>&lt;&gt;(<span class="hljs-string">&quot;SnailClimb&quot;</span>, <span class="hljs-literal">false</span>);
+
+<span class="hljs-comment">// 打印初始值和标记</span>
+<span class="hljs-type">boolean</span>[] <span class="hljs-variable">initialMark</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">boolean</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">initialRef</span> <span class="hljs-operator">=</span> amr.get(initialMark);
+System.out.println(<span class="hljs-string">&quot;Initial Reference: &quot;</span> + initialRef + <span class="hljs-string">&quot;, Initial Mark: &quot;</span> + initialMark[<span class="hljs-number">0</span>]);
+
+<span class="hljs-comment">// 更新值和标记</span>
+<span class="hljs-type">String</span> <span class="hljs-variable">oldRef</span> <span class="hljs-operator">=</span> initialRef;
+<span class="hljs-type">String</span> <span class="hljs-variable">newRef</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Daisy&quot;</span>;
+<span class="hljs-type">boolean</span> <span class="hljs-variable">oldMark</span> <span class="hljs-operator">=</span> initialMark[<span class="hljs-number">0</span>];
+<span class="hljs-type">boolean</span> <span class="hljs-variable">newMark</span> <span class="hljs-operator">=</span> <span class="hljs-literal">true</span>;
+
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdated</span> <span class="hljs-operator">=</span> amr.compareAndSet(oldRef, newRef, oldMark, newMark);
+System.out.println(<span class="hljs-string">&quot;Update Success: &quot;</span> + isUpdated);
+
+<span class="hljs-comment">// 打印更新后的值和标记</span>
+<span class="hljs-type">boolean</span>[] <span class="hljs-variable">updatedMark</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">boolean</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">updatedRef</span> <span class="hljs-operator">=</span> amr.get(updatedMark);
+System.out.println(<span class="hljs-string">&quot;Updated Reference: &quot;</span> + updatedRef + <span class="hljs-string">&quot;, Updated Mark: &quot;</span> + updatedMark[<span class="hljs-number">0</span>]);
+
+<span class="hljs-comment">// 尝试用错误的标记更新</span>
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdatedWithWrongMark</span> <span class="hljs-operator">=</span> amr.compareAndSet(newRef, <span class="hljs-string">&quot;John&quot;</span>, oldMark, !newMark);
+System.out.println(<span class="hljs-string">&quot;Update with Wrong Mark Success: &quot;</span> + isUpdatedWithWrongMark);
+
+<span class="hljs-comment">// 打印最终的值和标记</span>
+<span class="hljs-type">boolean</span>[] <span class="hljs-variable">finalMark</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">boolean</span>[<span class="hljs-number">1</span>];
+<span class="hljs-type">String</span> <span class="hljs-variable">finalRef</span> <span class="hljs-operator">=</span> amr.get(finalMark);
+System.out.println(<span class="hljs-string">&quot;Final Reference: &quot;</span> + finalRef + <span class="hljs-string">&quot;, Final Mark: &quot;</span> + finalMark[<span class="hljs-number">0</span>]);
+</code></pre>
+<p>输出结果如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Mark</span>: <span class="hljs-keyword">false</span>
+<span class="hljs-title class_">Update</span> <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">true</span>
+<span class="hljs-title class_">Updated</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">Daisy</span>, <span class="hljs-title class_">Updated</span> <span class="hljs-title class_">Mark</span>: <span class="hljs-keyword">true</span>
+<span class="hljs-title class_">Update</span> <span class="hljs-keyword">with</span> <span class="hljs-title class_">Wrong</span> <span class="hljs-title class_">Mark</span> <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">false</span>
+<span class="hljs-title class_">Final</span> <span class="hljs-title class_">Reference</span>: <span class="hljs-title class_">Daisy</span>, <span class="hljs-title class_">Final</span> <span class="hljs-title class_">Mark</span>: <span class="hljs-keyword">true</span>
+</code></pre>
+<h2 id="对象的属性修改类型原子类" tabindex="-1">对象的属性修改类型原子类</h2>
+<p>如果需要原子更新某个类里的某个字段时，需要用到对象的属性修改类型原子类。</p>
+<ul>
+<li><code>AtomicIntegerFieldUpdater</code>:原子更新整形字段的更新器</li>
+<li><code>AtomicLongFieldUpdater</code>：原子更新长整形字段的更新器</li>
+<li><code>AtomicReferenceFieldUpdater</code>：原子更新引用类型里的字段的更新器</li>
+</ul>
+<p>要想原子地更新对象的属性需要两步。第一步，因为对象的属性修改类型原子类都是抽象类，所以每次使用都必须使用静态方法 <code>newUpdater()</code> 创建一个更新器，并且需要设置想要更新的类和属性。第二步，目标字段必须使用 <code>volatile</code> 修饰，并与更新器的类型匹配：分别为 <code>int</code>、<code>long</code> 或引用类型；同时不能是 <code>static</code> 或 <code>final</code> 字段。</p>
+<p>上面三个类提供的方法几乎相同，所以我们这里以 <code>AtomicIntegerFieldUpdater</code> 为例子来介绍。</p>
+<p><strong><code>AtomicIntegerFieldUpdater</code> 类使用示例</strong> :</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// Person 类</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">private</span> String name;
+    <span class="hljs-comment">// 要使用 AtomicIntegerFieldUpdater，字段必须是 volatile int</span>
+    <span class="hljs-keyword">volatile</span> <span class="hljs-type">int</span> age;
+    <span class="hljs-comment">//省略getter/setter和toString</span>
+}
+
+<span class="hljs-comment">// 创建 AtomicIntegerFieldUpdater 对象</span>
+<span class="hljs-type">AtomicIntegerFieldUpdater</span>&lt;Person&gt; <span class="hljs-variable">ageUpdater</span> <span class="hljs-operator">=</span> AtomicIntegerFieldUpdater.newUpdater(Person.class, <span class="hljs-string">&quot;age&quot;</span>);
+
+<span class="hljs-comment">// 创建 Person 对象</span>
+<span class="hljs-type">Person</span> <span class="hljs-variable">person</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;SnailClimb&quot;</span>, <span class="hljs-number">22</span>);
+
+<span class="hljs-comment">// 打印初始值</span>
+System.out.println(<span class="hljs-string">&quot;Initial Person: &quot;</span> + person);
+
+<span class="hljs-comment">// 更新 age 字段</span>
+ageUpdater.incrementAndGet(person); <span class="hljs-comment">// 自增</span>
+System.out.println(<span class="hljs-string">&quot;After Increment: &quot;</span> + person);
+
+ageUpdater.addAndGet(person, <span class="hljs-number">5</span>); <span class="hljs-comment">// 增加 5</span>
+System.out.println(<span class="hljs-string">&quot;After Adding 5: &quot;</span> + person);
+
+ageUpdater.compareAndSet(person, <span class="hljs-number">28</span>, <span class="hljs-number">30</span>); <span class="hljs-comment">// 如果当前值是 28，则设置为 30</span>
+System.out.println(<span class="hljs-string">&quot;After Compare and Set (28 to 30): &quot;</span> + person);
+
+<span class="hljs-comment">// 尝试使用错误的比较值进行更新</span>
+<span class="hljs-type">boolean</span> <span class="hljs-variable">isUpdated</span> <span class="hljs-operator">=</span> ageUpdater.compareAndSet(person, <span class="hljs-number">28</span>, <span class="hljs-number">35</span>); <span class="hljs-comment">// 这次应该失败</span>
+System.out.println(<span class="hljs-string">&quot;Compare and Set (28 to 35) Success: &quot;</span> + isUpdated);
+System.out.println(<span class="hljs-string">&quot;Final Person: &quot;</span> + person);
+</code></pre>
+<p>输出结果：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Initial</span> <span class="hljs-title class_">Person</span>: <span class="hljs-title class_">Name</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Age</span>: <span class="hljs-number">22</span>
+<span class="hljs-title class_">After</span> <span class="hljs-title class_">Increment</span>: <span class="hljs-title class_">Name</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Age</span>: <span class="hljs-number">23</span>
+<span class="hljs-title class_">After</span> <span class="hljs-title class_">Adding</span> <span class="hljs-number">5</span>: <span class="hljs-title class_">Name</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Age</span>: <span class="hljs-number">28</span>
+<span class="hljs-title class_">After</span> <span class="hljs-title class_">Compare</span> and <span class="hljs-title class_">Set</span> (<span class="hljs-number">28</span> to <span class="hljs-number">30</span>): <span class="hljs-title class_">Name</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Age</span>: <span class="hljs-number">30</span>
+<span class="hljs-title class_">Compare</span> and <span class="hljs-title class_">Set</span> (<span class="hljs-number">28</span> to <span class="hljs-number">35</span>) <span class="hljs-title class_">Success</span>: <span class="hljs-keyword">false</span>
+<span class="hljs-title class_">Final</span> <span class="hljs-title class_">Person</span>: <span class="hljs-title class_">Name</span>: <span class="hljs-title class_">SnailClimb</span>, <span class="hljs-title class_">Age</span>: <span class="hljs-number">30</span>
+</code></pre>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>《Java 并发编程的艺术》</li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

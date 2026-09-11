@@ -1,0 +1,481 @@
+<h2 id="异常" tabindex="-1">异常</h2>
+<p><strong>Java 异常类层次结构图概览</strong>：</p>
+<p><img src="/img/types-of-exceptions-in-java-3b100929.png" alt="" loading="lazy"></p>
+<h3 id="exception-和-error-有什么区别" tabindex="-1">Exception 和 Error 有什么区别？</h3>
+<p>在 Java 中，所有的异常都有一个共同的祖先 <code>java.lang</code> 包中的 <code>Throwable</code> 类。<code>Throwable</code> 类有两个重要的子类:</p>
+<ul>
+<li><strong><code>Exception</code></strong> :程序本身可以处理的异常，可以通过 <code>catch</code> 来进行捕获。<code>Exception</code> 又可以分为 Checked Exception（受检查异常，必须处理） 和 Unchecked Exception（不受检查异常，可以不处理）。</li>
+<li><strong><code>Error</code></strong>：<code>Error</code> 属于程序无法处理的错误，<s>我们没办法通过 <code>catch</code> 来进行捕获</s>不建议通过 <code>catch</code> 捕获。例如 Java 虚拟机运行错误（<code>Virtual MachineError</code>）、虚拟机内存不够错误(<code>OutOfMemoryError</code>)、类定义错误（<code>NoClassDefFoundError</code>）等。这些异常发生时，Java 虚拟机（JVM）一般会选择线程终止。</li>
+</ul>
+<h3 id="classnotfoundexception-和-noclassdeffounderror-的区别" tabindex="-1">ClassNotFoundException 和 NoClassDefFoundError 的区别</h3>
+<ul>
+<li><code>ClassNotFoundException</code> 是 Exception，发生在使用反射等动态加载时找不到类，是可预期的，可以捕获处理。</li>
+<li><code>NoClassDefFoundError</code> 是 Error，表示 JVM 或类加载器尝试加载类定义时找不到该定义。除了运行时缺少 JAR，还可能由类初始化失败后再次使用该类等情况触发。它通常会终止当前线程，但不等于整个 JVM 必然无法继续运行。</li>
+</ul>
+<h3 id="-checked-exception-和-unchecked-exception-有什么区别" tabindex="-1">⭐️ Checked Exception 和 Unchecked Exception 有什么区别？</h3>
+<p><strong>Checked Exception</strong> 即 受检查异常，Java 代码在编译过程中，如果受检查异常没有被 <code>catch</code> 或者 <code>throws</code> 关键字处理的话，就没办法通过编译。</p>
+<p>比如下面这段 IO 操作的代码：</p>
+<p><img src="/img/checked-exception-0d2526e0.png" alt="" loading="lazy"></p>
+<p>除了 <code>RuntimeException</code> 及其子类以外，其他的 <code>Exception</code> 类及其子类都属于受检查异常。常见的受检查异常有：IO 相关的异常、<code>ClassNotFoundException</code>、<code>SQLException</code>...。</p>
+<p><strong>Unchecked Exception</strong> 即 <strong>不受检查异常</strong>，Java 代码在编译过程中，我们即使不处理不受检查异常也可以正常通过编译。</p>
+<p><code>RuntimeException</code> 及其子类属于非受检查异常；从 JLS 的分类来看，<code>Error</code> 及其子类也属于非受检查异常。常见的 <code>RuntimeException</code> 有：</p>
+<ul>
+<li><code>NullPointerException</code>（空指针错误）</li>
+<li><code>IllegalArgumentException</code>（参数错误比如方法入参类型错误）</li>
+<li><code>NumberFormatException</code>（字符串转换为数字格式错误，<code>IllegalArgumentException</code> 的子类）</li>
+<li><code>ArrayIndexOutOfBoundsException</code>（数组越界错误）</li>
+<li><code>ClassCastException</code>（类型转换错误）</li>
+<li><code>ArithmeticException</code>（算术错误）</li>
+<li><code>SecurityException</code>（安全错误比如权限不够）</li>
+<li><code>UnsupportedOperationException</code>（不支持的操作错误比如重复创建同一用户）</li>
+<li>……</li>
+</ul>
+<p><img src="/img/unchecked-exception-3bbef05c.png" alt="" loading="lazy"></p>
+<h3 id="你更倾向于使用-checked-exception-还是-unchecked-exception" tabindex="-1">你更倾向于使用 Checked Exception 还是 Unchecked Exception？</h3>
+<p>默认使用 Unchecked Exception，只在必要时才用 Checked Exception。</p>
+<p>我们可以把 Unchecked Exception（比如 <code>NullPointerException</code>）看作是代码 Bug。对待 Bug，最好的方式是让它暴露出来然后去修复代码，而不是用 <code>try-catch</code> 去掩盖它。</p>
+<p>一般来说，只在一种情况下使用 Checked Exception：当这个异常是业务逻辑的一部分，并且调用方必须处理它时。比如说，一个余额不足异常。这不是 bug，而是一个正常的业务分支，我需要用 Checked Exception 来强制调用者去处理这种情况，比如提示用户去充值。这样就能在保证关键业务逻辑完整性的同时，让代码尽可能保持简洁。</p>
+<h3 id="throwable-类常用方法有哪些" tabindex="-1">Throwable 类常用方法有哪些？</h3>
+<ul>
+<li><code>String getMessage()</code>: 返回异常发生时的详细信息</li>
+<li><code>String toString()</code>: 返回异常发生时的简要描述</li>
+<li><code>String getLocalizedMessage()</code>: 返回异常对象的本地化信息。使用 <code>Throwable</code> 的子类覆盖这个方法，可以生成本地化信息。如果子类没有覆盖该方法，则该方法返回的信息与 <code>getMessage()</code> 返回的结果相同</li>
+<li><code>void printStackTrace()</code>: 在控制台上打印 <code>Throwable</code> 对象封装的异常信息</li>
+</ul>
+<h3 id="try-catch-finally-如何使用" tabindex="-1">try-catch-finally 如何使用？</h3>
+<ul>
+<li><code>try</code> 块：用于捕获异常。其后可接零个或多个 <code>catch</code> 块，如果没有 <code>catch</code> 块，则必须跟一个 <code>finally</code> 块。</li>
+<li><code>catch</code> 块：用于处理 try 捕获到的异常。</li>
+<li><code>finally</code> 块：无论是否捕获或处理异常，<code>finally</code> 块里的语句都会被执行。当在 <code>try</code> 块或 <code>catch</code> 块中遇到 <code>return</code> 语句时，<code>finally</code> 语句块将在方法返回之前被执行。</li>
+</ul>
+<p>代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> {
+    System.out.println(<span class="hljs-string">&quot;Try to do something&quot;</span>);
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;RuntimeException&quot;</span>);
+} <span class="hljs-keyword">catch</span> (Exception e) {
+    System.out.println(<span class="hljs-string">&quot;Catch Exception -&gt; &quot;</span> + e.getMessage());
+} <span class="hljs-keyword">finally</span> {
+    System.out.println(<span class="hljs-string">&quot;Finally&quot;</span>);
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Try</span> to <span class="hljs-keyword">do</span> something
+<span class="hljs-title class_">Catch</span> <span class="hljs-title class_">Exception</span> -&gt; <span class="hljs-title class_">RuntimeException</span>
+<span class="hljs-title class_">Finally</span>
+</code></pre>
+<p><strong>注意：不要在 finally 语句块中使用 return!</strong> 当 try 语句和 finally 语句中都有 return 语句时，try 语句块中的 return 语句会被忽略。这是因为 try 语句中的 return 返回值会先被暂存在一个本地变量中，当执行到 finally 语句中的 return 之后，这个本地变量的值就变为了 finally 语句中的 return 返回值。</p>
+<p>代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+    System.out.println(f(<span class="hljs-number">2</span>));
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">int</span> <span class="hljs-title function_">f</span><span class="hljs-params">(<span class="hljs-type">int</span> value)</span> {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-keyword">return</span> value * value;
+    } <span class="hljs-keyword">finally</span> {
+        <span class="hljs-keyword">if</span> (value == <span class="hljs-number">2</span>) {
+            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+        }
+    }
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">0
+</code></pre>
+<h3 id="finally-中的代码一定会执行吗" tabindex="-1">finally 中的代码一定会执行吗？</h3>
+<p>不一定的！在某些情况下，finally 中的代码不会被执行。</p>
+<p>就比如说 finally 之前虚拟机被终止运行的话，finally 中的代码就不会被执行。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> {
+    System.out.println(<span class="hljs-string">&quot;Try to do something&quot;</span>);
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;RuntimeException&quot;</span>);
+} <span class="hljs-keyword">catch</span> (Exception e) {
+    System.out.println(<span class="hljs-string">&quot;Catch Exception -&gt; &quot;</span> + e.getMessage());
+    <span class="hljs-comment">// 终止当前正在运行的Java虚拟机</span>
+    System.exit(<span class="hljs-number">1</span>);
+} <span class="hljs-keyword">finally</span> {
+    System.out.println(<span class="hljs-string">&quot;Finally&quot;</span>);
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-title class_">Try</span> to <span class="hljs-keyword">do</span> something
+<span class="hljs-title class_">Catch</span> <span class="hljs-title class_">Exception</span> -&gt; <span class="hljs-title class_">RuntimeException</span>
+</code></pre>
+<p>另外，如果 JVM 进程被强制终止，例如调用 <code>Runtime.halt()</code>、操作系统直接结束进程或机器掉电，<code>finally</code> 块也可能来不及执行。普通的未捕获异常即使最终导致当前线程结束，在线程结束前仍会按语言规则执行 <code>finally</code>。</p>
+<p>相关 issue：<a href="https://github.com/Snailclimb/JavaGuide/issues/190" target="_blank" rel="noopener">https://github.com/Snailclimb/JavaGuide/issues/190</a>。</p>
+<p>🧗🏻 进阶一下：从字节码角度分析 <code>try catch finally</code> 这个语法糖背后的实现原理。</p>
+<h3 id="如何使用-try-with-resources-代替-try-catch-finally" tabindex="-1">如何使用 <code>try-with-resources</code> 代替 <code>try-catch-finally</code>？</h3>
+<ol>
+<li><strong>适用范围（资源的定义）：</strong> 任何实现 <code>java.lang.AutoCloseable</code> 或者 <code>java.io.Closeable</code> 的对象</li>
+<li><strong>关闭资源和 finally 块的执行顺序：</strong> 在 <code>try-with-resources</code> 语句中，任何 catch 或 finally 块在声明的资源关闭后运行</li>
+</ol>
+<p>《Effective Java》中明确指出：</p>
+<blockquote>
+<p>面对必须要关闭的资源，我们总是应该优先使用 <code>try-with-resources</code> 而不是 <code>try-finally</code>。随之产生的代码更简短，更清晰，产生的异常对我们也更有用。<code>try-with-resources</code> 语句让我们更容易编写必须要关闭的资源的代码，若采用 <code>try-finally</code> 则几乎做不到这点。</p>
+</blockquote>
+<p>Java 中类似于 <code>InputStream</code>、<code>OutputStream</code>、<code>Scanner</code>、<code>PrintWriter</code> 等的资源都需要我们调用 <code>close()</code> 方法来手动关闭，一般情况下我们都是通过 <code>try-catch-finally</code> 语句来实现这个需求，如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//读取文本文件的内容</span>
+<span class="hljs-type">Scanner</span> <span class="hljs-variable">scanner</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">try</span> {
+    scanner = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Scanner</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;D://read.txt&quot;</span>));
+    <span class="hljs-keyword">while</span> (scanner.hasNext()) {
+        System.out.println(scanner.nextLine());
+    }
+} <span class="hljs-keyword">catch</span> (FileNotFoundException e) {
+    e.printStackTrace();
+} <span class="hljs-keyword">finally</span> {
+    <span class="hljs-keyword">if</span> (scanner != <span class="hljs-literal">null</span>) {
+        scanner.close();
+    }
+}
+</code></pre>
+<p>使用 Java 7 之后的 <code>try-with-resources</code> 语句改造上面的代码:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">Scanner</span> <span class="hljs-variable">scanner</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Scanner</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;test.txt&quot;</span>))) {
+    <span class="hljs-keyword">while</span> (scanner.hasNext()) {
+        System.out.println(scanner.nextLine());
+    }
+} <span class="hljs-keyword">catch</span> (FileNotFoundException fnfe) {
+    fnfe.printStackTrace();
+}
+</code></pre>
+<p>当然多个资源需要关闭的时候，使用 <code>try-with-resources</code> 实现起来也非常简单，如果你还是用 <code>try-catch-finally</code> 可能会带来很多问题。</p>
+<p>通过使用分号分隔，可以在 <code>try-with-resources</code> 块中声明多个资源。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bin</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;test.txt&quot;</span>)));
+     <span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bout</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;out.txt&quot;</span>)))) {
+    <span class="hljs-type">int</span> b;
+    <span class="hljs-keyword">while</span> ((b = bin.read()) != -<span class="hljs-number">1</span>) {
+        bout.write(b);
+    }
+}
+<span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<h3 id="-异常使用有哪些需要注意的地方" tabindex="-1">⭐️ 异常使用有哪些需要注意的地方？</h3>
+<ul>
+<li>不要把异常定义为静态变量，因为这样会导致异常栈信息错乱。每次手动抛出异常，我们都需要手动 new 一个异常对象抛出。</li>
+<li>抛出的异常信息一定要有意义。</li>
+<li>建议抛出更加具体的异常，比如字符串转换为数字格式错误的时候应该抛出 <code>NumberFormatException</code> 而不是其父类 <code>IllegalArgumentException</code>。</li>
+<li>避免重复记录日志：如果在捕获异常的地方已经记录了足够的信息（包括异常类型、错误信息和堆栈跟踪等），那么在业务代码中再次抛出这个异常时，就不应该再次记录相同的错误信息。重复记录日志会使得日志文件膨胀，并且可能会掩盖问题的实际原因，使得问题更难以追踪和解决。</li>
+<li>……</li>
+</ul>
+<h2 id="泛型" tabindex="-1">泛型</h2>
+<h3 id="什么是泛型有什么作用" tabindex="-1">什么是泛型？有什么作用？</h3>
+<p><strong>Java 泛型（Generics）</strong> 是 JDK 5 中引入的一个新特性。使用泛型参数，可以增强代码的可读性以及稳定性。</p>
+<p>编译器可以对泛型参数进行检测，并且通过泛型参数可以指定传入的对象类型。比如 <code>ArrayList&lt;Person&gt; persons = new ArrayList&lt;Person&gt;()</code> 这行代码就指明了该 <code>ArrayList</code> 对象只能传入 <code>Person</code> 对象，如果传入其他类型的对象就会报错。</p>
+<pre class="md-pre"><code class="hljs">ArrayList&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractList</span>&lt;E&gt;
+</code></pre>
+<p>并且，原生 <code>List</code> 返回类型是 <code>Object</code>，需要手动转换类型才能使用，使用泛型后编译器自动转换。</p>
+<h3 id="泛型的使用方式有哪几种" tabindex="-1">泛型的使用方式有哪几种？</h3>
+<p>泛型一般有三种使用方式:<strong>泛型类</strong>、<strong>泛型接口</strong>、<strong>泛型方法</strong>。</p>
+<p><strong>1.泛型类</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//此处T可以随便写为任意标识，常见的如T、E、K、V等形式的参数常用于表示泛型</span>
+<span class="hljs-comment">//在实例化泛型类时，必须指定T的具体类型</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Generic</span>&lt;T&gt;{
+
+    <span class="hljs-keyword">private</span> T key;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">Generic</span><span class="hljs-params">(T key)</span> {
+        <span class="hljs-built_in">this</span>.key = key;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">T</span> <span class="hljs-title function_">getKey</span><span class="hljs-params">()</span>{
+        <span class="hljs-keyword">return</span> key;
+    }
+}
+</code></pre>
+<p>如何实例化泛型类：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Generic</span>&lt;Integer&gt; <span class="hljs-variable">genericInteger</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Generic</span>&lt;Integer&gt;(<span class="hljs-number">123456</span>);
+</code></pre>
+<p><strong>2.泛型接口</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Generator</span>&lt;T&gt; {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">T</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p>实现泛型接口，不指定类型：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">GeneratorImpl</span>&lt;T&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Generator</span>&lt;T&gt;{
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">T</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+    }
+}
+</code></pre>
+<p>实现泛型接口，指定类型：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">GeneratorImpl</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Generator</span>&lt;String&gt; {
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;hello&quot;</span>;
+    }
+}
+</code></pre>
+<p><strong>3.泛型方法</strong>：</p>
+<pre class="md-pre"><code class="hljs">   <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt; E &gt; <span class="hljs-type">void</span> <span class="hljs-title function_">printArray</span><span class="hljs-params">( E[] inputArray )</span>
+   {
+         <span class="hljs-keyword">for</span> ( E element : inputArray ){
+            System.out.printf( <span class="hljs-string">&quot;%s &quot;</span>, element );
+         }
+         System.out.println();
+    }
+</code></pre>
+<p>使用：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 创建不同类型数组：Integer, Double 和 Character</span>
+<span class="hljs-type">Integer</span>[] <span class="hljs-variable">intArray</span> <span class="hljs-operator">=</span> { <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span> };
+<span class="hljs-type">String</span>[] <span class="hljs-variable">stringArray</span> <span class="hljs-operator">=</span> { <span class="hljs-string">&quot;Hello&quot;</span>, <span class="hljs-string">&quot;World&quot;</span> };
+printArray( intArray  );
+printArray( stringArray  );
+</code></pre>
+<blockquote>
+<p>注意：<code>public static &lt;E&gt; void printArray(E[] inputArray)</code> 是静态泛型方法。静态上下文没有当前实例，因此不能引用类声明的类型参数；这与“静态方法先加载”无关。静态方法可以声明并使用自己的类型参数 <code>&lt;E&gt;</code>。</p>
+</blockquote>
+<h3 id="项目中哪里用到了泛型" tabindex="-1">项目中哪里用到了泛型？</h3>
+<ul>
+<li>自定义接口通用返回结果 <code>CommonResult&lt;T&gt;</code> 通过参数 <code>T</code> 可根据具体的返回类型动态指定结果的数据类型</li>
+<li>定义 <code>Excel</code> 处理类 <code>ExcelUtil&lt;T&gt;</code> 用于动态指定 <code>Excel</code> 导出的数据类型</li>
+<li>构建集合工具类（参考 <code>Collections</code> 中的 <code>sort</code>, <code>binarySearch</code> 方法）。</li>
+<li>……</li>
+</ul>
+<h2 id="-反射" tabindex="-1">⭐️ 反射</h2>
+<p>关于反射的详细解读，请看这篇文章 <a href="/read/java/basis/reflection.html">Java 反射机制详解</a>。</p>
+<h3 id="什么是反射" tabindex="-1">什么是反射？</h3>
+<p>简单来说，Java 反射 (Reflection) 是一种<strong>在程序运行时，动态地获取类的信息并操作类或对象（方法、属性）的能力</strong>。</p>
+<p>通常情况下，我们写的代码在编译时类型就已经确定了，要调用哪个方法、访问哪个字段都是明确的。但反射允许我们在<strong>运行时</strong>才去探知一个类有哪些方法、哪些属性、它的构造函数是怎样的，并在访问控制和模块边界允许的情况下动态创建对象、调用方法或修改属性。</p>
+<p>正是这种在运行时“反观自身”并进行操作的能力，使得反射成为许多<strong>通用框架和库的基石</strong>。它让代码更加灵活，能够处理在编译时未知的类型。</p>
+<h3 id="反射有什么优缺点" tabindex="-1">反射有什么优缺点？</h3>
+<p><strong>优点：</strong></p>
+<ol>
+<li><strong>灵活性和动态性</strong>：反射允许程序在运行时动态地加载类、创建对象、调用方法和访问字段，根据实际需求（如配置文件、用户输入、注解等）动态地适应和扩展程序的行为。许多现代 Java 框架（如 Spring、Hibernate、MyBatis）正是基于这一特性来实现依赖注入（DI）、面向切面编程（AOP）、对象关系映射（ORM）、注解处理等核心功能，可以说反射是框架开发不可或缺的基础。</li>
+<li><strong>解耦合和通用性</strong>：通过反射，可以编写更通用、可重用和高度解耦的代码，降低模块之间的依赖。例如，可以通过反射实现通用的对象拷贝、序列化、Bean 工具等。</li>
+</ol>
+<p><strong>缺点：</strong></p>
+<ol>
+<li><strong>性能开销</strong>：反射操作通常比直接代码调用要慢。因为涉及到动态类型解析、方法查找以及 JIT 编译器的优化受限等因素。不过，对于大多数框架场景，这种性能损耗通常是可以接受的，或者框架本身会做一些缓存优化。</li>
+<li><strong>安全性问题</strong>：反射在满足访问检查、模块开放关系等条件时，可以抑制部分 Java 语言访问检查（如访问 <code>private</code> 字段和方法），可能破坏封装性。此外，反射还可能绕过编译期泛型检查，带来类型安全隐患。Java 9 及之后的模块边界可能拒绝此类深层反射访问并抛出 <code>InaccessibleObjectException</code>。</li>
+<li><strong>代码可读性和维护性</strong>：过度使用反射会使代码变得复杂、难以理解和调试。错误通常在运行时才会暴露，不像编译期错误那样容易发现。</li>
+</ol>
+<p>相关阅读：<a href="https://stackoverflow.com/questions/1392351/java-reflection-why-is-it-so-slow" target="_blank" rel="noopener">Java Reflection: Why is it so slow?</a>。</p>
+<h3 id="反射的应用场景" tabindex="-1">反射的应用场景？</h3>
+<p>我们平时写业务代码可能很少直接跟 Java 的反射（Reflection）打交道。但你可能没意识到，你天天都在享受反射带来的便利！<strong>很多流行的框架，比如 Spring/Spring Boot、MyBatis 等，底层都大量运用了反射机制</strong>，这才让它们能够那么灵活和强大。</p>
+<p>下面简单列举几个最常见的场景帮助大家理解。</p>
+<p><strong>1.依赖注入与控制反转（IoC）</strong></p>
+<p>以 Spring/Spring Boot 为代表的 IoC 框架，会在启动时扫描带有特定注解（如 <code>@Component</code>, <code>@Service</code>, <code>@Repository</code>, <code>@Controller</code>）的类，利用反射实例化对象（Bean），并通过反射注入依赖（如 <code>@Autowired</code>、构造器注入等）。</p>
+<p><strong>2.注解处理</strong></p>
+<p>注解本身只是个“标记”，得有人去读这个标记才知道要做什么。反射就是那个“读取器”。框架通过反射检查类、方法、字段上有没有特定的注解，然后根据注解信息执行相应的逻辑。比如，看到 <code>@Value</code>，就用反射读取注解内容，去配置文件找对应的值，再用反射把值设置给字段。</p>
+<p><strong>3.动态代理与 AOP</strong></p>
+<p>想在调用某个方法前后自动加点料（比如打日志、开事务、做权限检查）？AOP（面向切面编程）就是干这个的，而动态代理是实现 AOP 的常用手段。JDK 自带的动态代理（Proxy 和 InvocationHandler）就离不开反射。代理对象在内部调用真实对象的方法时，就是通过反射的 <code>Method.invoke</code> 来完成的。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DebugInvocationHandler</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">InvocationHandler</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Object target; <span class="hljs-comment">// 真实对象</span>
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">DebugInvocationHandler</span><span class="hljs-params">(Object target)</span> { <span class="hljs-built_in">this</span>.target = target; }
+
+    <span class="hljs-comment">// proxy: 代理对象, method: 被调用的方法, args: 方法参数</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Object</span> <span class="hljs-title function_">invoke</span><span class="hljs-params">(Object proxy, Method method, Object[] args)</span> <span class="hljs-keyword">throws</span> Throwable {
+        System.out.println(<span class="hljs-string">&quot;切面逻辑：调用方法 &quot;</span> + method.getName() + <span class="hljs-string">&quot; 之前&quot;</span>);
+        <span class="hljs-comment">// 通过反射调用真实对象的同名方法</span>
+        <span class="hljs-type">Object</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> method.invoke(target, args);
+        System.out.println(<span class="hljs-string">&quot;切面逻辑：调用方法 &quot;</span> + method.getName() + <span class="hljs-string">&quot; 之后&quot;</span>);
+        <span class="hljs-keyword">return</span> result;
+    }
+}
+</code></pre>
+<p><strong>4.对象关系映射（ORM）</strong></p>
+<p>像 MyBatis、Hibernate 这种框架，能帮你把数据库查出来的一行行数据，自动变成一个个 Java 对象。它是怎么知道数据库字段对应哪个 Java 属性的？还是靠反射。它通过反射获取 Java 类的属性列表，然后把查询结果按名字或配置对应起来，再用反射调用 setter 或直接修改字段值。反过来，保存对象到数据库时，也是用反射读取属性值来拼 SQL。</p>
+<h2 id="代理" tabindex="-1">代理</h2>
+<p>关于 Java 代理的详细介绍，可以看看笔者写的 <a href="/read/java/basis/proxy.html">Java 代理模式详解</a> 这篇文章。</p>
+<h3 id="如何实现动态代理" tabindex="-1">如何实现动态代理？</h3>
+<p>动态代理是一种非常强大的设计模式，它允许我们在<strong>不修改源代码</strong>的情况下，对一个类或对象的方法进行<strong>功能增强（Enhancement）</strong>。</p>
+<p>在 Java 中，实现动态代理最主流的方式有两种：<strong>JDK 动态代理</strong> 和 <strong>CGLIB 动态代理</strong>。</p>
+<p><strong>第一种：JDK 动态代理</strong></p>
+<p>Java 官方提供的，其核心要求是目标类必须实现一个或多个接口。JDK 动态代理在运行时，会利用 <code>Proxy.newProxyInstance()</code> 方法，动态地创建一个实现了这些接口的代理类的实例。这个代理类在内存中生成，你看不到它的 <code>.java</code> 或 <code>.class</code> 文件。</p>
+<p>当你调用代理对象的任何一个方法时，这个调用都会被转发到我们提供的一个 <code>InvocationHandler</code> 接口的 <code>invoke</code> 方法中。在 <code>invoke</code> 方法里，我们就可以在调用原始方法（目标方法）之前或之后，加入我们自己的增强逻辑。</p>
+<p><strong>第二种：CGLIB 动态代理</strong></p>
+<p>CGLIB 是一个第三方的代码生成库。它的原理与 JDK 完全不同，它不要求被代理的类实现接口。它在运行时，动态生成目标类的子类作为代理类（通过 ASM 字节码操作技术）。然后，它会重写父类（也就是被代理类）中所有非 <code>final</code>、<code>private</code> 和 <code>static</code> 的方法。</p>
+<p>当你调用代理对象的任何一个方法时，这个调用会被 CGLIB 的 <code>MethodInterceptor</code> 接口的 <code>intercept</code> 方法拦截。和 <code>InvocationHandler</code> 的 <code>invoke</code> 方法一样，我们可以在 <code>intercept</code> 方法里，在调用原始的父类方法之前或之后，加入我们的增强逻辑。</p>
+<h3 id="静态代理和动态代理有什么区别" tabindex="-1">静态代理和动态代理有什么区别？</h3>
+<p>静态代理和动态代理的核心差异在于 <strong>代理关系的确定时机、实现灵活性及维护成本</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>静态代理 (Static Proxy)</th>
+<th>动态代理 (Dynamic Proxy)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>代理关系确定时机</td>
+<td>编译期（编译后生成固定的 <code>.class</code> 字节码文件）</td>
+<td>运行时（动态生成代理类字节码并加载到 JVM）</td>
+</tr>
+<tr>
+<td>实现方式</td>
+<td>在编译前手动编写代理类，常通过组合和委托调用目标对象</td>
+<td>无需手动编写具体代理类，通过 <code>Handler</code>/<code>Interceptor</code> 封装增强逻辑</td>
+</tr>
+<tr>
+<td>接口依赖</td>
+<td>不是必须；基于接口的静态代理通常让代理类与目标类遵循同一接口</td>
+<td>JDK 动态代理面向接口，CGLIB 等子类代理面向可继承的实现类</td>
+</tr>
+<tr>
+<td>代码量与维护性</td>
+<td>代码量大（目标类越多，代理类越多），维护成本高；接口新增方法时，目标类与代理类需同步修改</td>
+<td>代码量极少（通用增强逻辑可复用），维护性好；与接口解耦，接口变更不影响代理逻辑</td>
+</tr>
+<tr>
+<td>核心优势</td>
+<td>实现简单、逻辑直观，无额外框架依赖</td>
+<td>灵活性强、复用性高，降低重复编码，适配复杂场景</td>
+</tr>
+<tr>
+<td>典型应用场景</td>
+<td>简单的装饰器模式、少量固定类的增强需求</td>
+<td>Spring AOP、RPC 框架（如 Dubbo）、ORM 框架</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-jdk-动态代理和-cglib-动态代理有什么区别" tabindex="-1">⭐️ JDK 动态代理和 CGLIB 动态代理有什么区别？</h3>
+<ol>
+<li>JDK 动态代理是官方的，它要求被代理的类必须实现接口。它的原理是动态生成一个接口的实现类来作为代理。CGLIB 是第三方的，它不需要接口。它的原理是动态生成一个被代理类的子类来作为代理。但也正因为是继承，所以它不能代理 <code>final</code> 的类，被代理的方法也不能是 <code>final</code> 或 <code>private</code>。</li>
+<li>就二者的效率来说，大部分情况都是 JDK 动态代理更优秀，随着 JDK 版本的升级，这个优势更加明显。</li>
+</ol>
+<h3 id="-介绍一下动态代理在框架中的实际应用场景" tabindex="-1">⭐️ 介绍一下动态代理在框架中的实际应用场景</h3>
+<p>动态代理最典型的应用场景就是<strong>Spring AOP</strong>。</p>
+<p>AOP（Aspect-Oriented Programming:面向切面编程）能够将那些与业务无关，却为业务模块所共同调用的逻辑或责任（例如事务处理、日志管理、权限控制等）封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可拓展性和可维护性。</p>
+<p>Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 <strong>JDK Proxy</strong>，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 <strong>Cglib</strong> 生成一个被代理对象的子类来作为代理，如下图所示：</p>
+<p><img src="/img/230ae587a322d6e4d09510161987d346-1e9492d2.jpeg" alt="" loading="lazy"></p>
+<h2 id="注解" tabindex="-1">注解</h2>
+<h3 id="何谓注解" tabindex="-1">何谓注解？</h3>
+<p><code>Annotation</code>（注解） 是 Java5 开始引入的新特性，可以看作是一种特殊的注释，主要用于修饰类、方法或者变量，提供某些信息供程序在编译或者运行时使用。</p>
+<p>注解本质是一个继承了 <code>Annotation</code> 的特殊接口：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Target(ElementType.METHOD)</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.SOURCE)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> Override {
+
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Override</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Annotation</span>{
+
+}
+</code></pre>
+<p>JDK 提供了很多内置的注解（比如 <code>@Override</code>、<code>@Deprecated</code>），同时，我们还可以自定义注解。</p>
+<h3 id="注解的解析方法有哪几种" tabindex="-1">注解的解析方法有哪几种？</h3>
+<p>注解只有被解析之后才会生效，常见的解析方法有两种：</p>
+<ul>
+<li><strong>编译期直接扫描</strong>：编译器在编译 Java 代码的时候扫描对应的注解并处理，比如某个方法使用 <code>@Override</code> 注解，编译器在编译的时候就会检测当前的方法是否重写了父类对应的方法。</li>
+<li><strong>运行期通过反射处理</strong>：像框架中自带的注解(比如 Spring 框架的 <code>@Value</code>、<code>@Component</code>)都是通过反射来进行处理的。</li>
+</ul>
+<h2 id="-spi" tabindex="-1">⭐️ SPI</h2>
+<p>关于 SPI 的详细解读，请看这篇文章 <a href="/read/java/basis/spi.html">Java SPI 机制详解</a>。</p>
+<h3 id="何谓-spi" tabindex="-1">何谓 SPI?</h3>
+<p>SPI 即 Service Provider Interface，字面意思就是：“服务提供者的接口”，我的理解是：专门提供给服务提供者或者扩展框架功能的开发者去使用的一个接口。</p>
+<p>SPI 将服务接口和具体的服务实现分离开来，将服务调用方和服务实现者解耦，能够提升程序的扩展性、可维护性。修改或者替换服务实现并不需要修改调用方。</p>
+<p>很多框架都使用了 Java 的 SPI 机制，比如：Spring 框架、数据库加载驱动、日志接口、以及 Dubbo 的扩展实现等等。</p>
+<img src="/img/22e1830e0b0e4115a882751f6c417857tplv-k3u1fbpfcp--cf39285f.jpeg" loading="lazy"  style="zoom:50%;" >
+<h3 id="spi-和-api-有什么区别" tabindex="-1">SPI 和 API 有什么区别？</h3>
+<p><strong>那 SPI 和 API 有啥区别？</strong></p>
+<p>说到 SPI 就不得不说一下 API（Application Programming Interface） 了，从广义上来说它们都属于接口，而且很容易混淆。下面先用一张图说明一下：</p>
+<p><img src="/img/spi-vs-api-b7a94519.png" alt="" loading="lazy"></p>
+<p>一般模块之间都是通过接口进行通讯，因此我们在服务调用方和服务实现方（也称服务提供者）之间引入一个“接口”。</p>
+<ul>
+<li>当实现方提供了接口和实现，我们可以通过调用实现方的接口从而拥有实现方给我们提供的能力，这就是 <strong>API</strong>。这种情况下，接口和实现都是放在实现方的包中。调用方通过接口调用实现方的功能，而不需要关心具体的实现细节。</li>
+<li>当接口存在于调用方这边时，这就是 <strong>SPI</strong>。由接口调用方确定接口规则，然后由不同的厂商根据这个规则对这个接口进行实现，从而提供服务。</li>
+</ul>
+<p>举个通俗易懂的例子：公司 H 是一家科技公司，新设计了一款芯片，然后现在需要量产了，而市面上有好几家芯片制造业公司，这个时候，只要 H 公司指定好了这芯片生产的标准（定义好了接口标准），那么这些合作的芯片公司（服务提供者）就按照标准交付自家特色的芯片（提供不同方案的实现，但是给出来的结果是一样的）。</p>
+<h3 id="spi-的优缺点" tabindex="-1">SPI 的优缺点？</h3>
+<p>通过 SPI 机制能够大大地提高接口设计的灵活性，但是 SPI 机制也存在一些缺点，比如：</p>
+<ul>
+<li><code>ServiceLoader</code> 会按需定位并实例化提供者；如果调用方为了选择实现而遍历全部提供者，才会触发对全部可用提供者的加载。</li>
+<li>单个 <code>ServiceLoader</code> 实例不保证多线程安全；不同实例之间并不存在“同时 <code>load</code> 就必然冲突”的规则。</li>
+</ul>
+<h2 id="-序列化和反序列化" tabindex="-1">⭐️ 序列化和反序列化</h2>
+<p>关于序列化和反序列化的详细解读，请看这篇文章 <a href="/read/java/basis/serialization.html">Java 序列化详解</a>，里面涉及到的知识点和面试题更全面。</p>
+<h3 id="什么是序列化什么是反序列化" tabindex="-1">什么是序列化？什么是反序列化？</h3>
+<p>如果我们需要持久化 Java 对象比如将 Java 对象保存在文件中，或者在网络传输 Java 对象，这些场景都需要用到序列化。</p>
+<p>简单来说：</p>
+<ul>
+<li><strong>序列化</strong>：将数据结构或对象转换成可以存储或传输的形式，通常是二进制字节流，也可以是 JSON, XML 等文本格式</li>
+<li><strong>反序列化</strong>：将在序列化过程中所生成的数据转换为原始数据结构或者对象的过程</li>
+</ul>
+<p>对于 Java 这种面向对象编程语言来说，我们序列化的都是对象（Object）也就是实例化后的类(Class)，但是在 C++这种半面向对象的语言中，struct（结构体）定义的是数据结构类型，而 class 对应的是对象类型。</p>
+<p>下面是序列化和反序列化常见应用场景：</p>
+<ul>
+<li>对象在进行网络传输（比如远程方法调用 RPC 的时候）之前需要先被序列化，接收到序列化的对象之后需要再进行反序列化；</li>
+<li>将对象存储到文件之前需要进行序列化，将对象从文件中读取出来需要进行反序列化；</li>
+<li>将对象存储到数据库（如 Redis）之前需要用到序列化，将对象从缓存数据库中读取出来需要反序列化；</li>
+<li>将对象转换为需要长期保存或跨组件传递的字节表示时，通常需要序列化；普通 Java 对象在 JVM 内存中使用并不需要序列化。</li>
+</ul>
+<p>维基百科是如是介绍序列化的：</p>
+<blockquote>
+<p><strong>序列化</strong>（serialization）在计算机科学的数据处理中，是指将数据结构或对象状态转换成可取用格式（例如存成文件，存于缓冲，或经由网络中发送），以留待后续在相同或另一台计算机环境中，能恢复原先状态的过程。依照序列化格式重新获取字节的结果时，可以利用它来产生与原始对象相同语义的副本。对于许多对象，像是使用大量引用的复杂对象，这种序列化重建的过程并不容易。面向对象中的对象序列化，并不概括之前原始对象所关系的函数。这种过程也称为对象编组（marshalling）。从一系列字节提取数据结构的反向操作，是反序列化（也称为解编组、deserialization、unmarshalling）。</p>
+</blockquote>
+<p>综上：<strong>序列化的主要目的是把对象转换为适合网络传输或持久化到文件系统、数据库、缓存等介质的表示。</strong></p>
+<p><img src="/img/a478c74d-2c48-40ae-9374-87aacf05188c-92692fb2.png" alt="" loading="lazy"></p>
+<p style="text-align:right;font-size:13px;color:gray">https://www.corejavaguru.com/java/serialization/interview-questions-1</p>
+<p><strong>序列化协议对应于 TCP/IP 4 层模型的哪一层？</strong></p>
+<p>我们知道网络通信的双方必须要采用和遵守相同的协议。TCP/IP 四层模型是下面这样的，序列化协议属于哪一层呢？</p>
+<ol>
+<li>应用层</li>
+<li>传输层</li>
+<li>网络层</li>
+<li>网络接口层</li>
+</ol>
+<p><img src="/img/tcp-ip-4-model-6284e045.png" alt="" loading="lazy"></p>
+<p>如上图所示，OSI 七层协议模型中，表示层做的事情主要就是对应用层的用户数据进行处理转换为二进制流。反过来的话，就是将二进制流转换成应用层的用户数据。这不就对应的是序列化和反序列化么？</p>
+<p>因为，OSI 七层协议模型中的应用层、表示层和会话层对应的都是 TCP/IP 四层模型中的应用层，所以序列化协议属于 TCP/IP 协议应用层的一部分。</p>
+<h3 id="如果有些字段不想进行序列化怎么办" tabindex="-1">如果有些字段不想进行序列化怎么办？</h3>
+<p>对于不想进行序列化的变量，使用 <code>transient</code> 关键字修饰。</p>
+<p><code>transient</code> 关键字的作用是：阻止实例中那些用此关键字修饰的变量序列化；当对象被反序列化时，被 <code>transient</code> 修饰的变量值不会被持久化和恢复。</p>
+<p>关于 <code>transient</code> 还有几点注意：</p>
+<ul>
+<li><code>transient</code> 只能修饰变量，不能修饰类和方法。</li>
+<li><code>transient</code> 修饰的变量，在反序列化后变量值将会被置成类型的默认值。例如，如果是修饰 <code>int</code> 类型，那么反序列后结果就是 <code>0</code>。</li>
+<li><code>static</code> 变量因为不属于任何对象(Object)，所以无论有没有 <code>transient</code> 关键字修饰，均不会被序列化。</li>
+</ul>
+<h3 id="常见序列化协议有哪些" tabindex="-1">常见序列化协议有哪些？</h3>
+<p>JDK 自带的序列化方式一般不会用，因为序列化效率低并且存在安全问题。比较常用的序列化协议有 Hessian、Kryo、Protobuf、ProtoStuff，这些都是基于二进制的序列化协议。</p>
+<p>像 JSON 和 XML 这种属于文本类序列化方式。虽然可读性比较好，但是性能较差，一般不会选择。</p>
+<h3 id="为什么不推荐使用-jdk-自带的序列化" tabindex="-1">为什么不推荐使用 JDK 自带的序列化？</h3>
+<p>我们很少或者说几乎不会直接使用 JDK 自带的序列化方式，主要原因有下面这些原因：</p>
+<ul>
+<li><strong>不支持跨语言调用</strong> : 如果调用的是其他语言开发的服务的时候就不支持了。</li>
+<li><strong>性能差</strong>：相比于其他序列化框架性能更低，主要原因是序列化之后的字节数组体积较大，导致传输成本加大。</li>
+<li><strong>存在安全问题</strong>：序列化和反序列化本身并不存在问题。但当输入的反序列化的数据可被用户控制，那么攻击者即可通过构造恶意输入，让反序列化产生非预期的对象，在此过程中执行构造的任意代码。相关阅读：<a href="https://cryin.github.io/blog/secure-development-java-deserialization-vulnerability/" target="_blank" rel="noopener">应用安全：JAVA 反序列化漏洞之殇</a>。</li>
+</ul>
+<h2 id="io" tabindex="-1">I/O</h2>
+<p>关于 I/O 的详细解读，请看下面这几篇文章，里面涉及到的知识点和面试题更全面。</p>
+<ul>
+<li><a href="/read/java/io/io-basis.html">Java IO 基础知识总结</a></li>
+<li><a href="/read/java/io/io-design-patterns.html">Java IO 设计模式总结</a></li>
+<li><a href="/read/java/io/io-model.html">Java IO 模型详解</a></li>
+</ul>
+<h3 id="java-io-流了解吗" tabindex="-1">Java IO 流了解吗？</h3>
+<p>IO 即 <code>Input/Output</code>，输入和输出。数据输入到计算机内存的过程即输入，反之输出到外部存储（比如数据库，文件，远程主机）的过程即输出。数据传输过程类似于水流，因此称为 IO 流。IO 流在 Java 中分为输入流和输出流，而根据数据的处理方式又分为字节流和字符流。</p>
+<p>Java IO 流的 40 多个类都是从如下 4 个抽象类基类中派生出来的。</p>
+<ul>
+<li><code>InputStream</code>/<code>Reader</code>: 所有的输入流的基类，前者是字节输入流，后者是字符输入流。</li>
+<li><code>OutputStream</code>/<code>Writer</code>: 所有输出流的基类，前者是字节输出流，后者是字符输出流。</li>
+</ul>
+<h3 id="io-流为什么要分为字节流和字符流呢" tabindex="-1">I/O 流为什么要分为字节流和字符流呢？</h3>
+<p>问题本质想问：<strong>不管是文件读写还是网络发送接收，信息的最小存储单元都是字节，那为什么 I/O 流操作要分为字节流操作和字符流操作呢？</strong></p>
+<p>个人认为主要有两点原因：</p>
+<ul>
+<li>字符流是由 Java 虚拟机将字节转换得到的，这个过程还算是比较耗时；</li>
+<li>如果我们不知道编码类型的话，使用字节流的过程中很容易出现乱码问题。</li>
+</ul>
+<h3 id="java-io-中的设计模式有哪些" tabindex="-1">Java IO 中的设计模式有哪些？</h3>
+<p>参考答案：<a href="/read/java/io/io-design-patterns.html">Java IO 设计模式总结</a></p>
+<h3 id="-bionio-和-aio-的区别" tabindex="-1">⭐️ BIO、NIO 和 AIO 的区别？</h3>
+<p>参考答案：<a href="/read/java/io/io-model.html">Java IO 模型详解</a></p>
+<h2 id="语法糖" tabindex="-1">语法糖</h2>
+<h3 id="什么是语法糖" tabindex="-1">什么是语法糖？</h3>
+<p><strong>语法糖（Syntactic sugar）</strong> 代指的是编程语言为了方便程序员开发程序而设计的一种特殊语法，这种语法对编程语言的功能并没有影响。实现相同的功能，基于语法糖写出来的代码往往更简单简洁且更易阅读。</p>
+<p>举个例子，Java 中的 <code>for-each</code> 就是一个常用的语法糖，其原理其实就是基于普通的 for 循环和迭代器。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span>[] <span class="hljs-variable">strs</span> <span class="hljs-operator">=</span> {<span class="hljs-string">&quot;JavaGuide&quot;</span>, <span class="hljs-string">&quot;公众号：JavaGuide&quot;</span>, <span class="hljs-string">&quot;博客：https://javaguide.cn/&quot;</span>};
+<span class="hljs-keyword">for</span> (String s : strs) {
+    System.out.println(s);
+}
+</code></pre>
+<p>不过，JVM 其实并不能识别语法糖，Java 语法糖要想被正确执行，需要先通过编译器进行解糖，也就是在程序编译阶段将其转换成 JVM 认识的基本语法。这也侧面说明，Java 中真正支持语法糖的是 Java 编译器而不是 JVM。如果你去看 <code>com.sun.tools.javac.main.JavaCompiler</code> 的源码，你会发现在 <code>compile()</code> 中有一个步骤就是调用 <code>desugar()</code>，这个方法就是负责解语法糖的实现的。</p>
+<h3 id="java-中有哪些常见的语法糖" tabindex="-1">Java 中有哪些常见的语法糖？</h3>
+<p>Java 中最常用的语法糖主要有泛型、自动拆装箱、变长参数、枚举、内部类、增强 for 循环、try-with-resources 语法、lambda 表达式等。</p>
+<p>关于这些语法糖的详细解读，请看这篇文章 <a href="/read/java/basis/syntactic-sugar.html">Java 语法糖详解</a>。</p>
+<!-- @include: @article-footer.snippet.md -->

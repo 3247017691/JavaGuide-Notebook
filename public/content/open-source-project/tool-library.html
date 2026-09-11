@@ -1,0 +1,60 @@
+<p>本页收录通过 Maven 或 Gradle 引入代码的 Java 类库。需要单独安装或部署的 GUI、CLI 和管理平台放在<a href="/read/open-source-project/tools.html">开发工具</a>。</p>
+<h2 id="基础工具" tabindex="-1">基础工具</h2>
+<ul>
+<li><a href="https://github.com/rzwitserloot/lombok" target="_blank" rel="noopener">Lombok</a>：通过注解生成 <code>getter</code>、<code>setter</code>、<code>equals</code>、<code>hashCode</code>、<code>toString</code>、构造器和日志字段等样板代码。它依赖编译期注解处理，团队使用前要统一 IDE 插件和构建配置。</li>
+<li><a href="https://github.com/google/guava" title="guava" target="_blank" rel="noopener">Guava</a>：Google 维护的 Java 核心库，提供 <code>Multimap</code>、<code>Multiset</code>、<code>BiMap</code>、不可变集合以及 I/O、哈希、字符串处理等工具。</li>
+<li><a href="https://github.com/looly/hutool" title="hutool" target="_blank" rel="noopener">Hutool</a>：综合 Java 工具库，覆盖文件、字符串、日期、加密、缓存和日志等常见操作。模块较多，建议按实际需求引入，避免把它当作所有问题的默认答案。</li>
+</ul>
+<h2 id="json-处理" tabindex="-1">JSON 处理</h2>
+<ul>
+<li><a href="https://github.com/FasterXML/jackson-databind" target="_blank" rel="noopener">Jackson Databind</a>：Jackson 的通用数据绑定模块，用于在 JSON 与 Java 对象之间转换。升级时要同步关注 Jackson BOM 和安全公告，避免模块版本混用。</li>
+<li><a href="https://github.com/google/gson" target="_blank" rel="noopener">Gson</a>：Google 开源的 Java JSON 序列化与反序列化库，API 简单，适合依赖规模较小的场景。</li>
+</ul>
+<h2 id="参数校验" tabindex="-1">参数校验</h2>
+<ul>
+<li><a href="https://github.com/hibernate/hibernate-validator" target="_blank" rel="noopener">Hibernate Validator</a>：Jakarta Validation 的参考实现，可通过注解声明字段、方法参数和返回值约束。</li>
+</ul>
+<h2 id="问题排查和性能优化" tabindex="-1">问题排查和性能优化</h2>
+<ul>
+<li><a href="https://github.com/alibaba/arthas" title="arthas" target="_blank" rel="noopener">Arthas</a>：Alibaba 开源的 Java 诊断工具，可以实时监控和诊断 Java 应用程序。它提供了丰富的命令和功能，用于分析应用程序的性能问题，包括启动过程中的资源消耗和加载时间。</li>
+<li><a href="https://github.com/async-profiler/async-profiler" target="_blank" rel="noopener">Async Profiler</a>：低开销的异步 Java 性能分析工具，用于收集和分析应用程序的性能数据。</li>
+</ul>
+<h2 id="文件与媒体处理" tabindex="-1">文件与媒体处理</h2>
+<h3 id="文档解析" tabindex="-1">文档解析</h3>
+<ul>
+<li><a href="https://github.com/apache/tika" target="_blank" rel="noopener">Tika</a>：Apache Tika 工具包能够检测并提取来自超过一千种不同文件类型（如 PPT、XLS 和 PDF）的元数据和文本内容。</li>
+</ul>
+<h3 id="图像与媒体元数据" tabindex="-1">图像与媒体元数据</h3>
+<ul>
+<li><a href="https://github.com/haraldk/TwelveMonkeys" target="_blank" rel="noopener">TwelveMonkeys ImageIO</a>：为 Java ImageIO 补充更多图片格式插件和扩展，适合需要读取 TIFF、WebP、PSD 等格式的场景。</li>
+<li><a href="https://github.com/drewnoakes/metadata-extractor" target="_blank" rel="noopener">metadata-extractor</a>：从图片、视频和音频中提取 EXIF、IPTC、XMP、ICC 等元数据。</li>
+</ul>
+<h3 id="excel" tabindex="-1">Excel</h3>
+<ul>
+<li><a href="https://github.com/fast-excel/fastexcel" target="_blank" rel="noopener">FastExcel</a>：面向 Java 的高性能、低内存占用 Excel 读写工具。</li>
+<li><a href="https://github.com/pig-mesh/excel-spring-boot-starter" target="_blank" rel="noopener">Excel Spring Boot Starter</a>：基于 FastExcel 实现的 Spring Boot Starter，用于简化 Excel 的读写操作。</li>
+</ul>
+<h3 id="pdf" tabindex="-1">PDF</h3>
+<p>简单的 PDF 创建需求可以选择 OpenPDF；需要解析、转换和提取文本时，可以选择 Apache PDFBox。iText 的功能更丰富，但社区版采用 AGPL 许可证，闭源商业项目需要评估商业授权。</p>
+<ul>
+<li><a href="https://gitee.com/dromara/x-easypdf" target="_blank" rel="noopener">x-easypdf</a>：基于 PDFBox 和 FOP 的 PDF 构建框架，支持 PDF 导出和编辑，适合常规文档生成场景。</li>
+<li><a href="https://github.com/itext/itext7" target="_blank" rel="noopener">iText</a>：用于创建、编辑和增强 PDF 文档的 Java 库。社区版采用 AGPL 许可证，闭源商业项目通常需要购买商业许可证。</li>
+<li><a href="https://github.com/LibrePDF/OpenPDF" target="_blank" rel="noopener">OpenPDF</a>：采用 LGPL/MPL 双重许可的 PDF 库，由 iText 的早期版本演化而来，适合常见的 PDF 创建和编辑需求。</li>
+<li><a href="https://github.com/apache/pdfbox" target="_blank" rel="noopener">Apache PDFBox</a>：采用 Apache 许可证，支持 PDF 创建、解析、转换和文本提取，功能完整，但 API 的学习成本相对高。</li>
+<li><a href="https://github.com/apache/xmlgraphics-fop" target="_blank" rel="noopener">Apache FOP</a>：用于把 XSL-FO（Extensible Stylesheet Language Formatting Objects）转换为 PDF 等输出格式。</li>
+</ul>
+<h2 id="短信与邮件" tabindex="-1">短信与邮件</h2>
+<ul>
+<li><a href="https://github.com/dromara/SMS4J" target="_blank" rel="noopener">SMS4J</a>：短信聚合框架，解决接入多个短信 SDK 的繁琐流程。</li>
+<li><a href="https://github.com/bbottema/simple-java-mail" target="_blank" rel="noopener">Simple Java Mail</a>：轻量级 Java 邮件库，支持附件、嵌入图片、签名和加密等邮件场景。</li>
+</ul>
+<h2 id="密码学" tabindex="-1">密码学</h2>
+<ul>
+<li><a href="https://github.com/bcgit/bc-java" target="_blank" rel="noopener">Bouncy Castle for Java</a>：Bouncy Castle 的 Java 发行版，提供密码算法、证书、CMS、OpenPGP 等能力。密码学实现不宜自行拼装，使用时应结合项目许可证、合规要求和安全更新评估版本。</li>
+</ul>
+<h2 id="其他" tabindex="-1">其他</h2>
+<ul>
+<li><a href="https://github.com/oshi/oshi" title="oshi" target="_blank" rel="noopener">oshi</a>：一款为 Java 语言提供的基于 JNA 的（本机）操作系统和硬件信息库。</li>
+<li><a href="https://github.com/lionsoul2014/ip2region" target="_blank" rel="noopener">ip2region</a>：离线 IP 地址定位库，提供多语言查询客户端和紧凑的数据文件。IP 定位结果存在精度边界，不应当作身份或合规判断的唯一依据。</li>
+<li><a href="https://github.com/real-logic/agrona" target="_blank" rel="noopener">agrona</a>：Java 高性能数据结构（<code>Buffers</code>、<code>Lists</code>、<code>Maps</code>、<code>Scalable Timer Wheel</code>……）和实用方法。</li>
+</ul>

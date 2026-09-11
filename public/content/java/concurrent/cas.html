@@ -1,0 +1,116 @@
+<p>乐观锁和悲观锁的介绍以及乐观锁常见实现方式可以阅读笔者写的这篇文章：<a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a>。</p>
+<p>这篇文章主要介绍：Java 中 CAS 的实现以及 CAS 存在的一些问题。</p>
+<h2 id="java-中-cas-是如何实现的" tabindex="-1">Java 中 CAS 是如何实现的？</h2>
+<p>在 Java 中，实现 CAS（Compare-And-Swap, 比较并交换）操作的一个关键类是 <code>Unsafe</code>。</p>
+<p><code>Unsafe</code> 类位于 <code>sun.misc</code> 包下，是一个提供低级别、不安全操作的类。由于其强大的功能和潜在的危险性，它通常用于 JVM 内部或一些需要极高性能和底层访问的库中，而不推荐普通开发者在应用程序中使用。关于 <code>Unsafe</code> 类的详细介绍，可以阅读这篇文章：📌<a href="/read/java/basis/unsafe.html">Java 魔法类 Unsafe 详解</a>。</p>
+<p><code>sun.misc</code> 包下的 <code>Unsafe</code> 类提供了 <code>compareAndSwapObject</code>、<code>compareAndSwapInt</code>、<code>compareAndSwapLong</code> 方法来实现的对 <code>Object</code>、<code>int</code>、<code>long</code> 类型的 CAS 操作：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * 以原子方式更新对象字段的值。
+ *
+ * <span class="hljs-doctag">@param</span> o        要操作的对象
+ * <span class="hljs-doctag">@param</span> offset   对象字段的内存偏移量
+ * <span class="hljs-doctag">@param</span> expected 期望的旧值
+ * <span class="hljs-doctag">@param</span> x        要设置的新值
+ * <span class="hljs-doctag">@return</span> 如果值被成功更新，则返回 true；否则返回 false
+ */</span>
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSwapObject</span><span class="hljs-params">(Object o, <span class="hljs-type">long</span> offset, Object expected, Object x)</span>;
+
+<span class="hljs-comment">/**
+ * 以原子方式更新 int 类型的对象字段的值。
+ */</span>
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSwapInt</span><span class="hljs-params">(Object o, <span class="hljs-type">long</span> offset, <span class="hljs-type">int</span> expected, <span class="hljs-type">int</span> x)</span>;
+
+<span class="hljs-comment">/**
+ * 以原子方式更新 long 类型的对象字段的值。
+ */</span>
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSwapLong</span><span class="hljs-params">(Object o, <span class="hljs-type">long</span> offset, <span class="hljs-type">long</span> expected, <span class="hljs-type">long</span> x)</span>;
+</code></pre>
+<p><code>Unsafe</code> 在 JDK 8 中提供的这些 CAS 方法是 <code>native</code> 方法。Java 代码通过它们表达原子比较并交换语义，HotSpot 通常会把相关调用识别为 JVM 内部函数（intrinsic），再映射为目标处理器支持的原子指令或等价实现。具体实现依赖 JVM 和 CPU 架构，但不能简单概括为“通过 JNI 调用 C++ 内联汇编”。</p>
+<p><code>java.util.concurrent.atomic</code> 包提供了一些用于原子操作的类。</p>
+<p><img src="/img/JUC原子类概览-064976d1.png" alt="" loading="lazy"></p>
+<p>关于这些 Atomic 原子类的介绍和使用，可以阅读这篇文章：<a href="/read/java/concurrent/atomic-classes.html">Atomic 原子类总结</a>。</p>
+<p>Atomic 类依赖于 CAS 乐观锁来保证其方法的原子性，而不需要使用传统的锁机制（如 <code>synchronized</code> 块或 <code>ReentrantLock</code>）。</p>
+<p><code>AtomicInteger</code> 是 Java 的原子类之一，主要用于对 <code>int</code> 类型的变量进行原子操作。下面的 JDK 8 实现利用 <code>Unsafe</code> 提供的低级别原子操作方法；在较新的 JDK 中，相关 API 和内部实现细节可能不同，应用代码也可以使用标准的 <code>VarHandle</code> 表达原子访问语义。</p>
+<p>下面，我们通过解读 <code>AtomicInteger</code> 的核心源码（JDK1.8），来说明 Java 如何使用 <code>Unsafe</code> 类的方法来实现原子操作。</p>
+<p><code>AtomicInteger</code> 核心源码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 获取 Unsafe 实例</span>
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Unsafe</span> <span class="hljs-variable">unsafe</span> <span class="hljs-operator">=</span> Unsafe.getUnsafe();
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> valueOffset;
+
+<span class="hljs-keyword">static</span> {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// 获取“value”字段在AtomicInteger类中的内存偏移量</span>
+        valueOffset = unsafe.objectFieldOffset
+            (AtomicInteger.class.getDeclaredField(<span class="hljs-string">&quot;value&quot;</span>));
+    } <span class="hljs-keyword">catch</span> (Exception ex) { <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(ex); }
+}
+<span class="hljs-comment">// 确保“value”字段的可见性</span>
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">volatile</span> <span class="hljs-type">int</span> value;
+
+<span class="hljs-comment">// 如果当前值等于预期值，则原子地将值设置为newValue</span>
+<span class="hljs-comment">// 使用 Unsafe#compareAndSwapInt 方法进行CAS操作</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSet</span><span class="hljs-params">(<span class="hljs-type">int</span> expect, <span class="hljs-type">int</span> update)</span> {
+    <span class="hljs-keyword">return</span> unsafe.compareAndSwapInt(<span class="hljs-built_in">this</span>, valueOffset, expect, update);
+}
+
+<span class="hljs-comment">// 原子地将当前值加 delta 并返回旧值</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndAdd</span><span class="hljs-params">(<span class="hljs-type">int</span> delta)</span> {
+    <span class="hljs-keyword">return</span> unsafe.getAndAddInt(<span class="hljs-built_in">this</span>, valueOffset, delta);
+}
+
+<span class="hljs-comment">// 原子地将当前值加 1 并返回加之前的值（旧值）</span>
+<span class="hljs-comment">// 使用 Unsafe#getAndAddInt 方法进行CAS操作。</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndIncrement</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> unsafe.getAndAddInt(<span class="hljs-built_in">this</span>, valueOffset, <span class="hljs-number">1</span>);
+}
+
+<span class="hljs-comment">// 原子地将当前值减 1 并返回减之前的值（旧值）</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndDecrement</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> unsafe.getAndAddInt(<span class="hljs-built_in">this</span>, valueOffset, -<span class="hljs-number">1</span>);
+}
+</code></pre>
+<p><code>Unsafe#getAndAddInt</code> 源码：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 原子地获取并增加整数值</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">getAndAddInt</span><span class="hljs-params">(Object o, <span class="hljs-type">long</span> offset, <span class="hljs-type">int</span> delta)</span> {
+    <span class="hljs-type">int</span> v;
+    <span class="hljs-keyword">do</span> {
+        <span class="hljs-comment">// 以 volatile 方式获取对象 o 在内存偏移量 offset 处的整数值</span>
+        v = getIntVolatile(o, offset);
+    } <span class="hljs-keyword">while</span> (!compareAndSwapInt(o, offset, v, v + delta));
+    <span class="hljs-comment">// 返回旧值</span>
+    <span class="hljs-keyword">return</span> v;
+}
+</code></pre>
+<p>可以看到，<code>getAndAddInt</code> 使用了 <code>do-while</code> 循环：在 <code>compareAndSwapInt</code> 操作失败时，会不断重试直到成功。也就是说，<code>getAndAddInt</code> 方法会通过 <code>compareAndSwapInt</code> 方法来尝试更新 <code>value</code> 的值，如果更新失败（当前值在此期间被其他线程修改），它会重新获取当前值并再次尝试更新，直到操作成功。</p>
+<p>由于 CAS 操作可能会因为并发冲突而失败，因此通常会与 <code>while</code> 循环搭配使用，在失败后不断重试，直到操作成功。这就是 <strong>自旋锁机制</strong>。</p>
+<h2 id="cas-算法存在哪些问题" tabindex="-1">CAS 算法存在哪些问题？</h2>
+<p>ABA 问题是 CAS 算法最常见的问题。</p>
+<h3 id="aba-问题" tabindex="-1">ABA 问题</h3>
+<p>如果一个变量 V 初次读取的时候是 A 值，并且在准备赋值的时候检查到它仍然是 A 值，那我们就能说明它的值没有被其他线程修改过了吗？很明显是不能的，因为在这段时间它的值可能被改为其他值，然后又改回 A，那 CAS 操作就会误认为它从来没有被修改过。这个问题被称为 CAS 操作的 <strong>&quot;ABA&quot;问题。</strong></p>
+<p>ABA 问题的解决思路是在变量前面追加上<strong>版本号或者时间戳</strong>。JDK 1.5 以后的 <code>AtomicStampedReference</code> 类就是用来解决 ABA 问题的，其中的 <code>compareAndSet()</code> 方法就是首先检查当前引用是否等于预期引用，并且当前标志是否等于预期标志，如果全部相等，则以原子方式将该引用和该标志的值设置为给定的更新值。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">compareAndSet</span><span class="hljs-params">(V   expectedReference,
+                             V   newReference,
+                             <span class="hljs-type">int</span> expectedStamp,
+                             <span class="hljs-type">int</span> newStamp)</span> {
+    <span class="hljs-type">Pair</span>&lt;V&gt; <span class="hljs-variable">current</span> <span class="hljs-operator">=</span> pair;
+    <span class="hljs-keyword">return</span>
+        expectedReference == current.reference &amp;&amp;
+        expectedStamp == current.stamp &amp;&amp;
+        ((newReference == current.reference &amp;&amp;
+          newStamp == current.stamp) ||
+         casPair(current, Pair.of(newReference, newStamp)));
+}
+</code></pre>
+<h3 id="循环时间长开销大" tabindex="-1">循环时间长开销大</h3>
+<p>CAS 经常会用到自旋操作来进行重试，也就是不成功就一直循环执行直到成功。如果长时间不成功，会给 CPU 带来非常大的执行开销。</p>
+<p>如果 JVM 能够支持处理器提供的 <code>pause</code> 指令，那么自旋操作的效率将有所提升。<code>pause</code> 指令有两个重要作用：</p>
+<ol>
+<li><strong>延迟流水线执行指令</strong>：<code>pause</code> 指令可以延迟指令的执行，从而减少 CPU 的资源消耗。具体的延迟时间取决于处理器的实现版本，在某些处理器上，延迟时间可能为零。</li>
+<li><strong>避免内存顺序冲突</strong>：在退出循环时，<code>pause</code> 指令可以避免由于内存顺序冲突而导致的 CPU 流水线被清空，从而提高 CPU 的执行效率。</li>
+</ol>
+<h3 id="只能保证一个共享变量的原子操作" tabindex="-1">只能保证一个共享变量的原子操作</h3>
+<p>CAS 操作仅能对单个共享变量有效。当需要操作多个共享变量时，CAS 就显得无能为力。不过，从 JDK 1.5 开始，Java 提供了 <code>AtomicReference</code> 类，这使得我们能够保证引用对象之间的原子性。通过将多个变量封装在一个对象中，我们可以使用 <code>AtomicReference</code> 来执行 CAS 操作。</p>
+<p>除了 <code>AtomicReference</code> 这种方式之外，还可以利用加锁来保证。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>在 Java 中，原子类、<code>VarHandle</code> 等 API 可以表达 CAS 操作；JVM 再根据目标平台将其实现为处理器支持的原子指令或等价机制。具体实现依赖 JVM 和 CPU 架构，并不由 Java 规范限定为 JNI 或某一种汇编写法。</p>
+<p>CAS 虽然具有高效的无锁特性，但也需要注意 ABA、循环时间长开销大等问题。</p>

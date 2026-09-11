@@ -1,0 +1,450 @@
+<p>不少读者反馈 Skills 在现在的面试中经常会碰到，于是在前面已经写过两篇的基础上，我又肝了一篇。</p>
+<p>下面是正文。</p>
+<p>还记得刚用 Claude Code 那会，我很容易把各种规则都往 <code>CLAUDE.md</code> 里塞。</p>
+<p>代码风格，目录约定，测试命令，这些放进去没问题。可后来一些代码审查 checklist、PR 总结流程、UI 验收步骤，也开始往里面堆。</p>
+<p>这时候问题就来了。</p>
+<p>这些流程确实有用，但它们不是每一轮任务都要用。每次带上的话，会增加很多无用的信息，反而会干扰模型的判断。</p>
+<p>这类内容就别继续塞进 <code>CLAUDE.md</code> 了。如果你总是在对话里复制同一段 instructions、checklist 或多步骤流程，或者 <code>CLAUDE.md</code> 的某一节已经像操作手册，就可以把它拆出来。</p>
+<p>差别主要在加载方式上。<code>CLAUDE.md</code> 通常会在会话开始时作为持久上下文加载；Skill 平时只暴露名称和描述，真正命中时才加载完整内容。长参考材料、检查清单、脚本说明，不用一开始就挤进上下文。</p>
+<p>这篇文章主要讲 Claude Code Skills 的技术实现和运行方式。我会参考社区源码分析材料看实现细节，但当前用法以官方文档和 changelog 为准。</p>
+<p>如果你想先系统了解 Agent Skills 和 Prompt、MCP、Function Calling 的区别，可以看我之前写的 <a href="/read/ai/agent/skills.html">Agent Skills 是什么？和 Prompt、MCP 到底差在哪？</a>。如果更关心有哪些现成 Skill 值得装，可以直接看 <a href="/read/ai-coding/practices/programmer-essential-skills.html">AI 编程必备 Skills 推荐：TDD、代码审查、网页自动化与 MCP 实战</a>。</p>
+<h2 id="skills-解决了什么问题" tabindex="-1">Skills 解决了什么问题</h2>
+<p>先看 <code>CLAUDE.md</code> 和 Skill 的分工。</p>
+<p><code>CLAUDE.md</code> 适合放每轮都要用到的项目事实和长期规则，比如代码风格、目录约定、常用命令、架构说明。</p>
+<p>Skill 适合放有明确触发场景的流程。它们需要被复用，但不需要每次都跟着会话启动。</p>
+<p>最典型的是这些：</p>
+<ul>
+<li>一套代码审查 checklist；</li>
+<li>一套排查线上问题的步骤；</li>
+<li>一个生成 PR 总结的流程；</li>
+<li>一个只在改 UI 时才需要的设计规范；</li>
+<li>一个只在写测试时才用到的 TDD 工作流。</li>
+</ul>
+<p>它们的共同点是：步骤固定、篇幅不短，但只在特定任务里出现。如果全部写进 <code>CLAUDE.md</code>，启动时就会变成额外的上下文成本，越堆越重。</p>
+<p>你可以把 Skill 理解成一份按需打开的操作手册：平时只让 Claude 知道有这项能力，真用到的时候，再把完整说明拿出来。</p>
+<p><img src="/img/skill-prompt-function-calling-mcp-comparison-0566edb1.webp" alt="" loading="lazy"></p>
+<p><code>CLAUDE.md</code> 则反过来。官方建议把它留给每轮都要知道的内容，比如构建命令、项目约定、目录结构，以及必须一直遵守的规则。</p>
+<p>如果一段内容已经是多步骤流程，或者只影响代码库里的某个局部，就更适合移到 Skill 或 path-scoped rule。</p>
+<p>真到项目里拆的时候，我一般不会先纠结名字，而是先看这段内容到底卡在哪。</p>
+<ul>
+<li>如果卡在“规则每轮都要生效”，那更像 <code>CLAUDE.md</code> 的问题。如果卡在“一段流程反复复制”，那更像 Skill 的问题。</li>
+<li>如果卡在“任务太长，完整过程会挤占主会话上下文”，才考虑 Subagent。如果卡在“团队里每个人都要装一套”，再考虑 Plugin。</li>
+</ul>
+<p>我用了一张表格总结了一下上面提到的概念：</p>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>主要解决的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLAUDE.md</code></td>
+<td>常驻项目规则和长期约定</td>
+</tr>
+<tr>
+<td>Skill</td>
+<td>只有特定任务才会用到的流程和清单</td>
+</tr>
+<tr>
+<td>Subagent</td>
+<td>把长任务或支线任务委派给另一个 Agent</td>
+</tr>
+<tr>
+<td>Plugin</td>
+<td>分发 Skills、Agents、Hooks、MCP 等扩展能力</td>
+</tr>
+</tbody>
+</table>
+<p>Claude Code 里的 Skill 可以理解成“prompt-based command”。</p>
+<p>自定义命令这块也已经并到 Skills 体系里了。现在 <code>.claude/commands/deploy.md</code> 和 <code>.claude/skills/deploy/SKILL.md</code> 都能创建 <code>/deploy</code>；旧的 <code>.claude/commands/</code> 不用马上迁移，仍然兼容。</p>
+<p>Subagent 解决的是“谁来做”；Skill 解决的是“怎么做”。</p>
+<p>Plugin 负责分发。一个 Plugin 可以带 Skills、Agents、Hooks 和 MCP Servers。企业或团队如果要统一发放能力，Plugin 会比单独复制 Skill 文件更适合。</p>
+<p>如果项目里同时有 <code>CLAUDE.md</code>、<code>AGENTS.md</code>、局部规则、SPEC 和 Skills，也可以按这个思路拆：常驻规则放在规则文件里，可复用流程交给 Skill，本次任务的验收标准放到 SPEC。</p>
+<p><img src="/img/claude-md-best-practices-rule-files-relationship-66d1a6af.png" alt="" loading="lazy"></p>
+<p>适合变成 Skill 的内容，通常有几个特点：经常复用，有明确触发场景，步骤比较固定，内容比较长，不适合常驻上下文，最好还能配 supporting files 或脚本（例如 <code>scripts/</code>、<code>references/</code>、<code>templates/</code>）。</p>
+<p>代码审查、TDD、PR 总结、数据库变更检查、UI 验收、日志排查，都属于这类任务。</p>
+<p>不适合做成 Skill 的，是项目里永远要遵守的硬规则。比如“所有 Java 代码使用 Google Java Style”，这种更适合放 <code>CLAUDE.md</code> 或项目规则里。</p>
+<p>关于 <code>CLAUDE.md</code> 的详细介绍和最佳实践，可以参考我写的这篇 <a href="/read/ai-coding/practices/claude-md-best-practices.html">CLAUDE.md 最佳实践：该写什么、不该写什么、项目变大后怎么拆</a>。</p>
+<h2 id="skillmd-怎么写" tabindex="-1"><code>SKILL.md</code> 怎么写</h2>
+<p>一个文件系统 Skill 通常是这样的目录结构：</p>
+<pre class="md-pre"><code class="hljs">.claude/skills/
+  pr-summary/
+    SKILL.md
+    scripts/
+      collect-pr-info.sh
+    references/
+      review-checklist.md
+</code></pre>
+<p><code>SKILL.md</code> 由两部分组成：</p>
+<ol>
+<li>YAML frontmatter：描述名字、触发条件、工具权限、模型、执行上下文等元数据。</li>
+<li>Markdown body：真正发给 Claude 的操作说明。</li>
+</ol>
+<p>一个最小例子：</p>
+<pre class="md-pre"><code class="hljs">---
+name: pr-summary
+description: Summarize a pull request and list key risks
+<span class="hljs-section">allowed-tools: Bash(gh <span class="hljs-emphasis">*)
+---
+
+Read the pull request diff and comments, then summarize:
+
+1. Main changes
+2. Risky files
+3. Missing tests
+4. Suggested follow-up
+</span></span></code></pre>
+<p>当你执行 <code>/pr-summary</code>，Claude Code 会把这个 Skill 渲染成 prompt，再交给模型。</p>
+<p>源码里的 <code>parseSkillFrontmatterFields()</code> 支持的字段比较多，常见字段可以先看下面这些：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>展示名；目录名通常决定命令名</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>给模型判断何时使用</td>
+</tr>
+<tr>
+<td><code>when_to_use</code></td>
+<td>更细的触发说明</td>
+</tr>
+<tr>
+<td><code>allowed-tools</code></td>
+<td>预批准该 Skill 可用的工具</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td>指定模型别名</td>
+</tr>
+<tr>
+<td><code>effort</code></td>
+<td>指定推理/努力等级</td>
+</tr>
+<tr>
+<td><code>user-invocable</code></td>
+<td>是否允许用户通过 <code>/skill-name</code> 直接调用</td>
+</tr>
+<tr>
+<td><code>disable-model-invocation</code></td>
+<td>禁止模型自动调用，只允许用户手动调用</td>
+</tr>
+<tr>
+<td><code>paths</code></td>
+<td>条件触发路径</td>
+</tr>
+<tr>
+<td><code>context</code></td>
+<td>支持 <code>fork</code>，让 Skill 在子代理上下文中运行</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>绑定指定 Agent</td>
+</tr>
+<tr>
+<td><code>shell</code></td>
+<td>指定动态上下文命令使用 bash 或 powershell</td>
+</tr>
+</tbody>
+</table>
+<p>这里别一上来就把字段全堆上。大多数 Skill 只需要 <code>description</code>、<code>allowed-tools</code> 和正文说明。字段越多，维护成本越高。</p>
+<p>这里有几个字段容易混：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>更适合解决什么问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>allowed-tools</code></td>
+<td>收窄当前 Skill 可以直接使用的工具范围</td>
+</tr>
+<tr>
+<td><code>context: fork</code></td>
+<td>让长流程、调研类、审查类任务在 fork 上下文里跑</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>指定由哪个 Agent 执行这个 Skill</td>
+</tr>
+</tbody>
+</table>
+<p>例如：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">context:</span> <span class="hljs-string">fork</span>
+<span class="hljs-attr">agent:</span> <span class="hljs-string">Explore</span>
+<span class="hljs-attr">allowed-tools:</span> <span class="hljs-string">Bash(gh</span> <span class="hljs-string">*)</span>
+</code></pre>
+<p>这类配置适合 PR 总结、模块审查、文档汇总这类任务。主会话不一定要背完整过程，只拿结果就够。</p>
+<p>Skills 还支持参数替换。最简单的是 <code>$ARGUMENTS</code>：</p>
+<pre class="md-pre"><code class="hljs">---
+name: fix-issue
+description: Fix a GitHub issue
+<span class="hljs-section">disable-model-invocation: true
+---</span>
+
+Fix GitHub issue $ARGUMENTS following our coding standards.
+</code></pre>
+<p>执行：</p>
+<pre class="md-pre"><code class="hljs">/fix-issue 123
+</code></pre>
+<p>Claude 收到的内容里，<code>$ARGUMENTS</code> 会被替换成 <code>123</code>。</p>
+<p>如果要按位置取参数，可以用 <code>$ARGUMENTS[0]</code>，也可以用短写 <code>$0</code>：</p>
+<pre class="md-pre"><code class="hljs">Migrate the $0 component from $1 to $2.
+</code></pre>
+<p>执行：</p>
+<pre class="md-pre"><code class="hljs">/migrate-component SearchBar React Vue
+</code></pre>
+<p><code>$0</code>、<code>$1</code>、<code>$2</code> 会分别替换成 <code>SearchBar</code>、<code>React</code>、<code>Vue</code>。</p>
+<h2 id="claude-code-怎么发现-skills" tabindex="-1">Claude Code 怎么发现 Skills</h2>
+<p>Claude Code 会从多个来源加载 Skills。常见位置包括：</p>
+<pre class="md-pre"><code class="hljs">~/.claude/skills/
+.claude/skills/
+</code></pre>
+<p>用户级 Skills 放在 <code>~/.claude/skills/</code>，所有项目都能用。项目级 Skills 放在项目的 <code>.claude/skills/</code>，适合和团队共享。</p>
+<p><img src="/img/claude-code-project-skills-folder-31c3e95f.png" alt="" loading="lazy"></p>
+<p>从源码看，Skills 目录采用的是：</p>
+<pre class="md-pre"><code class="hljs">skill-name/SKILL.md
+</code></pre>
+<p>也就是说，<code>/skills/</code> 目录下单独一个 <code>.md</code> 文件不是标准 Skill 格式，目录里要有 <code>SKILL.md</code>。</p>
+<p>Claude Code 的 Skill 来源大致可以分几类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用户级 Skills</td>
+<td><code>~/.claude/skills/</code></td>
+<td>个人长期复用</td>
+</tr>
+<tr>
+<td>项目级 Skills</td>
+<td><code>.claude/skills/</code></td>
+<td>项目或团队共享</td>
+</tr>
+<tr>
+<td>Managed Skills</td>
+<td>管理策略目录</td>
+<td>组织统一下发</td>
+</tr>
+<tr>
+<td>Bundled Skills</td>
+<td>Claude Code 内置</td>
+<td>例如 <code>/code-review</code>、<code>/debug</code>、<code>/loop</code> 等</td>
+</tr>
+<tr>
+<td>Plugin Skills</td>
+<td>插件提供</td>
+<td>跟随 plugin 安装和启用</td>
+</tr>
+<tr>
+<td>MCP Skills</td>
+<td>MCP Server 映射能力</td>
+<td>来自 MCP Server</td>
+</tr>
+</tbody>
+</table>
+<p>Claude Code 包含一些 bundled skills，比如 <code>/code-review</code>、<code>/batch</code>、<code>/debug</code>、<code>/loop</code> 和 <code>/claude-api</code>。它们和普通内置命令不一样，属于 prompt-based skill。</p>
+<p><img src="/img/claude-code-bundled-skills-docs-d2142902.png" alt="" loading="lazy"></p>
+<p>嵌套 <code>.claude/skills</code> 目录也要留意。</p>
+<p>v2.1.178 后，嵌套 <code>.claude/skills</code> 目录在处理对应文件时也会加载。发生名称冲突时，嵌套 Skill 会以 <code>&lt;dir&gt;:&lt;name&gt;</code> 的形式出现，避免覆盖外层同名 Skill。</p>
+<p>这和项目规则的思路接近：<strong>越靠近当前工作目录的配置，越能表达局部上下文。</strong></p>
+<p>不过，不建议滥用嵌套 Skills。只有当子目录确实有独立工作流时才拆，比如：</p>
+<ul>
+<li><code>frontend/.claude/skills/ui-review/SKILL.md</code></li>
+<li><code>backend/.claude/skills/api-contract-check/SKILL.md</code></li>
+<li><code>docs/.claude/skills/article-review/SKILL.md</code></li>
+</ul>
+<p>如果只是为了分类，普通目录和文件名就够了。</p>
+<p>旧版 <code>.claude/commands/</code> 仍然兼容。源码里也能看到 legacy commands loader：如果旧命令目录里存在 <code>SKILL.md</code>，会按 Skill 方式处理；否则继续按 Markdown command 加载。</p>
+<p>官方文档里已经写明：custom commands 已经合并进 Skills，但已有 <code>.claude/commands/</code> 文件会继续工作。新写能力时，建议直接用 <code>.claude/skills/&lt;name&gt;/SKILL.md</code>。</p>
+<h2 id="skill-被调用后发生什么" tabindex="-1">Skill 被调用后发生什么</h2>
+<p>Skill 平时不会把完整正文塞进上下文。</p>
+<p>Claude Code 主要通过 Skill 的名称、描述、<code>when_to_use</code> 等 frontmatter 信息，让模型知道有哪些能力可用。</p>
+<p>源码里还有一个 <code>estimateSkillFrontmatterTokens()</code>，只估算 name、description、whenToUse 的 token，因为完整内容只在调用时加载。</p>
+<p>当用户执行 <code>/skill-name</code>，或者模型判断某个 Skill 适合当前任务时，Claude Code 才会调用 <code>getPromptForCommand()</code>，把 Skill body 渲染出来。</p>
+<p>这也是 Skills 比长 <code>CLAUDE.md</code> 更省上下文的主要原因。</p>
+<p><img src="/img/skill-agent-execution-link-4a51fe53.webp" alt="" loading="lazy"></p>
+<p>Skill 被调用后，Claude Code 会先拿到 Markdown body，然后依次做几件事：</p>
+<ol>
+<li>展开参数，比如 <code>$ARGUMENTS</code>、<code>$0</code>。</li>
+<li>替换 <code>${CLAUDE_SKILL_DIR}</code>。</li>
+<li>替换 <code>${CLAUDE_SESSION_ID}</code>。</li>
+<li>如果不是 MCP 来源，再执行内嵌 shell 命令。</li>
+<li>返回最终 prompt 给模型。</li>
+</ol>
+<p><code>createSkillCommand()</code> 里对应的实现就是 <code>getPromptForCommand()</code>。它会等到真正调用时才处理，不会在启动阶段把所有 Skill 都渲染好。</p>
+<p>Skill 可以带 supporting files，比如脚本、参考文档、模板。目录结构可以是：</p>
+<pre class="md-pre"><code class="hljs">my-skill/
+  SKILL.md
+  scripts/
+  references/
+  templates/
+</code></pre>
+<p>如果正文里需要引用脚本路径，可以用 <code>${CLAUDE_SKILL_DIR}</code>：</p>
+<pre class="md-pre"><code class="hljs">Run this helper:
+
+!<span class="hljs-code">`${CLAUDE_SKILL_DIR}/scripts/collect-context.sh`</span>
+</code></pre>
+<p>这样 Skill 移动目录后也不容易坏。</p>
+<p>不过，支持文件不应该全量塞进正文。更好的写法是：在 <code>SKILL.md</code> 里告诉 Claude 什么时候读取哪个文件。用得到再读，用不到就别进上下文。</p>
+<p>这就是渐进式披露：先让模型知道“有这个能力”，命中后再读正文，正文里只放流程骨架，真正长的材料继续放到 supporting files。</p>
+<p><img src="/img/skills-progressive-disclosure-three-layer-model-81f54306.png" alt="" loading="lazy"></p>
+<p>所以 <code>SKILL.md</code> 不适合写成超长 README。正文里优先写什么时候用、按什么顺序做、哪些情况别做、失败怎么兜底；长清单、模板和脚本说明放到 <code>references/</code>、<code>templates/</code>、<code>scripts/</code> 里。</p>
+<p><img src="/img/keep-skill-md-content-under-500-lines-for-best-p-7c39bab2.png" alt="" loading="lazy"></p>
+<p><code>CLAUDE.md</code> 和 Skill 的区别，也可以回到加载策略上理解：</p>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>更适合放哪里</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>项目编码规范</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>目录结构说明</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>代码审查流程</td>
+<td>Skill</td>
+</tr>
+<tr>
+<td>PR 总结流程</td>
+<td>Skill</td>
+</tr>
+<tr>
+<td>UI 验收 checklist</td>
+<td>Skill</td>
+</tr>
+<tr>
+<td>线上故障排查脚本</td>
+<td>Skill + supporting files</td>
+</tr>
+</tbody>
+</table>
+<p>不要把 Skill 当成另一个更长的 <code>CLAUDE.md</code>。Skill 的价值在于按需加载，而不是换个目录继续堆规则。</p>
+<h2 id="动态上下文和安全限制" tabindex="-1">动态上下文和安全限制</h2>
+<p>Skills 支持动态上下文注入，语法是：</p>
+<pre class="md-pre"><code class="hljs">当前 Git 状态：
+!<span class="hljs-code">`git status --short`</span>
+</code></pre>
+<p>也支持代码块形式：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-code">```!
+git log --oneline -5
+```</span>
+</code></pre>
+<p>这些命令会在 Skill 内容发送给 Claude 之前执行。命令输出会替换原来的占位符，模型看到的是最终结果，不是命令本身。</p>
+<p>官方文档里也强调：这是 preprocessing。Claude 只看到渲染后的 prompt。</p>
+<p>它和 Claude 调用 Bash 的区别很大。</p>
+<p>Claude 调用 Bash，是模型在 agent loop 里决定使用工具。它会产生一次工具调用，工具结果进入对话历史。</p>
+<p>Skill 里的动态命令是 prompt 预处理。命令先执行，输出被塞进 Skill prompt。模型不会看到“我要执行这条命令”的过程。</p>
+<p>适合放在动态上下文里的内容，通常是稳定、只读、低风险的上下文采集，比如：</p>
+<ul>
+<li><code>git status --short</code></li>
+<li><code>git diff --name-only</code></li>
+<li><code>gh pr view --comments</code></li>
+<li>项目自带的只读脚本</li>
+</ul>
+<p>不要把会修改文件、提交代码、删除资源的命令写进动态上下文。动态上下文应该负责“收集材料”，不负责“执行改动”。</p>
+<p>MCP 来源的 Skill 更特殊。源码里的判断条件是：<code>loadedFrom !== 'mcp'</code> 时才执行内嵌 shell。</p>
+<p>MCP Skill 来自远程 MCP Server，不一定可信。如果允许远程服务器返回一个带动态命令的 Skill，再在本机执行，就会变成远程代码执行风险。</p>
+<p>所以 MCP 来源的 Skill 会跳过内嵌 shell。文件系统、本地项目、受信任来源的 Skill 才能走这条预处理链路。</p>
+<p>同时，即使是本地 Skill，命令执行前也会走同一套工具权限检查。<code>allowed-tools</code> 可以给当前 Skill 放行一部分命令，但不是无条件执行。</p>
+<p>第三方 Skill 也要按这个思路检查。安装前至少看一遍 <code>SKILL.md</code>、<code>scripts/</code>、<code>references/</code>，确认里面没有危险命令、异常脚本或过宽权限。安装 Skill，等于把一套流程交给 Agent 执行，来源不清楚时，别急着让它进项目。</p>
+<p>企业环境里，官方 settings 文档有一个和治理相关的配置：<code>strictPluginOnlyCustomization</code>。</p>
+<p>它可以限制 skills、agents、hooks、MCP servers 的来源。比如设置：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;strictPluginOnlyCustomization&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;skills&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;hooks&quot;</span><span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>被锁定后，用户级和项目级来源会被跳过，只加载 plugin 提供的、managed settings 提供的，或者内置的能力。</p>
+<p>这类配置适合团队或企业环境。个人项目一般用不上，但如果公司要统一管理 AI 编程工具的扩展来源，就不能只靠口头约定。</p>
+<h2 id="skills-怎么和-agent-配合" tabindex="-1">Skills 怎么和 Agent 配合</h2>
+<p>Skill 可以跑在 Subagent 里。</p>
+<p>官方文档里有“Run skills in a subagent”相关说明，Skill frontmatter 也支持 <code>context: fork</code> 和 <code>agent</code>。</p>
+<p>例如一个 PR 总结 Skill，可以让 Explore agent 在 fork 上下文里跑：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">context:</span> <span class="hljs-string">fork</span>
+<span class="hljs-attr">agent:</span> <span class="hljs-string">Explore</span>
+<span class="hljs-attr">allowed-tools:</span> <span class="hljs-string">Bash(gh</span> <span class="hljs-string">*)</span>
+</code></pre>
+<p>这样主会话不用自己背完整 PR diff、评论和文件列表，只拿总结结果。</p>
+<p><code>context: fork</code> 适合三类场景：</p>
+<ol>
+<li>Skill 过程很长；</li>
+<li>Skill 需要读很多文件或外部信息；</li>
+<li>主会话只关心结果，不关心完整过程。</li>
+</ol>
+<p>比如生成 PR 风险摘要、对一个模块做只读审查、汇总文档和 issue、生成迁移计划，都可以考虑 fork。</p>
+<p>不适合放到 fork 里的，是那些必须和主会话持续互动的任务。比如你正在手动调整某个核心设计，Skill 每一步都要你确认，那就不要 fork 出去。</p>
+<p>Agent Teams 也会带来额外上下文开销。官方成本文档提醒过：teammates 会自动加载 <code>CLAUDE.md</code>、MCP servers 和 Skills。也就是说，Agent Teams 不是只多了几个 prompt，每个 teammate 都有自己的启动开销。</p>
+<p>这并不代表不要用 Skills，而是要控制 Skill 描述和触发范围：</p>
+<ul>
+<li><code>description</code> 写清楚，不要让模型误触发；</li>
+<li>长内容放 supporting files，不要全塞 <code>SKILL.md</code>；</li>
+<li>用 <code>disable-model-invocation</code> 限制只允许手动调用的 Skill；</li>
+<li>大型团队项目用 <code>strictPluginOnlyCustomization</code> 控制来源。</li>
+</ul>
+<p>Skill 的设计目标是按需加载。如果描述太泛、触发太频繁，它就会从“节省上下文”变成“额外开销”。</p>
+<p>实际项目里，我一般按下面这个规则拆：</p>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>放哪里</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每轮都要遵守的规则</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>特定路径下才生效的规则</td>
+<td><code>.claude/rules/</code> 或带 <code>paths</code> 的 Skill</td>
+</tr>
+<tr>
+<td>可复用操作流程</td>
+<td>Skill</td>
+</tr>
+<tr>
+<td>长参考材料</td>
+<td>Skill supporting files</td>
+</tr>
+<tr>
+<td>搜索、审查、验证支线</td>
+<td>Subagent</td>
+</tr>
+<tr>
+<td>多角色协作任务</td>
+<td>Agent Teams</td>
+</tr>
+</tbody>
+</table>
+<p>举个例子：你要做一次后端接口重构。</p>
+<p><code>CLAUDE.md</code> 里放项目编码规范和测试命令；<code>api-contract-check</code> Skill 里放接口兼容性检查流程；<code>code-review</code> Skill 里放审查 checklist；搜索旧调用方交给 Subagent；如果前端、后端、测试要并行推进，再考虑 Agent Teams。</p>
+<p>这样拆的好处是，规则、流程、执行者各自清楚。别把所有东西都塞进主会话，也别为了显得高级到处开 Agent。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>我更愿意把 Skill 当成一种 <strong>按需加载的操作手册</strong>。</p>
+<p>每轮都要遵守的，继续放规则文件；只有特定任务才会用到的流程，拆成 Skill；流程里很长的 checklist、模板和脚本说明，再继续拆到 supporting files。</p>
+<p>判断标准也很简单：如果你已经开始反复复制同一段提示词，或者 <code>CLAUDE.md</code> 里某一节长到读起来像手册，那它大概率该变成 Skill 了。</p>
+<p>反过来，如果只是代码风格、测试命令、目录约定这类每轮都要遵守的硬规则，就别为了用 Skill 而写 Skill。放在 <code>CLAUDE.md</code> 里，反而更直接。</p>

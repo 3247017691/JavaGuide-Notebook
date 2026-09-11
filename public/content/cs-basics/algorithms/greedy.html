@@ -1,0 +1,179 @@
+<p>贪心算法的代码往往不长，难点在于为什么当前选择不会影响全局最优。面试里如果只写代码，不解释贪心策略，很容易被追问到卡住。</p>
+<p>可以先记一个判断方式：如果问题可以通过排序或维护一个当前最优边界，每一步做出局部选择，并且这个选择不会破坏后续最优解，就可以尝试贪心。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能找出贪心策略。</li>
+<li>能用交换、反证或直觉边界说明策略合理。</li>
+<li>能处理排序后的遍历条件。</li>
+<li>能区分贪心和动态规划。</li>
+</ul>
+<h2 id="贪心题怎么想" tabindex="-1">贪心题怎么想？</h2>
+<p>贪心题最怕“凭感觉选”。写代码前至少要说清两个东西：</p>
+<ol>
+<li>每一步贪的是什么，比如结束时间最早、当前能跳到最远、当前收益为正。</li>
+<li>为什么这个选择不会让后面变差。</li>
+</ol>
+<p>证明不一定要很形式化，但要能讲出取舍。比如区间调度里，选择结束最早的区间，是因为它给后面留下的可选空间最大；如果选择一个结束更晚的区间，不会让答案变得更多。</p>
+<h2 id="常见题型" tabindex="-1">常见题型</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>贪心策略</th>
+<th>代表题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分配问题</td>
+<td>优先满足最容易满足的对象</td>
+<td>分发饼干</td>
+</tr>
+<tr>
+<td>股票买卖</td>
+<td>把所有正收益累加</td>
+<td>买卖股票的最佳时机 II</td>
+</tr>
+<tr>
+<td>跳跃问题</td>
+<td>维护当前能到达的最远位置</td>
+<td>跳跃游戏</td>
+</tr>
+<tr>
+<td>区间问题</td>
+<td>按右端点或左端点排序</td>
+<td>无重叠区间、用最少数量的箭引爆气球</td>
+</tr>
+<tr>
+<td>字符串重构</td>
+<td>维护剩余可用次数或最远覆盖位置</td>
+<td>划分字母区间</td>
+</tr>
+</tbody>
+</table>
+<p>贪心常常和排序一起出现，因为排序能让“当前最优选择”变得明确。区间题经常按左端点或右端点排序，分配题经常把需求和资源都排序后用双指针匹配。</p>
+<h2 id="跳跃游戏模板" tabindex="-1">跳跃游戏模板</h2>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">boolean</span> <span class="hljs-title function_">canJump</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">farthest</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; nums.length; i++) {
+        <span class="hljs-keyword">if</span> (i &gt; farthest) {
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+        }
+        farthest = Math.max(farthest, i + nums[i]);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}
+</code></pre>
+<p><code>farthest</code> 表示当前能到达的最远位置。遍历到 <code>i</code> 时，如果 <code>i &gt; farthest</code>，说明当前位置根本不可达。</p>
+<p>这题的贪心点是：不关心具体从哪一步跳到 <code>i</code>，只关心当前能覆盖到的最远位置。只要当前位置在覆盖范围内，就可以用它继续更新覆盖范围。</p>
+<p>“跳跃游戏 II”多了一个最少步数。它维护两个边界：</p>
+<ul>
+<li><code>curEnd</code>：当前步数能覆盖到的最远位置。</li>
+<li><code>farthest</code>：在当前覆盖范围内再跳一步能到的最远位置。</li>
+</ul>
+<p>当遍历到 <code>curEnd</code> 时，说明当前步数的范围用完了，必须多跳一步，并把 <code>curEnd</code> 更新为 <code>farthest</code>。</p>
+<h2 id="区间贪心模板" tabindex="-1">区间贪心模板</h2>
+<p>以无重叠区间为例，按右端点升序排序，每次保留结束最早的区间：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">eraseOverlapIntervals</span><span class="hljs-params">(<span class="hljs-type">int</span>[][] intervals)</span> {
+    <span class="hljs-keyword">if</span> (intervals.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    Arrays.sort(intervals, Comparator.comparingInt(a -&gt; a[<span class="hljs-number">1</span>]));
+    <span class="hljs-type">int</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> intervals[<span class="hljs-number">0</span>][<span class="hljs-number">1</span>];
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; i &lt; intervals.length; i++) {
+        <span class="hljs-keyword">if</span> (intervals[i][<span class="hljs-number">0</span>] &gt;= end) {
+            count++;
+            end = intervals[i][<span class="hljs-number">1</span>];
+        }
+    }
+    <span class="hljs-keyword">return</span> intervals.length - count;
+}
+</code></pre>
+<p>结束越早，留给后面区间的空间越大，这是这类题的核心选择。</p>
+<p>区间题最容易错在排序字段。几个常见选择：</p>
+<ul>
+<li>要选最多不重叠区间：按右端点升序。</li>
+<li>要合并区间：按左端点升序。</li>
+<li>要用最少箭引爆气球：按右端点升序，尽量用当前箭覆盖更多气球。</li>
+</ul>
+<p>如果一个贪心策略不好解释，先用小样例找反例。比如“每次选长度最短的区间”看起来合理，但并不能保证选出最多不重叠区间。</p>
+<h2 id="代表题精讲用最少数量的箭引爆气球" tabindex="-1">代表题精讲：用最少数量的箭引爆气球</h2>
+<p><a href="https://leetcode.cn/problems/minimum-number-of-arrows-to-burst-balloons/" target="_blank" rel="noopener">452. 用最少数量的箭引爆气球</a> 是区间贪心的典型题。题目给出一组气球区间 <code>[start, end]</code>，一支箭射在某个坐标 <code>x</code> 上，只要 <code>start &lt;= x &lt;= end</code>，这个气球就会被引爆，要求用最少的箭引爆所有气球。</p>
+<p>这题的贪心点是：<strong>每次把箭射在当前可选区间的最右边界</strong>。先按右端点升序排序，第一支箭放在第一个气球的右端点。后面的气球如果左端点 <code>&lt;= arrow</code>，说明这支箭还能覆盖它；如果左端点 <code>&gt; arrow</code>，说明当前箭已经够不到了，必须新增一支箭，并把新箭放在这个气球的右端点。</p>
+<p>代码里要注意两个边界：空数组返回 <code>0</code>；排序比较器不要写成 <code>a[1] - b[1]</code>，极端坐标下可能溢出。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">findMinArrowShots</span><span class="hljs-params">(<span class="hljs-type">int</span>[][] points)</span> {
+    <span class="hljs-keyword">if</span> (points.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+    }
+    Arrays.sort(points, (a, b) -&gt; Integer.compare(a[<span class="hljs-number">1</span>], b[<span class="hljs-number">1</span>]));
+    <span class="hljs-type">int</span> <span class="hljs-variable">arrows</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">arrow</span> <span class="hljs-operator">=</span> points[<span class="hljs-number">0</span>][<span class="hljs-number">1</span>];
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; i &lt; points.length; i++) {
+        <span class="hljs-keyword">if</span> (points[i][<span class="hljs-number">0</span>] &gt; arrow) {
+            arrows++;
+            arrow = points[i][<span class="hljs-number">1</span>];
+        }
+    }
+    <span class="hljs-keyword">return</span> arrows;
+}
+</code></pre>
+<p>如果样例是 <code>[[10,16],[2,8],[1,6],[7,12]]</code>，按右端点排序后是 <code>[1,6]、[2,8]、[7,12]、[10,16]</code>。第一支箭放在 <code>6</code>，能覆盖前两个区间；遇到 <code>[7,12]</code> 时左端点已经大于 <code>6</code>，必须新增一支箭，放在 <code>12</code>，它又能覆盖 <code>[10,16]</code>。最终答案是 <code>2</code>。</p>
+<h2 id="贪心和动态规划怎么区分" tabindex="-1">贪心和动态规划怎么区分？</h2>
+<table>
+<thead>
+<tr>
+<th>对比点</th>
+<th>贪心</th>
+<th>动态规划</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>决策方式</td>
+<td>当前一步直接选</td>
+<td>依赖前面多个状态</td>
+</tr>
+<tr>
+<td>是否回看历史</td>
+<td>通常不回看</td>
+<td>需要状态转移</td>
+</tr>
+<tr>
+<td>证明重点</td>
+<td>当前选择不会破坏全局最优</td>
+<td>最优子结构和重叠子问题</td>
+</tr>
+<tr>
+<td>常见题</td>
+<td>区间、跳跃、分配</td>
+<td>背包、子序列、路径</td>
+</tr>
+</tbody>
+</table>
+<p>如果当前选择看起来合理，但举个小反例就会错，那它更可能需要 DP 或搜索。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>贪心题常常需要先排序，排序字段错了答案就错。</li>
+<li>区间题要看边界是否允许相等，比如 <code>[1,2]</code> 和 <code>[2,3]</code> 是否重叠。</li>
+<li>跳跃游戏 II 里“步数增加”的时机和当前覆盖边界有关。</li>
+<li>贪心策略要能解释，不要只说“每次选最优”。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>贪心和动态规划怎么区分？</li>
+<li>区间题为什么经常按右端点排序？</li>
+<li>跳跃游戏里为什么只维护最远可达位置就够了？</li>
+<li>贪心题怎样用交换或反证说明策略正确？</li>
+<li>区间边界允许相等时，判断条件应该怎么写？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/assign-cookies/" target="_blank" rel="noopener">455. 分发饼干</a></li>
+<li><a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/" target="_blank" rel="noopener">122. 买卖股票的最佳时机 II</a></li>
+<li><a href="https://leetcode.cn/problems/jump-game/" target="_blank" rel="noopener">55. 跳跃游戏</a></li>
+<li><a href="https://leetcode.cn/problems/jump-game-ii/" target="_blank" rel="noopener">45. 跳跃游戏 II</a></li>
+<li><a href="https://leetcode.cn/problems/non-overlapping-intervals/" target="_blank" rel="noopener">435. 无重叠区间</a></li>
+<li><a href="https://leetcode.cn/problems/partition-labels/" target="_blank" rel="noopener">763. 划分字母区间</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

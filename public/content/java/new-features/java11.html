@@ -1,0 +1,99 @@
+<p>Java 11 于 2018 年 9 月 25 日正式发布，这是很重要的一个版本！Java 11 是继 Java 8 之后的第一个长期支持（Long-Term-Support）版本。按照 Oracle 当前的支持路线图，Java 11 的 Extended Support 将持续至 2032 年 1 月。</p>
+<p>下面这张图是 Oracle 官方给出的 Oracle JDK 支持的时间线。</p>
+<p><img src="/img/4c1611fad59449edbbd6e233690e9fa7-08d369cd.png" alt="" loading="lazy"></p>
+<p>下图是从 JDK 8 到 JDK 25 每个版本的更新带来的新特性数量和更新时间：</p>
+<p><img src="/img/jdk8-jdk24-a3e32dd5.png" alt="" loading="lazy"></p>
+<p>这篇文章会挑选其中较为重要的一些新特性进行详细介绍：</p>
+<ul>
+<li><a href="https://openjdk.org/jeps/321" target="_blank" rel="noopener">JEP 321: HTTP Client (Standard)</a></li>
+<li><a href="https://openjdk.org/jeps/323" target="_blank" rel="noopener">JEP 323: Local-Variable Syntax for Lambda Parameters</a></li>
+<li><a href="https://openjdk.org/jeps/330" target="_blank" rel="noopener">JEP 330: Launch Single-File Source-Code Programs</a></li>
+<li><a href="https://openjdk.org/jeps/333" target="_blank" rel="noopener">JEP 333: ZGC: A Scalable Low-Latency Garbage Collector (Experimental)</a></li>
+</ul>
+<h2 id="jep-321-http-clienthttp-客户端标准版" tabindex="-1">JEP 321: HTTP Client（HTTP 客户端，标准版）</h2>
+<p>Java 11 对 Java 9 中引入并在 Java 10 中进行了更新的 HTTP Client API 进行了标准化，在前两个版本中进行孵化的同时，HTTP Client 几乎被完全重写，并且现在完全支持异步非阻塞。</p>
+<p>并且，Java 11 中，HTTP Client 的包名由 <code>jdk.incubator.http</code> 改为 <code>java.net.http</code>，该 API 通过 <code>CompletableFuture</code> 提供非阻塞请求和响应语义。使用起来也很简单，如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">var</span> <span class="hljs-variable">request</span> <span class="hljs-operator">=</span> HttpRequest.newBuilder()
+    .uri(URI.create(<span class="hljs-string">&quot;https://javastack.cn&quot;</span>))
+    .GET()
+    .build();
+<span class="hljs-type">var</span> <span class="hljs-variable">client</span> <span class="hljs-operator">=</span> HttpClient.newHttpClient();
+
+<span class="hljs-comment">// 同步</span>
+<span class="hljs-type">HttpResponse</span>&lt;String&gt; <span class="hljs-variable">response</span> <span class="hljs-operator">=</span> client.send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.body());
+
+<span class="hljs-comment">// 异步</span>
+client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+    .thenApply(HttpResponse::body)
+    .thenAccept(System.out::println);
+</code></pre>
+<h2 id="jep-333-zgc可扩展的低延迟垃圾收集器实验性" tabindex="-1">JEP 333: ZGC（可扩展的低延迟垃圾收集器，实验性）</h2>
+<p><strong>ZGC 即 Z Garbage Collector</strong>，是一个可伸缩的、低延迟的垃圾收集器。</p>
+<p>ZGC 主要为了满足如下目标进行设计：</p>
+<ul>
+<li>GC 停顿时间不超过 10ms</li>
+<li>既能处理几百 MB 的小堆，也能处理几个 TB 的大堆</li>
+<li>应用吞吐能力不会下降超过 15%（与 G1 回收算法相比）</li>
+<li>方便在此基础上引入新的 GC 特性和利用 colored 针以及 Load barriers 优化奠定基础</li>
+<li>当前只支持 Linux/x64 位平台</li>
+</ul>
+<p>ZGC 目前 <strong>处在实验阶段</strong>，只支持 Linux/x64 平台。注意：ZGC 在 Java 15 成为正式特性，在 Java 21 引入分代 ZGC。</p>
+<p>与 CMS 中的 ParNew 和 G1 类似，ZGC 也采用标记-复制算法，不过 ZGC 对该算法做了重大改进。</p>
+<p>在 ZGC 中出现 Stop The World 的情况会更少！</p>
+<p>详情可以看：<a href="https://tech.meituan.com/2020/08/06/new-zgc-practice-in-meituan.html" target="_blank" rel="noopener">《新一代垃圾回收器 ZGC 的探索与实践》</a></p>
+<h2 id="jep-323-local-variable-syntax-for-lambda-parameterslambda-参数的局部变量语法" tabindex="-1">JEP 323: Local-Variable Syntax for Lambda Parameters（Lambda 参数的局部变量语法）</h2>
+<p>从 Java 10 开始，便引入了局部变量类型推断这一关键特性。类型推断允许使用关键字 var 作为局部变量的类型而不是实际类型，编译器根据分配给变量的值推断出类型。</p>
+<p>Java 10 中对 var 关键字存在几个限制</p>
+<ul>
+<li>只能用于局部变量上</li>
+<li>声明时必须初始化</li>
+<li>不能用作方法参数</li>
+<li>不能在 Lambda 表达式中使用</li>
+</ul>
+<p>Java11 开始允许开发者在 Lambda 表达式中使用 var 进行参数声明。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 下面两者是等价的</span>
+<span class="hljs-type">Consumer</span>&lt;String&gt; <span class="hljs-variable">consumer</span> <span class="hljs-operator">=</span> (<span class="hljs-keyword">var</span> i) -&gt; System.out.println(i);
+<span class="hljs-type">Consumer</span>&lt;String&gt; <span class="hljs-variable">consumer</span> <span class="hljs-operator">=</span> (String i) -&gt; System.out.println(i);
+</code></pre>
+<h2 id="jep-330-launch-single-file-source-code-programs启动单文件源代码程序" tabindex="-1">JEP 330: Launch Single-File Source-Code Programs（启动单文件源代码程序）</h2>
+<p>这意味着我们可以运行单一文件的 Java 源代码。此功能允许使用 Java 解释器直接执行 Java 源代码。源代码在内存中编译，然后由解释器执行，不需要在磁盘上生成 <code>.class</code> 文件了。唯一的约束在于所有相关的类必须定义在同一个 Java 文件中。</p>
+<p>对于 Java 初学者并希望尝试简单程序的人特别有用，并且能和 jshell 一起使用，一定程度上增强了使用 Java 来写脚本程序的能力。</p>
+<h2 id="api-增强" tabindex="-1">API 增强</h2>
+<p>并不是所有的 API 改动都会通过 JEP（Java Enhancement Proposal）来发布。</p>
+<p>在 JDK 的开发流程中：<strong>JEP</strong> 通常用于重大的改变，例如引入新的语言特性（如 <code>var</code>）、新的 JVM 机制（如 ZGC）或者大规模的库重构。像 <code>String.isBlank()</code> 这种在现有类中增加几个方法的操作，通常被视为常规的库维护。它们由 JDK 开发者直接通过 <strong>JBS (JDK Bug System)</strong> 的工单（Ticket）进行提交和评审，然后随版本直接发布。</p>
+<h3 id="string-增强" tabindex="-1">String 增强</h3>
+<p>Java 11 增加了一系列的字符串处理方法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//判断字符串是否为空</span>
+<span class="hljs-string">&quot; &quot;</span>.isBlank();<span class="hljs-comment">//true</span>
+<span class="hljs-comment">//去除字符串首尾空格</span>
+<span class="hljs-string">&quot; Java &quot;</span>.strip();<span class="hljs-comment">// &quot;Java&quot;</span>
+<span class="hljs-comment">//去除字符串首部空格</span>
+<span class="hljs-string">&quot; Java &quot;</span>.stripLeading();   <span class="hljs-comment">// &quot;Java &quot;</span>
+<span class="hljs-comment">//去除字符串尾部空格</span>
+<span class="hljs-string">&quot; Java &quot;</span>.stripTrailing();  <span class="hljs-comment">// &quot;Java&quot;</span>
+<span class="hljs-comment">//重复字符串多少次</span>
+<span class="hljs-string">&quot;Java&quot;</span>.repeat(<span class="hljs-number">3</span>);             <span class="hljs-comment">// &quot;JavaJavaJava&quot;</span>
+<span class="hljs-comment">//返回由行终止符分隔的字符串集合。</span>
+<span class="hljs-string">&quot;A\nB\nC&quot;</span>.lines().count();    <span class="hljs-comment">// 3</span>
+<span class="hljs-string">&quot;A\nB\nC&quot;</span>.lines().collect(Collectors.toList());
+</code></pre>
+<h3 id="optional-增强" tabindex="-1">Optional 增强</h3>
+<p>新增了 <code>isEmpty()</code> 方法来判断指定的 <code>Optional</code> 对象是否为空。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">var</span> <span class="hljs-variable">op</span> <span class="hljs-operator">=</span> Optional.empty();
+System.out.println(op.isEmpty());<span class="hljs-comment">//判断指定的 Optional 对象是否为空</span>
+</code></pre>
+<h2 id="其他新特性" tabindex="-1">其他新特性</h2>
+<ul>
+<li><strong>新的垃圾回收器 Epsilon</strong>：一个完全消极的 GC 实现，分配有限的内存资源，最大限度的降低内存占用和内存吞吐延迟时间</li>
+<li><strong>低开销的 Heap Profiling</strong>：Java 11 中提供一种低开销的 Java 堆分配采样方法，能够得到堆分配的 Java 对象信息，并且能够通过 JVMTI 访问堆信息</li>
+<li><strong>TLS1.3 协议</strong>：Java 11 中包含了传输层安全性（TLS）1.3 规范（RFC 8446）的实现，替换了之前版本中包含的 TLS，包括 TLS 1.2，同时还改进了其他 TLS 功能，例如 OCSP 装订扩展（RFC 6066，RFC 6961），以及会话散列和扩展主密钥扩展（RFC 7627），在安全性和性能方面也做了很多提升</li>
+<li><strong>飞行记录器(Java Flight Recorder)</strong>：飞行记录器之前是商业版 JDK 的一项分析工具，但在 Java 11 中，其代码被包含到公开代码库中，这样所有人都能使用该功能了。</li>
+<li>......</li>
+</ul>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>JDK 11 Release Notes：<a href="https://www.oracle.com/java/technologies/javase/11-relnote-issues.html" target="_blank" rel="noopener">https://www.oracle.com/java/technologies/javase/11-relnote-issues.html</a></li>
+<li>Java 11 – Features and Comparison：<a href="https://www.geeksforgeeks.org/java-11-features-and-comparison/" target="_blank" rel="noopener">https://www.geeksforgeeks.org/java-11-features-and-comparison/</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

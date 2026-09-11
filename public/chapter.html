@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>章节卡 · JavaGuide 离线小抄</title>
+<meta name="description" content="按章翻小抄：点一行翻开原文，点右侧按钮划线。穿孔、朱线、涂格三处同步。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f9f6ee'/%3E%3Crect width='32' height='5' fill='%232f6db0'/%3E%3Cpath d='M32 0v9l-9-9z' fill='%23dcd3be'/%3E%3Crect x='6' y='12' width='20' height='2.5' fill='%2317181a'/%3E%3Crect x='6' y='18' width='13' height='2.5' fill='%23b0492f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/cheat.css">
+</head>
+<body>
+<a class="skip" href="#groups">跳到篇目清单</a>
+
+<main class="sheet" id="sheet">
+  <i class="fold" aria-hidden="true"></i>
+  <header class="sheet-band" id="band" style="--ch:#55606a">
+    <span class="code" id="ch-code">—</span>
+    <h1 id="ch-title"><span class="loading-line">取卡中</span></h1>
+    <a class="back" href="/">← 回桌面</a>
+  </header>
+  <div class="sheet-meta" id="ch-meta" style="--p:0">
+    <span class="sheet-score" id="ch-score"></span>
+    <span class="sheet-tools">
+      <select class="ch-switch" id="ch-switch" aria-label="换一张卡"></select>
+      <button class="btn" id="btn-all-read" type="button">整章已读</button>
+      <button class="btn" id="btn-clear" type="button">清除划线</button>
+    </span>
+  </div>
+  <div id="groups"><p class="loading-line">摊开小抄</p></div>
+  <footer class="sheet-foot">
+    <span>点一行 = 翻开原文 · 右侧按钮 = 标记已读（穿孔 + 朱线 + 涂格，三处同步）</span>
+    <span>内容 © JavaGuide · CC BY-SA 4.0</span>
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="/colors.js"></script>
+<script src="/chapter.js"></script>
+</body>
+</html>

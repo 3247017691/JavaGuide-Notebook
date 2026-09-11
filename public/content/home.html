@@ -1,0 +1,349 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<!-- markdownlint-disable MD024 -->
+<p>JavaGuide 是一份系统化的 <strong>Java 面试指南</strong> 和<strong>后端通用面试复习资料</strong>，内容覆盖 Java 基础、集合、并发编程、JVM、Spring/Spring Boot、MySQL、Redis、分布式、高并发、高可用和系统设计等核心知识点。</p>
+<p>如果你正在准备校招、社招或跳槽面试，可以从 <a href="/read/interview-preparation/backend-interview-plan.html">Java 后端面试通关计划</a> 开始，再按下面的模块逐步复习高频 Java 八股文和后端面试题。</p>
+<p>本站所有内容都已免费开源，欢迎一起<a href="http://localhost:8080/javaguide/contribution-guideline.html" target="_blank" rel="noopener">维护完善</a>，有帮助的话，欢迎 Star！</p>
+<ul>
+<li><strong>项目地址</strong>：<a href="https://github.com/Snailclimb/JavaGuide" target="_blank" rel="noopener">https://github.com/Snailclimb/JavaGuide</a></li>
+<li><strong>在线阅读</strong>：<a href="/">https://javaguide.cn/</a></li>
+</ul>
+<h2 id="延伸资料" tabindex="-1">延伸资料</h2>
+<ul>
+<li><a href="/read/open-source-project/README.html">Java 优质开源项目</a>：精选 Gitee/GitHub 上适合学习、实战和写进简历的 Java 开源项目。</li>
+<li><a href="/read/books/README.html">优质技术书籍推荐</a>：覆盖计算机基础、数据库、搜索引擎、分布式系统、高可用架构等方向。</li>
+</ul>
+<h2 id="面试准备" tabindex="-1">面试准备</h2>
+<ul>
+<li><a href="/read/interview-preparation/backend-interview-plan.html">⭐Java 后端面试通关计划（涵盖后端通用体系）</a> (一定要看 :+1:)</li>
+<li><a href="/read/interview-preparation/teach-you-how-to-prepare-for-the-interview-hand-in-hand.html">如何高效准备 Java 面试？</a></li>
+<li><a href="/read/interview-preparation/key-points-of-interview.html">Java 后端面试重点总结</a></li>
+<li><a href="/read/interview-preparation/java-roadmap.html">Java 学习路线（最新版，4w+ 字）</a></li>
+<li><a href="/read/interview-preparation/resume-guide.html">程序员简历编写指南</a></li>
+<li><a href="/read/interview-preparation/project-experience-guide.html">项目经验指南</a></li>
+<li><a href="/read/interview-preparation/how-to-handle-interview-nerves.html">面试太紧张怎么办？</a></li>
+<li><a href="/read/interview-preparation/internship-experience.html">校招没有实习经历怎么办？实习经历怎么写？</a></li>
+</ul>
+<h2 id="java" tabindex="-1">Java</h2>
+<h3 id="基础" tabindex="-1">基础</h3>
+<p><strong>知识点/面试题总结</strong> : (必看:+1: )：</p>
+<ul>
+<li><a href="/read/java/basis/java-basic-questions-01.html">Java 基础常见知识点&amp;面试题总结(上)</a></li>
+<li><a href="/read/java/basis/java-basic-questions-02.html">Java 基础常见知识点&amp;面试题总结(中)</a></li>
+<li><a href="/read/java/basis/java-basic-questions-03.html">Java 基础常见知识点&amp;面试题总结(下)</a></li>
+</ul>
+<p><strong>重要知识点详解</strong>：</p>
+<ul>
+<li><a href="/read/java/basis/why-there-only-value-passing-in-java.html">为什么 Java 中只有值传递？</a></li>
+<li><a href="/read/java/basis/serialization.html">Java 序列化详解</a></li>
+<li><a href="/read/java/basis/generics-and-wildcards.html">泛型&amp;通配符详解</a></li>
+<li><a href="/read/java/basis/reflection.html">Java 反射机制详解</a></li>
+<li><a href="/read/java/basis/proxy.html">Java 代理模式详解</a></li>
+<li><a href="/read/java/basis/bigdecimal.html">BigDecimal 详解</a></li>
+<li><a href="/read/java/basis/unsafe.html">Java 魔法类 Unsafe 详解</a></li>
+<li><a href="/read/java/basis/spi.html">Java SPI 机制详解</a></li>
+<li><a href="/read/java/basis/syntactic-sugar.html">Java 语法糖详解</a></li>
+</ul>
+<h3 id="集合" tabindex="-1">集合</h3>
+<p><strong>知识点/面试题总结</strong>：</p>
+<ul>
+<li><a href="/read/java/collection/java-collection-questions-01.html">Java 集合常见知识点&amp;面试题总结(上)</a> (必看 :+1:)</li>
+<li><a href="/read/java/collection/java-collection-questions-02.html">Java 集合常见知识点&amp;面试题总结(下)</a> (必看 :+1:)</li>
+<li><a href="/read/java/collection/java-collection-precautions-for-use.html">Java 集合使用注意事项总结</a></li>
+</ul>
+<p><strong>源码分析</strong>：</p>
+<ul>
+<li><a href="/read/java/collection/arraylist-source-code.html">ArrayList 核心源码+扩容机制分析</a></li>
+<li><a href="/read/java/collection/linkedlist-source-code.html">LinkedList 核心源码分析</a></li>
+<li><a href="/read/java/collection/hashmap-source-code.html">HashMap 核心源码+底层数据结构分析</a></li>
+<li><a href="/read/java/collection/concurrent-hash-map-source-code.html">ConcurrentHashMap 核心源码+底层数据结构分析</a></li>
+<li><a href="/read/java/collection/linkedhashmap-source-code.html">LinkedHashMap 核心源码分析</a></li>
+<li><a href="/read/java/collection/copyonwritearraylist-source-code.html">CopyOnWriteArrayList 核心源码分析</a></li>
+<li><a href="/read/java/collection/arrayblockingqueue-source-code.html">ArrayBlockingQueue 核心源码分析</a></li>
+<li><a href="/read/java/collection/priorityqueue-source-code.html">PriorityQueue 核心源码分析</a></li>
+<li><a href="/read/java/collection/priorityqueue-source-code.html">DelayQueue 核心源码分析</a></li>
+</ul>
+<h3 id="io" tabindex="-1">IO</h3>
+<ul>
+<li><a href="/read/java/io/io-basis.html">IO 基础知识总结</a></li>
+<li><a href="/read/java/io/io-design-patterns.html">IO 设计模式总结</a></li>
+<li><a href="/read/java/io/io-model.html">IO 模型详解</a></li>
+<li><a href="/read/java/io/nio-basis.html">NIO 核心知识总结</a></li>
+</ul>
+<h3 id="并发" tabindex="-1">并发</h3>
+<p><strong>知识点/面试题总结</strong> : (必看 :+1:)</p>
+<ul>
+<li><a href="/read/java/concurrent/java-concurrent-questions-01.html">Java 并发常见知识点&amp;面试题总结（上）</a></li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-02.html">Java 并发常见知识点&amp;面试题总结（中）</a></li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-03.html">Java 并发常见知识点&amp;面试题总结（下）</a></li>
+</ul>
+<p><strong>重要知识点详解</strong>：</p>
+<ul>
+<li><a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a></li>
+<li><a href="/read/java/concurrent/cas.html">CAS 详解</a></li>
+<li><a href="/read/java/concurrent/jmm.html">JMM（Java 内存模型）详解</a></li>
+<li><strong>线程池</strong>：<a href="/read/java/concurrent/java-thread-pool-summary.html">Java 线程池详解</a>、<a href="/read/java/concurrent/java-thread-pool-best-practices.html">Java 线程池最佳实践</a></li>
+<li><a href="/read/java/concurrent/threadlocal.html">ThreadLocal 详解</a></li>
+<li><a href="/read/java/concurrent/java-concurrent-collections.html">Java 并发容器总结</a></li>
+<li><a href="/read/java/concurrent/atomic-classes.html">Atomic 原子类总结</a></li>
+<li><a href="/read/java/concurrent/aqs.html">AQS 详解</a></li>
+<li><a href="/read/java/concurrent/completablefuture-intro.html">CompletableFuture 详解</a></li>
+</ul>
+<h3 id="jvm-必看-1" tabindex="-1">JVM (必看 :+1:)</h3>
+<p>JVM 这部分内容主要参考 <a href="https://docs.oracle.com/javase/specs/jvms/se8/html/index.html" target="_blank" rel="noopener">JVM 虚拟机规范-Java8</a> 和周志明老师的<a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener">《深入理解 Java 虚拟机（第 3 版）》</a> （强烈建议阅读多遍！）。</p>
+<ul>
+<li><strong><a href="/read/java/jvm/jvm-interview-questions.html">⭐JVM 常见面试题总结</a></strong></li>
+<li><strong><a href="/read/java/jvm/memory-area.html">Java 内存区域</a></strong></li>
+<li><strong><a href="/read/java/jvm/jvm-garbage-collection.html">JVM 垃圾回收</a></strong></li>
+<li><a href="/read/java/jvm/class-file-structure.html">类文件结构</a></li>
+<li><strong><a href="/read/java/jvm/class-loading-process.html">类加载过程</a></strong></li>
+<li><a href="/read/java/jvm/classloader.html">类加载器</a></li>
+<li><a href="/read/java/jvm/jvm-parameters-intro.html">【待完成】最重要的 JVM 参数总结（翻译完善了一半）</a></li>
+<li><a href="/read/java/jvm/jvm-intro.html">【加餐】大白话带你认识 JVM</a></li>
+<li><a href="/read/java/jvm/jdk-monitoring-and-troubleshooting-tools.html">JDK 监控和故障处理工具</a></li>
+</ul>
+<h3 id="新特性" tabindex="-1">新特性</h3>
+<ul>
+<li><strong>Java 8</strong>：<a href="/read/java/new-features/java8-tutorial-translate.html">Java 8 新特性总结（翻译）</a>、<a href="/read/java/new-features/java8-common-new-features.html">Java8 常用新特性总结</a></li>
+<li><a href="/read/java/new-features/java9.html">Java 9 新特性概览</a></li>
+<li><a href="/read/java/new-features/java10.html">Java 10 新特性概览</a></li>
+<li><a href="/read/java/new-features/java11.html">Java 11 新特性概览</a></li>
+<li><a href="/read/java/new-features/java12-13.html">Java 12 &amp; 13 新特性概览</a></li>
+<li><a href="/read/java/new-features/java14-15.html">Java 14 &amp; 15 新特性概览</a></li>
+<li><a href="/read/java/new-features/java16.html">Java 16 新特性概览</a></li>
+<li><a href="/read/java/new-features/java17.html">Java 17 新特性概览</a></li>
+<li><a href="/read/java/new-features/java18.html">Java 18 新特性概览</a></li>
+<li><a href="/read/java/new-features/java19.html">Java 19 新特性概览</a></li>
+<li><a href="/read/java/new-features/java20.html">Java 20 新特性概览</a></li>
+<li><a href="/read/java/new-features/java21.html">Java 21 新特性概览</a></li>
+<li><a href="/read/java/new-features/java22-23.html">Java 22 &amp; 23 新特性概览</a></li>
+<li><a href="/read/java/new-features/java24.html">Java 24 新特性概览</a></li>
+<li><a href="/read/java/new-features/java25.html">Java 25 新特性概览</a></li>
+</ul>
+<h2 id="计算机基础" tabindex="-1">计算机基础</h2>
+<blockquote>
+<p>计算机基础（计算机网络、操作系统、数据结构与算法）已独立为单独模块，详见 <a href="/read/cs-basics/README.html">计算机基础知识总结</a>。</p>
+</blockquote>
+<p><a href="/read/about-the-author/zhishixingqiu-two-years.html"><img src="/img/xingqiu-ac17d65d.png" alt="" loading="lazy"></a></p>
+<h2 id="数据库" tabindex="-1">数据库</h2>
+<h3 id="基础-2" tabindex="-1">基础</h3>
+<ul>
+<li><a href="/read/database/basis.html">数据库基础知识总结</a></li>
+<li><a href="/read/database/nosql.html">NoSQL 基础知识总结</a></li>
+<li><a href="/read/database/character-set.html">字符集详解</a></li>
+<li>SQL :
+<ul>
+<li><a href="/read/database/sql/sql-syntax-summary.html">SQL 语法基础知识总结</a></li>
+<li><a href="/read/database/sql/sql-questions-01.html">SQL 常见面试题总结</a></li>
+</ul>
+</li>
+</ul>
+<h3 id="mysql" tabindex="-1">MySQL</h3>
+<p><strong>知识点/面试题总结：</strong></p>
+<ul>
+<li><strong><a href="/read/database/mysql/mysql-questions-01.html">MySQL 常见知识点&amp;面试题总结</a></strong> (必看 :+1:)</li>
+<li><a href="/read/database/mysql/mysql-high-performance-optimization-specification-recommendations.html">MySQL 高性能优化规范建议总结</a></li>
+</ul>
+<p><strong>重要知识点：</strong></p>
+<ul>
+<li><a href="/read/database/mysql/mysql-index.html">MySQL 索引详解</a></li>
+<li><a href="/read/database/mysql/mysql-index-invalidation.html">MySQL 索引失效场景总结</a></li>
+<li><a href="/read/database/mysql/transaction-isolation-level.html">MySQL 事务隔离级别图文详解)</a></li>
+<li><a href="/read/database/mysql/mysql-logs.html">MySQL 三大日志(binlog、redo log 和 undo log)详解</a></li>
+<li><a href="/read/database/mysql/innodb-implementation-of-mvcc.html">InnoDB 存储引擎对 MVCC 的实现</a></li>
+<li><a href="/read/database/mysql/how-sql-executed-in-mysql.html">SQL 语句在 MySQL 中的执行过程</a></li>
+<li><a href="/read/database/mysql/mysql-query-cache.html">MySQL 查询缓存详解</a></li>
+<li><a href="/read/database/mysql/mysql-query-execution-plan.html">MySQL 执行计划分析</a></li>
+<li><a href="/read/database/mysql/mysql-auto-increment-primary-key-continuous.html">MySQL 自增主键一定是连续的吗</a></li>
+<li><a href="/read/database/mysql/some-thoughts-on-database-storage-time.html">MySQL 时间类型数据存储建议</a></li>
+<li><a href="/read/database/mysql/index-invalidation-caused-by-implicit-conversion.html">MySQL 隐式转换造成索引失效</a></li>
+</ul>
+<h3 id="redis" tabindex="-1">Redis</h3>
+<p><strong>知识点/面试题总结</strong> : (必看:+1: )：</p>
+<ul>
+<li><a href="/read/database/redis/redis-questions-01.html">Redis 常见知识点&amp;面试题总结(上)</a></li>
+<li><a href="/read/database/redis/redis-questions-02.html">Redis 常见知识点&amp;面试题总结(下)</a></li>
+</ul>
+<p><strong>重要知识点：</strong></p>
+<ul>
+<li><a href="/read/database/redis/3-commonly-used-cache-read-and-write-strategies.html">3 种常用的缓存读写策略详解</a></li>
+<li><a href="/read/database/redis/redis-stream-mq.html">Redis 能做消息队列吗？怎么实现？</a></li>
+<li><a href="/read/database/redis/redis-data-structures-01.html">Redis 5 种基本数据结构详解</a></li>
+<li><a href="/read/database/redis/redis-data-structures-02.html">Redis 3 种特殊数据结构详解</a></li>
+<li><a href="/read/database/redis/redis-persistence.html">Redis 持久化机制详解</a></li>
+<li><a href="/read/database/redis/redis-memory-fragmentation.html">Redis 内存碎片详解</a></li>
+<li><a href="/read/database/redis/redis-common-blocking-problems-summary.html">Redis 常见阻塞原因总结</a></li>
+<li><a href="/read/database/redis/redis-cluster.html">Redis 集群详解</a></li>
+</ul>
+<h3 id="mongodb" tabindex="-1">MongoDB</h3>
+<ul>
+<li><a href="/read/database/mongodb/mongodb-questions-01.html">MongoDB 常见知识点&amp;面试题总结(上)</a></li>
+<li><a href="/read/database/mongodb/mongodb-questions-02.html">MongoDB 常见知识点&amp;面试题总结(下)</a></li>
+</ul>
+<h2 id="搜索引擎" tabindex="-1">搜索引擎</h2>
+<p><a href="/read/database/elasticsearch/elasticsearch-questions-01.html">Elasticsearch 常见面试题总结(付费)</a></p>
+<p><img src="/img/gongzhonghaoxuanchuan-23be7585.png" alt="" loading="lazy"></p>
+<h2 id="开发工具" tabindex="-1">开发工具</h2>
+<h3 id="maven" tabindex="-1">Maven</h3>
+<ul>
+<li><a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a></li>
+<li><a href="/read/tools/maven/maven-best-practices.html">Maven 最佳实践</a></li>
+</ul>
+<h3 id="gradle" tabindex="-1">Gradle</h3>
+<p><a href="/read/tools/gradle/gradle-core-concepts.html">Gradle 核心概念总结</a>（可选，目前国内还是使用 Maven 普遍一些）</p>
+<h3 id="docker" tabindex="-1">Docker</h3>
+<ul>
+<li><a href="/read/tools/docker/docker-intro.html">Docker 核心概念总结</a></li>
+<li><a href="/read/tools/docker/docker-in-action.html">Docker 实战</a></li>
+</ul>
+<h3 id="git" tabindex="-1">Git</h3>
+<ul>
+<li><a href="/read/tools/git/git-intro.html">Git 核心概念总结</a></li>
+<li><a href="/read/tools/git/github-tips.html">GitHub 实用小技巧总结</a></li>
+</ul>
+<h2 id="系统设计" tabindex="-1">系统设计</h2>
+<ul>
+<li><a href="/read/system-design/system-design-questions.html">⭐系统设计常见面试题总结</a></li>
+<li><a href="/read/system-design/design-pattern.html">⭐设计模式常见面试题总结</a></li>
+</ul>
+<h3 id="基础-3" tabindex="-1">基础</h3>
+<ul>
+<li><a href="/read/system-design/basis/RESTfulAPI.html">RestFul API 简明教程</a></li>
+<li><a href="/read/system-design/basis/software-engineering.html">软件工程简明教程</a></li>
+<li><a href="/read/system-design/basis/naming.html">代码命名指南</a></li>
+<li><a href="/read/system-design/basis/refactoring.html">代码重构指南</a></li>
+<li><a href="/read/system-design/basis/unit-test.html">单元测试指南</a></li>
+</ul>
+<h3 id="常用框架" tabindex="-1">常用框架</h3>
+<h4 id="springspringboot-必看-1" tabindex="-1">Spring/SpringBoot (必看 :+1:)</h4>
+<p><strong>知识点/面试题总结</strong> :</p>
+<ul>
+<li><a href="/read/system-design/framework/spring/spring-knowledge-and-questions-summary.html">Spring 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/system-design/framework/spring/springboot-knowledge-and-questions-summary.html">SpringBoot 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/system-design/framework/spring/spring-common-annotations.html">Spring/Spring Boot 常用注解总结</a></li>
+<li><a href="https://github.com/Snailclimb/springboot-guide" target="_blank" rel="noopener">SpringBoot 入门指南</a></li>
+</ul>
+<p><strong>重要知识点详解</strong>：</p>
+<ul>
+<li><a href="/read/system-design/framework/spring/ioc-and-aop.html">IoC &amp; AOP 详解（快速搞懂）</a></li>
+<li><a href="/read/system-design/framework/spring/spring-transaction.html">Spring 事务详解</a></li>
+<li><a href="/read/system-design/framework/spring/spring-design-patterns-summary.html">Spring 中的设计模式详解</a></li>
+<li><a href="/read/system-design/framework/spring/spring-boot-auto-assembly-principles.html">SpringBoot 自动装配原理详解</a></li>
+</ul>
+<h4 id="mybatis" tabindex="-1">MyBatis</h4>
+<p><a href="/read/system-design/framework/mybatis/mybatis-interview.html">MyBatis 常见面试题总结</a></p>
+<h3 id="安全" tabindex="-1">安全</h3>
+<h4 id="认证授权" tabindex="-1">认证授权</h4>
+<ul>
+<li><a href="/read/system-design/security/basis-of-authority-certification.html">认证授权基础概念详解</a></li>
+<li><a href="/read/system-design/security/jwt-intro.html">JWT 基础概念详解</a></li>
+<li><a href="/read/system-design/security/advantages-and-disadvantages-of-jwt.html">JWT 优缺点分析以及常见问题解决方案</a></li>
+<li><a href="/read/system-design/security/sso-intro.html">SSO 单点登录详解</a></li>
+<li><a href="/read/system-design/security/design-of-authority-system.html">权限系统设计详解</a></li>
+</ul>
+<h4 id="数据安全" tabindex="-1">数据安全</h4>
+<ul>
+<li><a href="/read/system-design/security/encryption-algorithms.html">常见加密算法总结</a></li>
+<li><a href="/read/system-design/security/sentive-words-filter.html">敏感词过滤方案总结</a></li>
+<li><a href="/read/system-design/security/data-desensitization.html">数据脱敏方案总结</a></li>
+<li><a href="/read/system-design/security/data-validation.html">为什么前后端都要做数据校验</a></li>
+<li><a href="/read/system-design/security/why-password-reset-instead-of-retrieval.html">为什么忘记密码时只能重置，不能告诉你原密码？</a></li>
+</ul>
+<h3 id="定时任务" tabindex="-1">定时任务</h3>
+<p><a href="/read/system-design/schedule-task.html">Java 定时任务详解</a></p>
+<h3 id="web-实时消息推送" tabindex="-1">Web 实时消息推送</h3>
+<p><a href="/read/system-design/web-real-time-message-push.html">Web 实时消息推送详解</a></p>
+<h2 id="分布式" tabindex="-1">分布式</h2>
+<ul>
+<li><a href="/read/books/distributed-system.html">⭐分布式高频面试题</a></li>
+<li><a href="/read/distributed-system/distributed-system-interview-questions.html">分布式系统面试准备</a></li>
+<li><a href="/read/distributed-system/microservices-interview-questions.html">微服务面试准备</a></li>
+<li><a href="/read/distributed-system/distributed-system-intro.html">分布式系统入门</a></li>
+</ul>
+<h3 id="理论算法协议" tabindex="-1">理论&amp;算法&amp;协议</h3>
+<ul>
+<li><a href="/read/distributed-system/protocol/cap-and-base-theorem.html">CAP 理论和 BASE 理论解读</a></li>
+<li><a href="/read/distributed-system/protocol/centralized-and-decentralized.html">分布式协调详解</a></li>
+<li><a href="/read/distributed-system/protocol/byzantine-generals-problem.html">拜占庭将军问题详解</a></li>
+<li><a href="/read/distributed-system/protocol/paxos-algorithm.html">Paxos 算法解读</a></li>
+<li><a href="/read/distributed-system/protocol/raft-algorithm.html">Raft 算法解读</a></li>
+<li><a href="/read/distributed-system/protocol/zab.html">ZAB 协议解读</a></li>
+<li><a href="/read/distributed-system/protocol/gossip-protocol.html">Gossip 协议详解</a></li>
+<li><a href="/read/distributed-system/protocol/consistent-hashing.html">一致性哈希算法详解</a></li>
+</ul>
+<h3 id="rpc" tabindex="-1">RPC</h3>
+<ul>
+<li><a href="/read/distributed-system/rpc/rpc-intro.html">RPC 基础知识总结</a></li>
+<li><a href="/read/distributed-system/rpc/dubbo.html">Dubbo 常见知识点&amp;面试题总结</a></li>
+</ul>
+<h3 id="zookeeper" tabindex="-1">ZooKeeper</h3>
+<blockquote>
+<p>这两篇文章可能有内容重合部分，推荐都看一遍。</p>
+</blockquote>
+<ul>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-intro.html">ZooKeeper 相关概念总结(入门)</a></li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-plus.html">ZooKeeper 相关概念总结(进阶)</a></li>
+</ul>
+<h3 id="api-网关" tabindex="-1">API 网关</h3>
+<ul>
+<li><a href="/read/distributed-system/api-gateway.html">API 网关基础知识总结</a></li>
+<li><a href="/read/distributed-system/spring-cloud-gateway-questions.html">Spring Cloud Gateway 常见知识点&amp;面试题总结</a></li>
+</ul>
+<h3 id="分布式-id" tabindex="-1">分布式 ID</h3>
+<ul>
+<li><a href="/read/distributed-system/distributed-id.html">分布式 ID 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/distributed-system/distributed-id-design.html">分布式 ID 设计指南</a></li>
+</ul>
+<h3 id="分布式锁" tabindex="-1">分布式锁</h3>
+<ul>
+<li><a href="/read/distributed-system/distributed-lock.html">分布式锁介绍</a></li>
+<li><a href="/read/distributed-system/distributed-lock-implementations.html">分布式锁常见实现方案总结</a></li>
+</ul>
+<h3 id="分布式事务" tabindex="-1">分布式事务</h3>
+<p><a href="/read/distributed-system/distributed-transaction.html">分布式事务常见知识点&amp;面试题总结</a></p>
+<h3 id="分布式配置中心" tabindex="-1">分布式配置中心</h3>
+<p><a href="/read/distributed-system/distributed-configuration-center.html">分布式配置中心常见知识点&amp;面试题总结</a></p>
+<h2 id="高性能" tabindex="-1">高性能</h2>
+<h3 id="数据库优化" tabindex="-1">数据库优化</h3>
+<ul>
+<li><a href="/read/high-performance/read-and-write-separation-and-library-subtable.html">数据库读写分离和分库分表</a></li>
+<li><a href="/read/high-performance/data-cold-hot-separation.html">数据冷热分离</a></li>
+<li><a href="/read/high-performance/sql-optimization.html">常见 SQL 优化手段总结</a></li>
+<li><a href="/read/high-performance/deep-pagination-optimization.html">深度分页介绍及优化建议</a></li>
+</ul>
+<h3 id="负载均衡" tabindex="-1">负载均衡</h3>
+<p><a href="/read/high-performance/load-balancing.html">负载均衡常见知识点&amp;面试题总结</a></p>
+<h3 id="cdn" tabindex="-1">CDN</h3>
+<p><a href="/read/high-performance/cdn.html">CDN（内容分发网络）常见知识点&amp;面试题总结</a></p>
+<h3 id="消息队列" tabindex="-1">消息队列</h3>
+<ul>
+<li><a href="/read/high-performance/message-queue/message-queue-interview-questions.html">消息队列面试准备</a></li>
+<li><a href="/read/high-performance/message-queue/message-queue.html">消息队列基础知识总结</a></li>
+<li><a href="/read/high-performance/message-queue/disruptor-questions.html">Disruptor 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/high-performance/message-queue/rabbitmq-questions.html">RabbitMQ 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/high-performance/message-queue/rocketmq-questions.html">RocketMQ 常见知识点&amp;面试题总结</a></li>
+<li><a href="/read/high-performance/message-queue/kafka-questions-01.html">Kafka 常见知识点&amp;面试题总结</a></li>
+</ul>
+<h2 id="高可用" tabindex="-1">高可用</h2>
+<p><a href="/read/high-availability/high-availability-system-design.html">高可用系统设计指南</a></p>
+<h3 id="冗余设计" tabindex="-1">冗余设计</h3>
+<p><a href="/read/high-availability/redundancy.html">冗余设计详解</a></p>
+<h3 id="限流" tabindex="-1">限流</h3>
+<p><a href="/read/high-availability/limit-request.html">服务限流详解</a></p>
+<h3 id="降级熔断" tabindex="-1">降级&amp;熔断</h3>
+<p><a href="/read/high-availability/fallback-and-circuit-breaker.html">降级&amp;熔断详解</a></p>
+<h3 id="超时重试" tabindex="-1">超时&amp;重试</h3>
+<p><a href="/read/high-availability/timeout-and-retry.html">超时&amp;重试详解</a></p>
+<h3 id="集群" tabindex="-1">集群</h3>
+<p>相同的服务部署多份，避免单点故障。</p>
+<h3 id="灾备设计和异地多活" tabindex="-1">灾备设计和异地多活</h3>
+<p><strong>灾备</strong> = 容灾 + 备份。</p>
+<ul>
+<li><strong>备份</strong>：将系统所产生的所有重要数据多备份几份。</li>
+<li><strong>容灾</strong>：在异地建立两个完全相同的系统。当某个地方的系统突然挂掉，整个应用系统可以切换到另一个，这样系统就可以正常提供服务了。</li>
+</ul>
+<p><strong>异地多活</strong> 描述的是将服务部署在异地并且服务同时对外提供服务。和传统的灾备设计的最主要区别在于“多活”，即所有站点都是同时在对外提供服务的。异地多活是为了应对突发状况比如火灾、地震等自然或者人为灾害。</p>
+<h2 id="star-趋势" tabindex="-1">Star 趋势</h2>
+<p><img src="https://api.star-history.com/svg?repos=Snailclimb/JavaGuide&amp;type=Date" alt="" loading="lazy"></p>
+<h2 id="公众号" tabindex="-1">公众号</h2>
+<p>如果大家想要实时关注我更新的文章以及分享的干货的话，可以关注我的公众号“<strong>JavaGuide</strong>”。</p>
+<p><img src="/img/gongzhonghaoxuanchuan-23be7585.png" alt="" loading="lazy"></p>

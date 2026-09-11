@@ -1,0 +1,253 @@
+<p>DFS 和 BFS 是树、图、矩阵题的基础。面试里不会只问“DFS 是什么”，更常见的是给你一个岛屿、课程依赖、最短步数或二叉树层序遍历，让你选搜索方式并写出边界处理。</p>
+<p>一个简单判断：需要一路走到底、枚举路径或处理连通块时，优先想 DFS；需要按层推进、求最短步数时，优先想 BFS。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能写递归 DFS、队列 BFS。</li>
+<li>能说出树和图搜索的复杂度。</li>
+<li>能处理 <code>visited</code>，避免重复访问和死循环。</li>
+<li>能区分“遍历所有节点”和“求最短步数”。</li>
+<li>能把矩阵题转换成图搜索。</li>
+</ul>
+<h2 id="怎么选择-dfs-还是-bfs" tabindex="-1">怎么选择 DFS 还是 BFS？</h2>
+<p>DFS 和 BFS 都能遍历节点，但它们的天然优势不同。</p>
+<table>
+<thead>
+<tr>
+<th>目标</th>
+<th>更常用</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>遍历所有节点</td>
+<td>DFS 或 BFS 都可以</td>
+<td>只要不重复访问即可</td>
+</tr>
+<tr>
+<td>找连通块面积</td>
+<td>DFS 更顺手</td>
+<td>一路递归扩展，代码短</td>
+</tr>
+<tr>
+<td>求无权图最短步数</td>
+<td>BFS</td>
+<td>按层推进，第一次到达就是最短</td>
+</tr>
+<tr>
+<td>枚举所有路径</td>
+<td>DFS</td>
+<td>路径天然存在递归栈里</td>
+</tr>
+<tr>
+<td>二叉树层序遍历</td>
+<td>BFS</td>
+<td>队列正好按层处理</td>
+</tr>
+</tbody>
+</table>
+<p>如果题目里出现“最少几步”“最短路径”“扩散到所有位置”，先想 BFS。如果题目里出现“所有方案”“是否存在一条路径”“连通块大小”，先想 DFS。</p>
+<h2 id="dfs-模板" tabindex="-1">DFS 模板</h2>
+<p>矩阵 DFS 常见写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">void</span> <span class="hljs-title function_">dfs</span><span class="hljs-params">(<span class="hljs-type">char</span>[][] grid, <span class="hljs-type">int</span> i, <span class="hljs-type">int</span> j)</span> {
+    <span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">0</span> || i &gt;= grid.length || j &lt; <span class="hljs-number">0</span> || j &gt;= grid[<span class="hljs-number">0</span>].length) {
+        <span class="hljs-keyword">return</span>;
+    }
+    <span class="hljs-keyword">if</span> (grid[i][j] != <span class="hljs-string">&#x27;1&#x27;</span>) {
+        <span class="hljs-keyword">return</span>;
+    }
+    grid[i][j] = <span class="hljs-string">&#x27;2&#x27;</span>;
+    dfs(grid, i + <span class="hljs-number">1</span>, j);
+    dfs(grid, i - <span class="hljs-number">1</span>, j);
+    dfs(grid, i, j + <span class="hljs-number">1</span>);
+    dfs(grid, i, j - <span class="hljs-number">1</span>);
+}
+</code></pre>
+<p>这里直接把访问过的陆地改成 <code>'2'</code>，相当于使用原数组做访问标记。如果题目不允许修改输入，就单独建 <code>boolean[][] visited</code>。</p>
+<p>DFS 的递归函数要先定义清楚含义。上面这段代码可以解释为：从 <code>(i, j)</code> 出发，把和它连通的所有陆地都标记掉。</p>
+<p>这个含义决定了代码顺序：</p>
+<ol>
+<li>越界直接返回。</li>
+<li>当前格子不是陆地直接返回。</li>
+<li>标记当前格子，避免重复访问。</li>
+<li>继续访问上下左右 4 个方向。</li>
+</ol>
+<p>很多 DFS bug 都来自第 3 步写晚了。如果先递归邻居，再标记当前节点，就可能在两个相邻格子之间来回递归。</p>
+<h2 id="bfs-模板" tabindex="-1">BFS 模板</h2>
+<p>BFS 适合层序遍历和最短步数。下面的模板约定输入是非空矩形矩阵，其中 <code>0</code> 表示可以通行，<code>1</code> 表示障碍物；函数返回起点到目标点的最短步数，坐标越界或目标不可达时返回 <code>-1</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">bfs</span><span class="hljs-params">(<span class="hljs-type">int</span>[][] grid, <span class="hljs-type">int</span> startX, <span class="hljs-type">int</span> startY, <span class="hljs-type">int</span> targetX, <span class="hljs-type">int</span> targetY)</span> {
+    <span class="hljs-keyword">if</span> (grid == <span class="hljs-literal">null</span> || grid.length == <span class="hljs-number">0</span> || grid[<span class="hljs-number">0</span>].length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">rows</span> <span class="hljs-operator">=</span> grid.length;
+    <span class="hljs-type">int</span> <span class="hljs-variable">columns</span> <span class="hljs-operator">=</span> grid[<span class="hljs-number">0</span>].length;
+    <span class="hljs-keyword">if</span> (startX &lt; <span class="hljs-number">0</span> || startX &gt;= rows || startY &lt; <span class="hljs-number">0</span> || startY &gt;= columns
+            || targetX &lt; <span class="hljs-number">0</span> || targetX &gt;= rows || targetY &lt; <span class="hljs-number">0</span> || targetY &gt;= columns
+            || grid[startX][startY] == <span class="hljs-number">1</span> || grid[targetX][targetY] == <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    <span class="hljs-type">int</span>[][] <span class="hljs-variable">dirs</span> <span class="hljs-operator">=</span> {{<span class="hljs-number">1</span>, <span class="hljs-number">0</span>}, {-<span class="hljs-number">1</span>, <span class="hljs-number">0</span>}, {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>}, {<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>}};
+    <span class="hljs-type">Queue</span>&lt;<span class="hljs-type">int</span>[]&gt; <span class="hljs-variable">queue</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayDeque</span>&lt;&gt;();
+    queue.offer(<span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {startX, startY});
+    <span class="hljs-type">boolean</span>[][] <span class="hljs-variable">visited</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">boolean</span>[rows][columns];
+    visited[startX][startY] = <span class="hljs-literal">true</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">step</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (!queue.isEmpty()) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">size</span> <span class="hljs-operator">=</span> queue.size();
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">k</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; k &lt; size; k++) {
+            <span class="hljs-type">int</span>[] <span class="hljs-variable">cur</span> <span class="hljs-operator">=</span> queue.poll();
+            <span class="hljs-keyword">if</span> (cur[<span class="hljs-number">0</span>] == targetX &amp;&amp; cur[<span class="hljs-number">1</span>] == targetY) {
+                <span class="hljs-keyword">return</span> step;
+            }
+            <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span>[] dir : dirs) {
+                <span class="hljs-type">int</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> cur[<span class="hljs-number">0</span>] + dir[<span class="hljs-number">0</span>];
+                <span class="hljs-type">int</span> <span class="hljs-variable">y</span> <span class="hljs-operator">=</span> cur[<span class="hljs-number">1</span>] + dir[<span class="hljs-number">1</span>];
+                <span class="hljs-keyword">if</span> (x &lt; <span class="hljs-number">0</span> || x &gt;= rows || y &lt; <span class="hljs-number">0</span> || y &gt;= columns
+                        || visited[x][y] || grid[x][y] == <span class="hljs-number">1</span>) {
+                    <span class="hljs-keyword">continue</span>;
+                }
+                visited[x][y] = <span class="hljs-literal">true</span>;
+                queue.offer(<span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {x, y});
+            }
+        }
+        step++;
+    }
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+}
+</code></pre>
+<p>这段代码在目标节点第一次出队时返回当前层数，而不是等队列清空。具体题目的可通行条件可能不是 <code>0</code> 和 <code>1</code>，需要按题意调整。</p>
+<p>BFS 的关键是“按层处理”。队列里一开始是第 0 层节点，每轮取出当前队列大小 <code>size</code>，只处理这一层的节点；它们扩展出来的新节点属于下一层。</p>
+<p>为什么无权图 BFS 能求最短路径？因为每条边的代价相同。BFS 第一次到达某个节点时，一定是用了最少的边数。后面即使还能再次到达，也不会更短，所以可以直接标记访问。</p>
+<p>多源 BFS 也很常见。比如“腐烂的橘子”里，所有烂橘子同时开始扩散。做法是先把所有初始烂橘子都入队，再按层扩散。</p>
+<h2 id="树搜索和图搜索的区别" tabindex="-1">树搜索和图搜索的区别</h2>
+<p>树没有环，很多时候不需要 <code>visited</code>。图可能有环，必须考虑重复访问。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>是否常用 <code>visited</code></th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>二叉树递归遍历</td>
+<td>通常不用</td>
+<td>节点没有回到父节点的边</td>
+</tr>
+<tr>
+<td>无向图遍历</td>
+<td>需要</td>
+<td>否则两个节点会互相访问</td>
+</tr>
+<tr>
+<td>有向图遍历</td>
+<td>通常需要</td>
+<td>可能存在环</td>
+</tr>
+<tr>
+<td>矩阵搜索</td>
+<td>需要</td>
+<td>上下左右可能走回原点</td>
+</tr>
+</tbody>
+</table>
+<h2 id="复杂度" tabindex="-1">复杂度</h2>
+<p>图搜索常用 <code>V</code> 表示顶点数，<code>E</code> 表示边数。邻接表存储时，DFS 和 BFS 的时间复杂度通常是 <code>O(V + E)</code>，空间复杂度是 <code>O(V)</code>。</p>
+<p>矩阵搜索如果矩阵大小是 <code>m * n</code>，每个格子最多访问一次，时间复杂度是 <code>O(mn)</code>，访问标记或队列空间最坏也是 <code>O(mn)</code>。</p>
+<h2 id="矩阵题怎么转成图" tabindex="-1">矩阵题怎么转成图？</h2>
+<p>矩阵中的每个格子都可以看成图里的一个节点。上下左右 4 个方向，就是这个节点连出去的边。</p>
+<p>常用方向数组：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[][] <span class="hljs-variable">dirs</span> <span class="hljs-operator">=</span> {{<span class="hljs-number">1</span>, <span class="hljs-number">0</span>}, {-<span class="hljs-number">1</span>, <span class="hljs-number">0</span>}, {<span class="hljs-number">0</span>, <span class="hljs-number">1</span>}, {<span class="hljs-number">0</span>, -<span class="hljs-number">1</span>}};
+</code></pre>
+<p>遍历邻居时只需要做 3 件事：</p>
+<ol>
+<li>计算新坐标。</li>
+<li>判断是否越界。</li>
+<li>判断是否已经访问过，或是否符合题目要求。</li>
+</ol>
+<p>如果题目允许斜向移动，把方向数组扩展成 8 个方向即可。不要在代码里手写 4 段几乎相同的递归调用，方向数组更不容易漏条件。</p>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>以岛屿数量为例，遇到一个未访问过的陆地格子，就从它开始 DFS/BFS，把整座岛都标记掉。</p>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>扫描矩阵，找到一个 <code>1</code></td>
+<td>发现一座新岛</td>
+</tr>
+<tr>
+<td>2</td>
+<td>岛屿数量加 1</td>
+<td>记录连通块</td>
+</tr>
+<tr>
+<td>3</td>
+<td>从当前格子 DFS/BFS</td>
+<td>把这座岛所有陆地标记掉</td>
+</tr>
+<tr>
+<td>4</td>
+<td>继续扫描后续格子</td>
+<td>避免重复统计同一座岛</td>
+</tr>
+</tbody>
+</table>
+<p>矩阵搜索建议检查这些边界：</p>
+<table>
+<thead>
+<tr>
+<th>输入</th>
+<th>重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>空矩阵</td>
+<td>是否先判断行列长度</td>
+</tr>
+<tr>
+<td>全是水</td>
+<td>结果应该是 0</td>
+</tr>
+<tr>
+<td>全是陆地</td>
+<td>只能统计成 1 个连通块</td>
+</tr>
+<tr>
+<td>只有斜向相邻</td>
+<td>如果题目只允许上下左右，不能算连通</td>
+</tr>
+</tbody>
+</table>
+<p>常见错误写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">void</span> <span class="hljs-title function_">dfs</span><span class="hljs-params">(<span class="hljs-type">char</span>[][] grid, <span class="hljs-type">int</span> i, <span class="hljs-type">int</span> j)</span> {
+    dfs(grid, i + <span class="hljs-number">1</span>, j);
+    grid[i][j] = <span class="hljs-string">&#x27;2&#x27;</span>; <span class="hljs-comment">// 错：标记太晚，可能来回递归</span>
+}
+</code></pre>
+<p>访问标记要在递归扩展邻居之前完成。图和矩阵里只要存在回边或相邻互访，标记太晚就可能重复访问甚至栈溢出。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>BFS 入队时就标记访问，避免同一个节点被重复入队。</li>
+<li>DFS 递归深度过大可能栈溢出，面试中可以说明可改成显式栈。</li>
+<li>矩阵题先判断越界，再访问数组。</li>
+<li>无向图要注意从子节点走回父节点的问题。</li>
+<li>求最短步数时，BFS 的层数统计要和队列当前层大小绑定。</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/binary-tree-level-order-traversal/" target="_blank" rel="noopener">102. 二叉树的层序遍历</a></li>
+<li><a href="https://leetcode.cn/problems/number-of-islands/" target="_blank" rel="noopener">200. 岛屿数量</a></li>
+<li><a href="https://leetcode.cn/problems/max-area-of-island/" target="_blank" rel="noopener">695. 岛屿的最大面积</a></li>
+<li><a href="https://leetcode.cn/problems/rotting-oranges/" target="_blank" rel="noopener">994. 腐烂的橘子</a></li>
+<li><a href="https://leetcode.cn/problems/course-schedule/" target="_blank" rel="noopener">207. 课程表</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

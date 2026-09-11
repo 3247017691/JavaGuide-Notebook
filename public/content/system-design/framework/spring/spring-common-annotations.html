@@ -1,0 +1,794 @@
+<p>可以毫不夸张地说，这篇文章介绍的 Spring/SpringBoot 常用注解基本已经涵盖你工作中遇到的大部分常用的场景。对于每一个注解本文都提供了具体用法，掌握这些内容后，使用 Spring Boot 来开发项目基本没啥大问题了！</p>
+<p><strong>为什么要写这篇文章？</strong></p>
+<p>最近看到网上有一篇关于 Spring Boot 常用注解的文章被广泛转载，但文章内容存在一些误导性，可能对没有太多实际使用经验的开发者不太友好。于是我花了几天时间总结了这篇文章，希望能够帮助大家更好地理解和使用 Spring 注解。</p>
+<p><strong>因为个人能力和精力有限，如果有任何错误或遗漏，欢迎指正！非常感激！</strong></p>
+<h2 id="spring-boot-基础注解" tabindex="-1">Spring Boot 基础注解</h2>
+<p><code>@SpringBootApplication</code> 是 Spring Boot 应用的核心注解，通常用于标注主启动类。</p>
+<p>示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@SpringBootApplication</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SpringSecurityJwtGuideApplication</span> {
+      <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(java.lang.String[] args)</span> {
+        SpringApplication.run(SpringSecurityJwtGuideApplication.class, args);
+    }
+}
+</code></pre>
+<p>我们可以把 <code>@SpringBootApplication</code>看作是下面三个注解的组合：</p>
+<ul>
+<li><strong><code>@EnableAutoConfiguration</code></strong>：启用 Spring Boot 的自动配置机制。</li>
+<li><strong><code>@ComponentScan</code></strong>：扫描 <code>@Component</code>、<code>@Service</code>、<code>@Repository</code>、<code>@Controller</code> 等注解的类。</li>
+<li><strong><code>@Configuration</code></strong>：允许注册额外的 Spring Bean 或导入其他配置类。</li>
+</ul>
+<p>源码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">package</span> org.springframework.boot.autoconfigure;
+<span class="hljs-meta">@Target(ElementType.TYPE)</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Inherited</span>
+<span class="hljs-meta">@SpringBootConfiguration</span>
+<span class="hljs-meta">@EnableAutoConfiguration</span>
+<span class="hljs-meta">@ComponentScan(excludeFilters = {
+    @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+    @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> SpringBootApplication {
+   ......
+}
+
+<span class="hljs-keyword">package</span> org.springframework.boot;
+<span class="hljs-meta">@Target(ElementType.TYPE)</span>
+<span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Configuration</span>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> SpringBootConfiguration {
+
+}
+</code></pre>
+<h2 id="spring-bean" tabindex="-1">Spring Bean</h2>
+<h3 id="依赖注入dependency-injection-di" tabindex="-1">依赖注入（Dependency Injection, DI）</h3>
+<p><code>@Autowired</code> 用于自动注入依赖项（即其他 Spring Bean）。它可以标注在构造器、字段、Setter 方法或配置方法上，Spring 容器会自动查找匹配类型的 Bean 并将其注入。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Service</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserServiceImpl</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UserService</span> {
+    <span class="hljs-comment">// ...</span>
+}
+
+<span class="hljs-meta">@RestController</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserController</span> {
+    <span class="hljs-comment">// 字段注入</span>
+    <span class="hljs-meta">@Autowired</span>
+    <span class="hljs-keyword">private</span> UserService userService;
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<p>当存在多个相同类型的 Bean 时，<code>@Autowired</code> 默认按类型注入可能产生歧义。此时，可以与 <code>@Qualifier</code> 结合使用，通过指定 Bean 的名称来精确选择需要注入的实例。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Repository(&quot;userRepositoryA&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserRepositoryA</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UserRepository</span> { <span class="hljs-comment">/* ... */</span> }
+
+<span class="hljs-meta">@Repository(&quot;userRepositoryB&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserRepositoryB</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UserRepository</span> { <span class="hljs-comment">/* ... */</span> }
+
+<span class="hljs-meta">@Service</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> {
+    <span class="hljs-meta">@Autowired</span>
+    <span class="hljs-meta">@Qualifier(&quot;userRepositoryA&quot;)</span> <span class="hljs-comment">// 指定注入名为 &quot;userRepositoryA&quot; 的 Bean</span>
+    <span class="hljs-keyword">private</span> UserRepository userRepository;
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<p><code>@Primary</code>同样是为了解决同一类型存在多个 Bean 实例的注入问题。在 Bean 定义时（例如使用 <code>@Bean</code> 或类注解）添加 <code>@Primary</code> 注解，表示该 Bean 是<strong>首选</strong>的注入对象。当进行 <code>@Autowired</code> 注入时，如果没有使用 <code>@Qualifier</code> 指定名称，Spring 将优先选择带有 <code>@Primary</code> 的 Bean。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Primary</span> <span class="hljs-comment">// 将 UserRepositoryA 设为首选注入对象</span>
+<span class="hljs-meta">@Repository(&quot;userRepositoryA&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserRepositoryA</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UserRepository</span> { <span class="hljs-comment">/* ... */</span> }
+
+<span class="hljs-meta">@Repository(&quot;userRepositoryB&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserRepositoryB</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">UserRepository</span> { <span class="hljs-comment">/* ... */</span> }
+
+<span class="hljs-meta">@Service</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> {
+    <span class="hljs-meta">@Autowired</span> <span class="hljs-comment">// 会自动注入 UserRepositoryA，因为它是 @Primary</span>
+    <span class="hljs-keyword">private</span> UserRepository userRepository;
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<p><code>@Resource(name=&quot;beanName&quot;)</code>是 JSR-250 规范定义的注解，也用于依赖注入。它默认按<strong>名称 (by Name)</strong> 查找 Bean 进行注入，而 <code>@Autowired</code>默认按<strong>类型 (by Type)</strong> 。如果未指定 <code>name</code> 属性，它会尝试根据字段名或方法名查找，如果找不到，则回退到按类型查找（类似 <code>@Autowired</code>）。</p>
+<p><code>@Resource</code>只能标注在字段 和 Setter 方法上，不支持构造器注入。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Service</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> {
+    <span class="hljs-meta">@Resource(name = &quot;userRepositoryA&quot;)</span>
+    <span class="hljs-keyword">private</span> UserRepository userRepository;
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<h3 id="bean-作用域" tabindex="-1">Bean 作用域</h3>
+<p><code>@Scope(&quot;scopeName&quot;)</code> 定义 Spring Bean 的作用域，即 Bean 实例的生命周期和可见范围。常用的作用域包括：</p>
+<ul>
+<li><strong>singleton</strong> : IoC 容器中只有唯一的 bean 实例。Spring 中的 bean 默认都是单例的，是对单例设计模式的应用。</li>
+<li><strong>prototype</strong> : 每次获取都会创建一个新的 bean 实例。也就是说，连续 <code>getBean()</code> 两次，得到的是不同的 Bean 实例。</li>
+<li><strong>request</strong> （仅 Web 应用可用）: 每一次 HTTP 请求都会产生一个新的 bean（请求 bean），该 bean 仅在当前 HTTP request 内有效。</li>
+<li><strong>session</strong> （仅 Web 应用可用） : 每一次来自新 session 的 HTTP 请求都会产生一个新的 bean（会话 bean），该 bean 仅在当前 HTTP session 内有效。</li>
+<li><strong>application/global-session</strong> （仅 Web 应用可用）：每个 Web 应用在启动时创建一个 Bean（应用 Bean），该 bean 仅在当前应用启动时间内有效。</li>
+<li><strong>websocket</strong> （仅 Web 应用可用）：每一次 WebSocket 会话产生一个新的 bean。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Component</span>
+<span class="hljs-comment">// 每次获取都会创建新的 PrototypeBean 实例</span>
+<span class="hljs-meta">@Scope(&quot;prototype&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PrototypeBean</span> {
+    <span class="hljs-comment">// ...</span>
+}
+</code></pre>
+<h3 id="bean-注册" tabindex="-1">Bean 注册</h3>
+<p>Spring 容器需要知道哪些类需要被管理为 Bean。除了使用 <code>@Bean</code> 方法显式声明（通常在 <code>@Configuration</code> 类中），更常见的方式是使用 Stereotype（构造型） 注解标记类，并配合组件扫描（Component Scanning）机制，让 Spring 自动发现并注册这些类作为 Bean。这些 Bean 后续可以通过 <code>@Autowired</code> 等方式注入到其他组件中。</p>
+<p>下面是常见的一些注册 Bean 的注解：</p>
+<ul>
+<li><code>@Component</code>：通用的注解，可标注任意类为 <code>Spring</code> 组件。如果一个 Bean 不知道属于哪个层，可以使用<code>@Component</code> 注解标注。</li>
+<li><code>@Repository</code> : 对应持久层即 Dao 层，主要用于数据库相关操作。</li>
+<li><code>@Service</code> : 对应服务层，主要涉及一些复杂的逻辑，需要用到 Dao 层。</li>
+<li><code>@Controller</code> : 对应 Spring MVC 控制层，主要用于接受用户请求并调用 Service 层返回数据给前端页面。</li>
+<li><code>@RestController</code>：一个组合注解，等效于 <code>@Controller</code> + <code>@ResponseBody</code>。它专门用于构建 RESTful Web 服务的控制器。标注了 <code>@RestController</code> 的类，其所有处理器方法（handler methods）的返回值都会被自动序列化（通常为 JSON）并写入 HTTP 响应体，而不是被解析为视图名称。</li>
+</ul>
+<p><code>@Controller</code> vs <code>@RestController</code>：</p>
+<ul>
+<li><code>@Controller</code>：主要用于传统的 Spring MVC 应用，方法返回值通常是逻辑视图名，需要视图解析器配合渲染页面。如果需要返回数据（如 JSON），则需要在方法上额外添加 <code>@ResponseBody</code> 注解。</li>
+<li><code>@RestController</code>：专为构建返回数据的 RESTful API 设计。类上使用此注解后，所有方法的返回值都会默认被视为响应体内容（相当于每个方法都隐式添加了 <code>@ResponseBody</code>），通常用于返回 JSON 或 XML 数据。在现代前后端分离的应用中，<code>@RestController</code> 是更常用的选择。</li>
+</ul>
+<p>关于<code>@RestController</code> 和 <code>@Controller</code>的对比，请看这篇文章：<a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247485544&amp;idx=1&amp;sn=3cc95b88979e28fe3bfe539eb421c6d8&amp;chksm=cea247a3f9d5ceb5e324ff4b8697adc3e828ecf71a3468445e70221cce768d1e722085359907&amp;token=1725092312&amp;lang=zh_CN#rd" target="_blank" rel="noopener">@RestController vs @Controller</a>。</p>
+<h2 id="配置" tabindex="-1">配置</h2>
+<h3 id="声明配置类" tabindex="-1">声明配置类</h3>
+<p><code>@Configuration</code> 主要用于声明一个类是 Spring 的配置类。虽然也可以用 <code>@Component</code> 注解替代，但 <code>@Configuration</code> 能够更明确地表达该类的用途（定义 Bean），语义更清晰，也便于 Spring 进行特定的处理（例如，通过 CGLIB 代理确保 <code>@Bean</code> 方法的单例行为）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Configuration</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AppConfig</span> {
+
+    <span class="hljs-comment">// @Bean 注解用于在配置类中声明一个 Bean</span>
+    <span class="hljs-meta">@Bean</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">TransferService</span> <span class="hljs-title function_">transferService</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TransferServiceImpl</span>();
+    }
+
+    <span class="hljs-comment">// 配置类中可以包含一个或多个 @Bean 方法。</span>
+}
+</code></pre>
+<h3 id="读取配置信息" tabindex="-1">读取配置信息</h3>
+<p>在应用程序开发中，我们经常需要管理一些配置信息，例如数据库连接细节、第三方服务（如阿里云 OSS、短信服务、微信认证）的密钥或地址等。通常，这些信息会<strong>集中存放在配置文件</strong>（如 <code>application.yml</code> 或 <code>application.properties</code>）中，方便管理和修改。</p>
+<p>Spring 提供了多种便捷的方式来读取这些配置信息。假设我们有如下 <code>application.yml</code> 文件：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">wuhan2020:</span> <span class="hljs-number">2020</span><span class="hljs-string">年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！</span>
+
+<span class="hljs-attr">my-profile:</span>
+  <span class="hljs-attr">name:</span> <span class="hljs-string">Guide哥</span>
+  <span class="hljs-attr">email:</span> <span class="hljs-string">koushuangbwcx@163.com</span>
+
+<span class="hljs-attr">library:</span>
+  <span class="hljs-attr">location:</span> <span class="hljs-string">湖北武汉加油中国加油</span>
+  <span class="hljs-attr">books:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">天才基本法</span>
+      <span class="hljs-attr">description:</span> <span class="hljs-string">二十二岁的林朝夕在父亲确诊阿尔茨海默病这天，得知自己暗恋多年的校园男神裴之即将出国深造的消息——对方考取的学校，恰是父亲当年为她放弃的那所。</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">时间的秩序</span>
+      <span class="hljs-attr">description:</span> <span class="hljs-string">为什么我们记得过去，而非未来？时间“流逝”意味着什么？是我们存在于时间之内，还是时间存在于我们之中？卡洛·罗韦利用诗意的文字，邀请我们思考这一亘古难题——时间的本质。</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">了不起的我</span>
+      <span class="hljs-attr">description:</span> <span class="hljs-string">如何养成一个新习惯？如何让心智变得更成熟？如何拥有高质量的关系？</span> <span class="hljs-string">如何走出人生的艰难时刻？</span>
+</code></pre>
+<p>下面介绍几种常用的读取配置的方式：</p>
+<p>1、<code>@Value(&quot;${property.key}&quot;)</code> 注入配置文件（如 <code>application.properties</code> 或 <code>application.yml</code>）中的单个属性值。它还支持 Spring 表达式语言 (SpEL)，可以实现更复杂的注入逻辑。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Value(&quot;${wuhan2020}&quot;)</span>
+String wuhan2020;
+</code></pre>
+<p>2、<code>@ConfigurationProperties</code>可以读取配置信息并与 Bean 绑定，用的更多一些。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Component</span>
+<span class="hljs-meta">@ConfigurationProperties(prefix = &quot;library&quot;)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LibraryProperties</span> {
+    <span class="hljs-meta">@NotEmpty</span>
+    <span class="hljs-keyword">private</span> String location;
+    <span class="hljs-keyword">private</span> List&lt;Book&gt; books;
+
+    <span class="hljs-meta">@Setter</span>
+    <span class="hljs-meta">@Getter</span>
+    <span class="hljs-meta">@ToString</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Book</span> {
+        String name;
+        String description;
+    }
+  省略getter/setter
+  ......
+}
+</code></pre>
+<p>你可以像使用普通的 Spring Bean 一样，将其注入到类中使用。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Service</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LibraryService</span> {
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> LibraryProperties libraryProperties;
+
+    <span class="hljs-meta">@Autowired</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">LibraryService</span><span class="hljs-params">(LibraryProperties libraryProperties)</span> {
+        <span class="hljs-built_in">this</span>.libraryProperties = libraryProperties;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">printLibraryInfo</span><span class="hljs-params">()</span> {
+        System.out.println(libraryProperties);
+    }
+}
+</code></pre>
+<h3 id="加载指定的配置文件" tabindex="-1">加载指定的配置文件</h3>
+<p><code>@PropertySource</code> 注解允许加载自定义的配置文件。适用于需要将部分配置信息独立存储的场景。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Component</span>
+<span class="hljs-meta">@PropertySource(&quot;classpath:website.properties&quot;)</span>
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">WebSite</span> {
+    <span class="hljs-meta">@Value(&quot;${url}&quot;)</span>
+    <span class="hljs-keyword">private</span> String url;
+
+  省略getter/setter
+  ......
+}
+</code></pre>
+<p><strong>注意</strong>：当使用 <code>@PropertySource</code> 时，确保外部文件路径正确，且文件在类路径（classpath）中。</p>
+<p>更多内容请查看我的这篇文章：<a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247486181&amp;idx=2&amp;sn=10db0ae64ef501f96a5b0dbc4bd78786&amp;chksm=cea2452ef9d5cc384678e456427328600971180a77e40c13936b19369672ca3e342c26e92b50&amp;token=816772476&amp;lang=zh_CN#rd" target="_blank" rel="noopener">10 分钟搞定 SpringBoot 如何优雅读取配置文件？</a> 。</p>
+<h2 id="mvc" tabindex="-1">MVC</h2>
+<h3 id="http-请求" tabindex="-1">HTTP 请求</h3>
+<p><strong>5 种常见的请求类型:</strong></p>
+<ul>
+<li><strong>GET</strong>：请求从服务器获取特定资源。举个例子：<code>GET /users</code>（获取所有学生）</li>
+<li><strong>POST</strong>：在服务器上创建一个新的资源。举个例子：<code>POST /users</code>（创建学生）</li>
+<li><strong>PUT</strong>：更新服务器上的资源（客户端提供更新后的整个资源）。举个例子：<code>PUT /users/12</code>（更新编号为 12 的学生）</li>
+<li><strong>DELETE</strong>：从服务器删除特定的资源。举个例子：<code>DELETE /users/12</code>（删除编号为 12 的学生）</li>
+<li><strong>PATCH</strong>：更新服务器上的资源（客户端提供更改的属性，可以看做作是部分更新），使用的比较少，这里就不举例子了。</li>
+</ul>
+<h4 id="get-请求" tabindex="-1">GET 请求</h4>
+<p><code>@GetMapping(&quot;users&quot;)</code> 等价于<code>@RequestMapping(value=&quot;/users&quot;,method=RequestMethod.GET)</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@GetMapping(&quot;/users&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;List&lt;User&gt;&gt; <span class="hljs-title function_">getAllUsers</span><span class="hljs-params">()</span> {
+  <span class="hljs-keyword">return</span> ResponseEntity.ok(userRepository.findAll());
+}
+</code></pre>
+<h4 id="post-请求" tabindex="-1">POST 请求</h4>
+<p><code>@PostMapping(&quot;users&quot;)</code> 等价于<code>@RequestMapping(value=&quot;/users&quot;,method=RequestMethod.POST)</code>。</p>
+<p><code>@PostMapping</code> 通常与 <code>@RequestBody</code> 配合，用于接收 JSON 数据并映射为 Java 对象。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@PostMapping(&quot;/users&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;User&gt; <span class="hljs-title function_">createUser</span><span class="hljs-params">(<span class="hljs-meta">@Valid</span> <span class="hljs-meta">@RequestBody</span> UserCreateRequest userCreateRequest)</span> {
+  <span class="hljs-type">User</span> <span class="hljs-variable">user</span> <span class="hljs-operator">=</span> userService.create(userCreateRequest);
+  <span class="hljs-keyword">return</span> ResponseEntity.status(HttpStatus.CREATED).body(user);
+}
+</code></pre>
+<h4 id="put-请求" tabindex="-1">PUT 请求</h4>
+<p><code>@PutMapping(&quot;/users/{userId}&quot;)</code> 等价于<code>@RequestMapping(value=&quot;/users/{userId}&quot;,method=RequestMethod.PUT)</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@PutMapping(&quot;/users/{userId}&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;User&gt; <span class="hljs-title function_">updateUser</span><span class="hljs-params">(<span class="hljs-meta">@PathVariable(value = &quot;userId&quot;)</span> Long userId,
+  <span class="hljs-meta">@Valid</span> <span class="hljs-meta">@RequestBody</span> UserUpdateRequest userUpdateRequest)</span> {
+  ......
+}
+</code></pre>
+<h4 id="delete-请求" tabindex="-1">DELETE 请求</h4>
+<p><code>@DeleteMapping(&quot;/users/{userId}&quot;)</code>等价于<code>@RequestMapping(value=&quot;/users/{userId}&quot;,method=RequestMethod.DELETE)</code></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@DeleteMapping(&quot;/users/{userId}&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span> <span class="hljs-title function_">deleteUser</span><span class="hljs-params">(<span class="hljs-meta">@PathVariable(value = &quot;userId&quot;)</span> Long userId)</span>{
+  ......
+}
+</code></pre>
+<h4 id="patch-请求" tabindex="-1">PATCH 请求</h4>
+<p>一般实际项目中，我们都是 PUT 不够用了之后才用 PATCH 请求去更新数据。</p>
+<pre class="md-pre"><code class="hljs">  <span class="hljs-meta">@PatchMapping(&quot;/profile&quot;)</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span> <span class="hljs-title function_">updateStudent</span><span class="hljs-params">(<span class="hljs-meta">@RequestBody</span> StudentUpdateRequest studentUpdateRequest)</span> {
+        studentRepository.updateDetail(studentUpdateRequest);
+        <span class="hljs-keyword">return</span> ResponseEntity.ok().build();
+    }
+</code></pre>
+<h3 id="参数绑定" tabindex="-1">参数绑定</h3>
+<p>在处理 HTTP 请求时，Spring MVC 提供了多种注解用于绑定请求参数到方法参数中。以下是常见的参数绑定方式：</p>
+<h4 id="从-url-路径中提取参数" tabindex="-1">从 URL 路径中提取参数</h4>
+<p><code>@PathVariable</code> 用于从 URL 路径中提取参数。例如：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@GetMapping(&quot;/klasses/{klassId}/teachers&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;Teacher&gt; <span class="hljs-title function_">getTeachersByClass</span><span class="hljs-params">(<span class="hljs-meta">@PathVariable(&quot;klassId&quot;)</span> Long klassId)</span> {
+    <span class="hljs-keyword">return</span> teacherService.findTeachersByClass(klassId);
+}
+</code></pre>
+<p>若请求 URL 为 <code>/klasses/123/teachers</code>，则 <code>klassId = 123</code>。</p>
+<h4 id="绑定查询参数" tabindex="-1">绑定查询参数</h4>
+<p><code>@RequestParam</code> 用于绑定查询参数。例如：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@GetMapping(&quot;/klasses/{klassId}/teachers&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;Teacher&gt; <span class="hljs-title function_">getTeachersByClass</span><span class="hljs-params">(<span class="hljs-meta">@PathVariable</span> Long klassId,
+                                        <span class="hljs-meta">@RequestParam(value = &quot;type&quot;, required = false)</span> String type)</span> {
+    <span class="hljs-keyword">return</span> teacherService.findTeachersByClassAndType(klassId, type);
+}
+</code></pre>
+<p>若请求 URL 为 <code>/klasses/123/teachers?type=web</code>，则 <code>klassId = 123</code>，<code>type = web</code>。</p>
+<h4 id="绑定请求体中的-json-数据" tabindex="-1">绑定请求体中的 JSON 数据</h4>
+<p><code>@RequestBody</code> 用于读取 Request 请求（可能是 POST,PUT,DELETE,GET 请求）的 body 部分并且<strong>Content-Type 为 application/json</strong> 格式的数据，接收到数据之后会自动将数据绑定到 Java 对象上去。系统会使用<code>HttpMessageConverter</code>或者自定义的<code>HttpMessageConverter</code>将请求的 body 中的 json 字符串转换为 java 对象。</p>
+<p>我用一个简单的例子来给演示一下基本使用！</p>
+<p>我们有一个注册的接口：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@PostMapping(&quot;/sign-up&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span> <span class="hljs-title function_">signUp</span><span class="hljs-params">(<span class="hljs-meta">@RequestBody</span> <span class="hljs-meta">@Valid</span> UserRegisterRequest userRegisterRequest)</span> {
+  userService.save(userRegisterRequest);
+  <span class="hljs-keyword">return</span> ResponseEntity.ok().build();
+}
+</code></pre>
+<p><code>UserRegisterRequest</code>对象：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Data</span>
+<span class="hljs-meta">@AllArgsConstructor</span>
+<span class="hljs-meta">@NoArgsConstructor</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserRegisterRequest</span> {
+    <span class="hljs-meta">@NotBlank</span>
+    <span class="hljs-keyword">private</span> String userName;
+    <span class="hljs-meta">@NotBlank</span>
+    <span class="hljs-keyword">private</span> String password;
+    <span class="hljs-meta">@NotBlank</span>
+    <span class="hljs-keyword">private</span> String fullName;
+}
+</code></pre>
+<p>我们发送 post 请求到这个接口，并且 body 携带 JSON 数据：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;userName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;coder&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;fullName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;shuangkou&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;password&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;123456&quot;</span> <span class="hljs-punctuation">}</span>
+</code></pre>
+<p>这样我们的后端就可以直接把 json 格式的数据映射到我们的 <code>UserRegisterRequest</code> 类上。</p>
+<p><img src="./images/spring-annotations/@RequestBody.png" alt="" loading="lazy"></p>
+<p><strong>注意</strong>：</p>
+<ul>
+<li>一个方法只能有一个 <code>@RequestBody</code> 参数，但可以有多个 <code>@PathVariable</code> 和 <code>@RequestParam</code>。</li>
+<li>如果需要接收多个复杂对象，建议合并成一个单一对象。</li>
+</ul>
+<h2 id="数据校验" tabindex="-1">数据校验</h2>
+<p>数据校验是保障系统稳定性和安全性的关键环节。即使在用户界面（前端）已经实施了数据校验，<strong>后端服务仍必须对接收到的数据进行再次校验</strong>。这是因为前端校验可以被轻易绕过（例如，通过开发者工具修改请求或使用 Postman、curl 等 HTTP 工具直接调用 API），恶意或错误的数据可能直接发送到后端。因此，后端校验是防止非法数据、维护数据一致性、确保业务逻辑正确执行的最后一道，也是最重要的一道防线。</p>
+<p>Bean Validation 是一套定义 JavaBean 参数校验标准的规范 (JSR 303, 349, 380)，它提供了一系列注解，可以直接用于 JavaBean 的属性上，从而实现便捷的参数校验。</p>
+<ul>
+<li><strong>JSR 303 (Bean Validation 1.0):</strong> 奠定了基础，引入了核心校验注解（如 <code>@NotNull</code>、<code>@Size</code>、<code>@Min</code>、<code>@Max</code> 等），定义了如何通过注解的方式对 JavaBean 的属性进行校验，并支持嵌套对象校验和自定义校验器。</li>
+<li><strong>JSR 349 (Bean Validation 1.1):</strong> 在 1.0 基础上进行扩展，例如引入了对方法参数和返回值校验的支持、增强了对分组校验（Group Validation）的处理。</li>
+<li><strong>JSR 380 (Bean Validation 2.0):</strong> 拥抱 Java 8 的新特性，并进行了一些改进，例如支持 <code>java.time</code> 包中的日期和时间类型、引入了一些新的校验注解（如 <code>@NotEmpty</code>, <code>@NotBlank</code>等）。</li>
+</ul>
+<p>Bean Validation 本身只是一套<strong>规范（接口和注解）</strong>，我们需要一个实现了这套规范的<strong>具体框架</strong>来执行校验逻辑。目前，<strong>Hibernate Validator</strong> 是 Bean Validation 规范最权威、使用最广泛的参考实现。</p>
+<ul>
+<li>Hibernate Validator 4.x 实现了 Bean Validation 1.0 (JSR 303)。</li>
+<li>Hibernate Validator 5.x 实现了 Bean Validation 1.1 (JSR 349)。</li>
+<li>Hibernate Validator 6.x 实现了 Bean Validation 2.0（JSR 380），使用 <code>javax.validation</code> 包名。</li>
+<li>Hibernate Validator 7.x 和 8.x 实现了 Jakarta Bean Validation 3.0，使用 <code>jakarta.validation</code> 包名；Hibernate Validator 9.x 实现了 Jakarta Validation 3.1。</li>
+</ul>
+<p>在 Spring Boot 项目中使用 Bean Validation 非常方便，这得益于 Spring Boot 的自动配置能力。关于依赖引入，需要注意：</p>
+<ul>
+<li>在较早版本的 Spring Boot（通常指 2.3.x 之前）中，<code>spring-boot-starter-web</code> 依赖默认包含了 hibernate-validator。因此，只要引入了 Web Starter，就无需额外添加校验相关的依赖。</li>
+<li>从 Spring Boot 2.3.x 版本开始，为了更精细化的依赖管理，校验相关的依赖被移出了 spring-boot-starter-web。如果你的项目使用了这些或更新的版本，并且需要 Bean Validation 功能，那么你需要显式地添加 <code>spring-boot-starter-validation</code> 依赖：</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.springframework.boot<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>spring-boot-starter-validation<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p><img src="/img/c7bacd12-1c1a-4e41-aaaf-4cad840fc073-deea861a.png" alt="" loading="lazy"></p>
+<p>非 SpringBoot 项目需要自行引入相关依赖包，这里不多做讲解，具体可以查看我的这篇文章：<a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247485783&amp;idx=1&amp;sn=a407f3b75efa17c643407daa7fb2acd6&amp;chksm=cea2469cf9d5cf8afbcd0a8a1c9cc4294d6805b8e01bee6f76bb2884c5bc15478e91459def49&amp;token=292197051&amp;lang=zh_CN#rd" target="_blank" rel="noopener">如何在 Spring/Spring Boot 中做参数校验？你需要了解的都在这里！</a>。</p>
+<p>👉 需要注意的是：优先使用 Bean Validation/Jakarta Validation 规范提供的约束注解，而不是 Hibernate Validator 私有约束。Spring Boot 2.x 通常使用 <code>javax.validation.constraints</code>，Spring Boot 3.x 及以上版本使用 <code>jakarta.validation.constraints</code>。</p>
+<h3 id="一些常用的字段验证的注解" tabindex="-1">一些常用的字段验证的注解</h3>
+<p>Bean Validation 规范及其实现（如 Hibernate Validator）提供了丰富的注解，用于声明式地定义校验规则。以下是一些常用的注解及其说明：</p>
+<ul>
+<li><code>@NotNull</code>: 检查被注解的元素（任意类型）不能为 <code>null</code>。</li>
+<li><code>@NotEmpty</code>: 检查被注解的元素（如 <code>CharSequence</code>、<code>Collection</code>、<code>Map</code>、<code>Array</code>）不能为 <code>null</code> 且其大小/长度不能为 0。注意：对于字符串，<code>@NotEmpty</code> 允许包含空白字符的字符串，如 <code>&quot; &quot;</code>。</li>
+<li><code>@NotBlank</code>: 检查被注解的 <code>CharSequence</code>（如 <code>String</code>）不能为 <code>null</code>，并且去除首尾空格后的长度必须大于 0。（即，不能为空白字符串）。</li>
+<li><code>@Null</code>: 检查被注解的元素必须为 <code>null</code>。</li>
+<li><code>@AssertTrue</code> / <code>@AssertFalse</code>: 检查被注解的 <code>boolean</code> 或 <code>Boolean</code> 类型元素必须为 <code>true</code> / <code>false</code>。</li>
+<li><code>@Min(value)</code> / <code>@Max(value)</code>: 检查被注解的数字类型（或其字符串表示）的值必须大于等于 / 小于等于指定的 <code>value</code>。适用于整数类型（<code>byte</code>、<code>short</code>、<code>int</code>、<code>long</code>、<code>BigInteger</code> 等）。</li>
+<li><code>@DecimalMin(value)</code> / <code>@DecimalMax(value)</code>: 功能类似 <code>@Min</code> / <code>@Max</code>，但适用于包含小数的数字类型（<code>BigDecimal</code>、<code>BigInteger</code>、<code>CharSequence</code>、<code>byte</code>、<code>short</code>、<code>int</code>、<code>long</code>及其包装类）。 <code>value</code> 必须是数字的字符串表示。</li>
+<li><code>@Size(min=, max=)</code>: 检查被注解的元素（如 <code>CharSequence</code>、<code>Collection</code>、<code>Map</code>、<code>Array</code>）的大小/长度必须在指定的 <code>min</code> 和 <code>max</code> 范围之内（包含边界）。</li>
+<li><code>@Digits(integer=, fraction=)</code>: 检查被注解的数字类型（或其字符串表示）的值，其整数部分的位数必须 ≤ <code>integer</code>，小数部分的位数必须 ≤ <code>fraction</code>。</li>
+<li><code>@Pattern(regexp=, flags=)</code>: 检查被注解的 <code>CharSequence</code>（如 <code>String</code>）是否匹配指定的正则表达式 (<code>regexp</code>)。<code>flags</code> 可以指定匹配模式（如不区分大小写）。</li>
+<li><code>@Email</code>: 检查被注解的 <code>CharSequence</code>（如 <code>String</code>）是否符合 Email 格式（内置了一个相对宽松的正则表达式）。</li>
+<li><code>@Past</code> / <code>@Future</code>: 检查被注解的日期或时间类型（<code>java.util.Date</code>、<code>java.util.Calendar</code>、JSR 310 <code>java.time</code> 包下的类型）是否在当前时间之前 / 之后。</li>
+<li><code>@PastOrPresent</code> / <code>@FutureOrPresent</code>: 类似 <code>@Past</code> / <code>@Future</code>，但允许等于当前时间。</li>
+<li>……</li>
+</ul>
+<h3 id="验证请求体requestbody" tabindex="-1">验证请求体(RequestBody)</h3>
+<p>当 Controller 方法使用 <code>@RequestBody</code> 注解来接收请求体并将其绑定到一个对象时，可以在该参数前添加 <code>@Valid</code> 注解来触发对该对象的校验。如果验证失败，它将抛出<code>MethodArgumentNotValidException</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Data</span>
+<span class="hljs-meta">@AllArgsConstructor</span>
+<span class="hljs-meta">@NoArgsConstructor</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-meta">@NotNull(message = &quot;classId 不能为空&quot;)</span>
+    <span class="hljs-keyword">private</span> String classId;
+
+    <span class="hljs-meta">@Size(max = 33)</span>
+    <span class="hljs-meta">@NotNull(message = &quot;name 不能为空&quot;)</span>
+    <span class="hljs-keyword">private</span> String name;
+
+    <span class="hljs-meta">@Pattern(regexp = &quot;((^Man$|^Woman$|^UGM$))&quot;, message = &quot;sex 值不在可选范围&quot;)</span>
+    <span class="hljs-meta">@NotNull(message = &quot;sex 不能为空&quot;)</span>
+    <span class="hljs-keyword">private</span> String sex;
+
+    <span class="hljs-meta">@Email(message = &quot;email 格式不正确&quot;)</span>
+    <span class="hljs-meta">@NotNull(message = &quot;email 不能为空&quot;)</span>
+    <span class="hljs-keyword">private</span> String email;
+}
+
+
+<span class="hljs-meta">@RestController</span>
+<span class="hljs-meta">@RequestMapping(&quot;/api&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PersonController</span> {
+    <span class="hljs-meta">@PostMapping(&quot;/person&quot;)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;Person&gt; <span class="hljs-title function_">getPerson</span><span class="hljs-params">(<span class="hljs-meta">@RequestBody</span> <span class="hljs-meta">@Valid</span> Person person)</span> {
+        <span class="hljs-keyword">return</span> ResponseEntity.ok().body(person);
+    }
+}
+</code></pre>
+<h3 id="验证请求参数path-variables-和-request-parameters" tabindex="-1">验证请求参数(Path Variables 和 Request Parameters)</h3>
+<p>对于直接映射到方法参数的简单类型数据（如路径变量 <code>@PathVariable</code> 或请求参数 <code>@RequestParam</code>），校验方式会因 Spring Framework 版本而异：</p>
+<ol>
+<li><strong>Spring Framework 6.1 及以上版本</strong>：Spring MVC 内置支持 Handler Method Validation。将 <code>@Min</code>、<code>@Max</code>、<code>@Size</code>、<code>@Pattern</code> 等约束注解直接放在方法参数上即可，不要在 Controller 类上添加 <code>@Validated</code>，否则会改用基于 AOP 的方法校验。</li>
+<li><strong>Spring Framework 6.0 及更早版本</strong>：通常需要在 Controller 类上添加 Spring 提供的 <code>@Validated</code>，通过方法校验基础设施处理参数约束。</li>
+</ol>
+<p>下面以 Spring Framework 6.1 及以上版本的内置校验方式为例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@RestController</span>
+<span class="hljs-meta">@RequestMapping(&quot;/api&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PersonController</span> {
+
+    <span class="hljs-meta">@GetMapping(&quot;/person/{id}&quot;)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;Integer&gt; <span class="hljs-title function_">getPersonByID</span><span class="hljs-params">(
+            <span class="hljs-meta">@PathVariable(&quot;id&quot;)</span>
+            <span class="hljs-meta">@Max(value = 5, message = &quot;ID 不能超过 5&quot;)</span>
+            Integer id
+    )</span> {
+        <span class="hljs-comment">// Spring MVC 6.1+ 会在进入方法体前抛出 HandlerMethodValidationException。</span>
+        <span class="hljs-keyword">return</span> ResponseEntity.ok().body(id);
+    }
+
+    <span class="hljs-meta">@GetMapping(&quot;/person&quot;)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;String&gt; <span class="hljs-title function_">findPersonByName</span><span class="hljs-params">(
+            <span class="hljs-meta">@RequestParam(&quot;name&quot;)</span>
+            <span class="hljs-meta">@NotBlank(message = &quot;姓名不能为空&quot;)</span> // 同样适用于 <span class="hljs-meta">@RequestParam</span>
+            <span class="hljs-meta">@Size(max = 10, message = &quot;姓名长度不能超过 10&quot;)</span>
+            String name
+    )</span> {
+        <span class="hljs-keyword">return</span> ResponseEntity.ok().body(<span class="hljs-string">&quot;Found person: &quot;</span> + name);
+    }
+}
+</code></pre>
+<h2 id="全局异常处理" tabindex="-1">全局异常处理</h2>
+<p>介绍一下我们 Spring 项目必备的全局处理 Controller 层异常。</p>
+<p><strong>相关注解：</strong></p>
+<ol>
+<li><code>@ControllerAdvice</code> :注解定义全局异常处理类</li>
+<li><code>@ExceptionHandler</code> :注解声明异常处理方法</li>
+</ol>
+<p>如何使用呢？拿我们在第 5 节参数校验这块来举例子。如果方法参数不对的话就会抛出<code>MethodArgumentNotValidException</code>，我们来处理这个异常。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@ControllerAdvice</span>
+<span class="hljs-meta">@ResponseBody</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">GlobalExceptionHandler</span> {
+
+    <span class="hljs-comment">/**
+     * 请求参数异常处理
+     */</span>
+    <span class="hljs-meta">@ExceptionHandler(MethodArgumentNotValidException.class)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">ResponseEntity</span>&lt;?&gt; <span class="hljs-title function_">handleMethodArgumentNotValidException</span><span class="hljs-params">(MethodArgumentNotValidException ex, HttpServletRequest request)</span> {
+       ......
+    }
+}
+</code></pre>
+<p>更多关于 Spring Boot 异常处理的内容，请看我的这两篇文章：</p>
+<ol>
+<li><a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247485568&amp;idx=2&amp;sn=c5ba880fd0c5d82e39531fa42cb036ac&amp;chksm=cea2474bf9d5ce5dcbc6a5f6580198fdce4bc92ef577579183a729cb5d1430e4994720d59b34&amp;token=2133161636&amp;lang=zh_CN#rd" target="_blank" rel="noopener">SpringBoot 处理异常的几种常见姿势</a></li>
+<li><a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247486379&amp;idx=2&amp;sn=48c29ae65b3ed874749f0803f0e4d90e&amp;chksm=cea24460f9d5cd769ed53ad7e17c97a7963a89f5350e370be633db0ae8d783c3a3dbd58c70f8&amp;token=1054498516&amp;lang=zh_CN#rd" target="_blank" rel="noopener">使用枚举简单封装一个优雅的 Spring Boot 全局异常处理！</a></li>
+</ol>
+<h2 id="事务" tabindex="-1">事务</h2>
+<p>在要开启事务的方法上使用<code>@Transactional</code>注解即可!</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Transactional(rollbackFor = Exception.class)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">save</span><span class="hljs-params">()</span> {
+  ......
+}
+
+</code></pre>
+<p>我们知道 Exception 分为运行时异常 RuntimeException 和非运行时异常。在<code>@Transactional</code>注解中如果不配置<code>rollbackFor</code>属性,那么事务只会在遇到<code>RuntimeException</code>的时候才会回滚,加上<code>rollbackFor=Exception.class</code>,可以让事务在遇到非运行时异常时也回滚。</p>
+<p><code>@Transactional</code> 注解一般可以作用在<code>类</code>或者<code>方法</code>上。</p>
+<ul>
+<li><strong>作用于类</strong>：当把<code>@Transactional</code> 注解放在类上时，表示所有该类的 public 方法都配置相同的事务属性信息。</li>
+<li><strong>作用于方法</strong>：当类配置了<code>@Transactional</code>，方法也配置了<code>@Transactional</code>，方法的事务会覆盖类的事务配置信息。</li>
+</ul>
+<p>更多关于 Spring 事务的内容请查看我的这篇文章：<a href="/read/system-design/framework/spring/spring-transaction.html">可能是最漂亮的 Spring 事务管理详解</a> 。</p>
+<h2 id="jpa" tabindex="-1">JPA</h2>
+<p>Spring Data JPA 提供了一系列注解和功能，帮助开发者轻松实现 ORM（对象关系映射）。</p>
+<h3 id="创建表" tabindex="-1">创建表</h3>
+<p><code>@Entity</code> 用于声明一个类为 JPA 实体类，与数据库中的表映射。<code>@Table</code> 指定实体对应的表名。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Entity</span>
+<span class="hljs-meta">@Table(name = &quot;role&quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Role</span> {
+
+    <span class="hljs-meta">@Id</span>
+    <span class="hljs-meta">@GeneratedValue(strategy = GenerationType.IDENTITY)</span>
+    <span class="hljs-keyword">private</span> Long id;
+
+    <span class="hljs-keyword">private</span> String name;
+    <span class="hljs-keyword">private</span> String description;
+
+    <span class="hljs-comment">// 省略 getter/setter</span>
+}
+</code></pre>
+<h3 id="主键生成策略" tabindex="-1">主键生成策略</h3>
+<p><code>@Id</code>声明字段为主键。<code>@GeneratedValue</code> 指定主键的生成策略。</p>
+<p>Jakarta Persistence 3.1 提供了 5 种主键生成策略：</p>
+<ul>
+<li><strong><code>GenerationType.TABLE</code></strong>：通过数据库表生成主键。</li>
+<li><strong><code>GenerationType.SEQUENCE</code></strong>：通过数据库序列生成主键（适用于 Oracle 等数据库）。</li>
+<li><strong><code>GenerationType.IDENTITY</code></strong>：主键自增长（适用于 MySQL 等数据库）。</li>
+<li><strong><code>GenerationType.UUID</code></strong>：生成 RFC 4122 UUID，适用于 <code>UUID</code> 或 <code>String</code> 类型主键。</li>
+<li><strong><code>GenerationType.AUTO</code></strong>：由 JPA 自动选择合适的生成策略（默认策略）。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Id</span>
+<span class="hljs-meta">@GeneratedValue(strategy = GenerationType.IDENTITY)</span>
+<span class="hljs-keyword">private</span> Long id;
+</code></pre>
+<p>通过 <code>@GenericGenerator</code> 声明自定义主键生成策略：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Id</span>
+<span class="hljs-meta">@GeneratedValue(generator = &quot;IdentityIdGenerator&quot;)</span>
+<span class="hljs-meta">@GenericGenerator(name = &quot;IdentityIdGenerator&quot;, strategy = &quot;identity&quot;)</span>
+<span class="hljs-keyword">private</span> Long id;
+</code></pre>
+<p>等价于：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Id</span>
+<span class="hljs-meta">@GeneratedValue(strategy = GenerationType.IDENTITY)</span>
+<span class="hljs-keyword">private</span> Long id;
+</code></pre>
+<p>下面是旧版 Hibernate 内部实现的源码节选，展示了当时 Hibernate 支持的字符串生成器策略。它不属于 JPA/Jakarta Persistence 标准 API，也不能替代上面的标准 <code>GenerationType</code> 枚举；新项目应以所使用 Hibernate 版本的官方文档为准。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DefaultIdentifierGeneratorFactory</span>
+    <span class="hljs-keyword">implements</span> <span class="hljs-title class_">MutableIdentifierGeneratorFactory</span>, Serializable, ServiceRegistryAwareService {
+
+  <span class="hljs-meta">@SuppressWarnings(&quot;deprecation&quot;)</span>
+  <span class="hljs-type">public</span> <span class="hljs-title function_">DefaultIdentifierGeneratorFactory</span><span class="hljs-params">()</span> {
+    register( <span class="hljs-string">&quot;uuid2&quot;</span>, UUIDGenerator.class );
+    register( <span class="hljs-string">&quot;guid&quot;</span>, GUIDGenerator.class );      <span class="hljs-comment">// can be done with UUIDGenerator + strategy</span>
+    register( <span class="hljs-string">&quot;uuid&quot;</span>, UUIDHexGenerator.class );      <span class="hljs-comment">// &quot;deprecated&quot; for new use</span>
+    register( <span class="hljs-string">&quot;uuid.hex&quot;</span>, UUIDHexGenerator.class );   <span class="hljs-comment">// uuid.hex is deprecated</span>
+    register( <span class="hljs-string">&quot;assigned&quot;</span>, Assigned.class );
+    register( <span class="hljs-string">&quot;identity&quot;</span>, IdentityGenerator.class );
+    register( <span class="hljs-string">&quot;select&quot;</span>, SelectGenerator.class );
+    register( <span class="hljs-string">&quot;sequence&quot;</span>, SequenceStyleGenerator.class );
+    register( <span class="hljs-string">&quot;seqhilo&quot;</span>, SequenceHiLoGenerator.class );
+    register( <span class="hljs-string">&quot;increment&quot;</span>, IncrementGenerator.class );
+    register( <span class="hljs-string">&quot;foreign&quot;</span>, ForeignGenerator.class );
+    register( <span class="hljs-string">&quot;sequence-identity&quot;</span>, SequenceIdentityGenerator.class );
+    register( <span class="hljs-string">&quot;enhanced-sequence&quot;</span>, SequenceStyleGenerator.class );
+    register( <span class="hljs-string">&quot;enhanced-table&quot;</span>, TableGenerator.class );
+  }
+
+  <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">register</span><span class="hljs-params">(String strategy, Class generatorClass)</span> {
+    LOG.debugf( <span class="hljs-string">&quot;Registering IdentifierGenerator strategy [%s] -&gt; [%s]&quot;</span>, strategy, generatorClass.getName() );
+    <span class="hljs-keyword">final</span> <span class="hljs-type">Class</span> <span class="hljs-variable">previous</span> <span class="hljs-operator">=</span> generatorStrategyToClassNameMap.put( strategy, generatorClass );
+    <span class="hljs-keyword">if</span> ( previous != <span class="hljs-literal">null</span> ) {
+      LOG.debugf( <span class="hljs-string">&quot;    - overriding [%s]&quot;</span>, previous.getName() );
+    }
+  }
+
+}
+</code></pre>
+<h3 id="字段映射" tabindex="-1">字段映射</h3>
+<p><code>@Column</code> 用于指定实体字段与数据库列的映射关系。</p>
+<ul>
+<li><strong><code>name</code></strong>：指定数据库列名。</li>
+<li><strong><code>nullable</code></strong>：指定是否允许为 <code>null</code>。</li>
+<li><strong><code>length</code></strong>：设置字段的长度（仅适用于 <code>String</code> 类型）。</li>
+<li><strong><code>columnDefinition</code></strong>：指定字段的数据库类型和默认值。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Column(name = &quot;user_name&quot;, nullable = false, length = 32)</span>
+<span class="hljs-keyword">private</span> String userName;
+
+<span class="hljs-meta">@Column(columnDefinition = &quot;tinyint(1) default 1&quot;)</span>
+<span class="hljs-keyword">private</span> Boolean enabled;
+</code></pre>
+<h3 id="忽略字段" tabindex="-1">忽略字段</h3>
+<p><code>@Transient</code> 用于声明不需要持久化的字段。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Entity</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> {
+
+    <span class="hljs-meta">@Transient</span>
+    <span class="hljs-keyword">private</span> String temporaryField; <span class="hljs-comment">// 不会映射到数据库表中</span>
+}
+</code></pre>
+<p>其他不被持久化的字段方式：</p>
+<ul>
+<li><strong><code>static</code></strong>：静态字段不会被持久化。</li>
+<li><strong><code>final</code></strong>：最终字段不会被持久化。</li>
+<li><strong><code>transient</code></strong>：使用 Java 的 <code>transient</code> 关键字声明的字段不会被序列化或持久化。</li>
+</ul>
+<h3 id="大字段存储" tabindex="-1">大字段存储</h3>
+<p><code>@Lob</code> 用于声明大字段（如 <code>CLOB</code> 或 <code>BLOB</code>）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Lob</span>
+<span class="hljs-meta">@Column(name = &quot;content&quot;, columnDefinition = &quot;LONGTEXT NOT NULL&quot;)</span>
+<span class="hljs-keyword">private</span> String content;
+</code></pre>
+<h3 id="枚举类型映射" tabindex="-1">枚举类型映射</h3>
+<p><code>@Enumerated</code> 用于将枚举类型映射为数据库字段。</p>
+<ul>
+<li><strong><code>EnumType.ORDINAL</code></strong>：存储枚举的序号（默认）。</li>
+<li><strong><code>EnumType.STRING</code></strong>：存储枚举的名称（推荐）。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">enum</span> <span class="hljs-title class_">Gender</span> {
+    MALE,
+    FEMALE
+}
+
+<span class="hljs-meta">@Entity</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> {
+
+    <span class="hljs-meta">@Enumerated(EnumType.STRING)</span>
+    <span class="hljs-keyword">private</span> Gender gender;
+}
+</code></pre>
+<p>数据库中存储的值为 <code>MALE</code> 或 <code>FEMALE</code>。</p>
+<h3 id="审计功能" tabindex="-1">审计功能</h3>
+<p>通过 JPA 的审计功能，可以在实体中自动记录创建时间、更新时间、创建人和更新人等信息。</p>
+<p>审计基类:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Data</span>
+<span class="hljs-meta">@MappedSuperclass</span>
+<span class="hljs-meta">@EntityListeners(AuditingEntityListener.class)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AbstractAuditBase</span> {
+
+    <span class="hljs-meta">@CreatedDate</span>
+    <span class="hljs-meta">@Column(updatable = false)</span>
+    <span class="hljs-keyword">private</span> Instant createdAt;
+
+    <span class="hljs-meta">@LastModifiedDate</span>
+    <span class="hljs-keyword">private</span> Instant updatedAt;
+
+    <span class="hljs-meta">@CreatedBy</span>
+    <span class="hljs-meta">@Column(updatable = false)</span>
+    <span class="hljs-keyword">private</span> String createdBy;
+
+    <span class="hljs-meta">@LastModifiedBy</span>
+    <span class="hljs-keyword">private</span> String updatedBy;
+}
+</code></pre>
+<p>配置审计功能:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Configuration</span>
+<span class="hljs-meta">@EnableJpaAuditing</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AuditConfig</span> {
+
+    <span class="hljs-meta">@Bean</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">AuditorAware</span>&lt;String&gt; <span class="hljs-title function_">auditorProvider</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> () -&gt; Optional.ofNullable(SecurityContextHolder.getContext())
+                .map(SecurityContext::getAuthentication)
+                .filter(Authentication::isAuthenticated)
+                .map(Authentication::getName);
+    }
+}
+</code></pre>
+<p>简单介绍一下上面涉及到的一些注解：</p>
+<ol>
+<li><code>@CreatedDate</code>: 表示该字段为创建时间字段，在这个实体被 insert 的时候，会设置值</li>
+<li><code>@CreatedBy</code> :表示该字段为创建人，在这个实体被 insert 的时候，会设置值 <code>@LastModifiedDate</code>、<code>@LastModifiedBy</code>同理。</li>
+<li><code>@EnableJpaAuditing</code>：开启 JPA 审计功能。</li>
+</ol>
+<h3 id="修改和删除操作" tabindex="-1">修改和删除操作</h3>
+<p><code>@Modifying</code> 用于把 <code>@Query</code> 声明的语句标识为 INSERT、UPDATE、DELETE 或 DDL 等修改操作。派生删除方法（例如 <code>deleteByUserName</code>）不需要 <code>@Modifying</code>。事务边界既可以声明在 Repository 方法上，也可以由上层 Service 的工作单元统一管理。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Repository</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">UserRepository</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">JpaRepository</span>&lt;User, Long&gt; {
+
+    <span class="hljs-meta">@Modifying</span>
+    <span class="hljs-meta">@Transactional</span>
+    <span class="hljs-meta">@Query(&quot;delete from User user where user.userName = :userName&quot;)</span>
+    <span class="hljs-type">int</span> <span class="hljs-title function_">deleteByUserName</span><span class="hljs-params">(<span class="hljs-meta">@Param(&quot;userName&quot;)</span> String userName)</span>;
+}
+</code></pre>
+<h3 id="关联关系" tabindex="-1">关联关系</h3>
+<p>JPA 提供了 4 种关联关系的注解：</p>
+<ul>
+<li><strong><code>@OneToOne</code></strong>：一对一关系。</li>
+<li><strong><code>@OneToMany</code></strong>：一对多关系。</li>
+<li><strong><code>@ManyToOne</code></strong>：多对一关系。</li>
+<li><strong><code>@ManyToMany</code></strong>：多对多关系。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Entity</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> {
+
+    <span class="hljs-meta">@OneToOne</span>
+    <span class="hljs-keyword">private</span> Profile profile;
+
+    <span class="hljs-meta">@OneToMany(mappedBy = &quot;user&quot;)</span>
+    <span class="hljs-keyword">private</span> List&lt;Order&gt; orders;
+}
+</code></pre>
+<h2 id="json-数据处理" tabindex="-1">JSON 数据处理</h2>
+<p>在 Web 开发中，经常需要处理 Java 对象与 JSON 格式之间的转换。Spring 通常集成 Jackson 库来完成此任务，以下是一些常用的 Jackson 注解，可以帮助我们定制化 JSON 的序列化（Java 对象转 JSON）和反序列化（JSON 转 Java 对象）过程。</p>
+<h3 id="过滤-json-字段" tabindex="-1">过滤 JSON 字段</h3>
+<p>有时我们不希望 Java 对象的某些字段被包含在最终生成的 JSON 中，或者在将 JSON 转换为 Java 对象时不处理某些 JSON 属性。</p>
+<p><code>@JsonIgnoreProperties</code> 作用在类上用于过滤掉特定字段不返回或者不解析。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 在生成 JSON 时忽略 userRoles 属性</span>
+<span class="hljs-comment">// 如果允许未知属性（即 JSON 中有而类中没有的属性），可以添加 ignoreUnknown = true</span>
+<span class="hljs-meta">@JsonIgnoreProperties({&quot;userRoles&quot;})</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> {
+    <span class="hljs-keyword">private</span> String userName;
+    <span class="hljs-keyword">private</span> String fullName;
+    <span class="hljs-keyword">private</span> String password;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">List</span>&lt;UserRole&gt; <span class="hljs-variable">userRoles</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+    <span class="hljs-comment">// getters and setters...</span>
+}
+</code></pre>
+<p><code>@JsonIgnore</code>作用于字段或<code>getter/setter</code> 方法级别，用于指定在序列化或反序列化时忽略该特定属性。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">User</span> {
+    <span class="hljs-keyword">private</span> String userName;
+    <span class="hljs-keyword">private</span> String fullName;
+    <span class="hljs-keyword">private</span> String password;
+
+    <span class="hljs-comment">// 在生成 JSON 时忽略 userRoles 属性</span>
+    <span class="hljs-meta">@JsonIgnore</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">List</span>&lt;UserRole&gt; <span class="hljs-variable">userRoles</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+    <span class="hljs-comment">// getters and setters...</span>
+}
+</code></pre>
+<p><code>@JsonIgnoreProperties</code> 更适用于在类定义时明确排除多个字段，或继承场景下的字段排除；<code>@JsonIgnore</code> 则更直接地用于标记单个具体字段。</p>
+<h3 id="格式化-json-数据" tabindex="-1">格式化 JSON 数据</h3>
+<p><code>@JsonFormat</code> 用于指定属性在序列化和反序列化时的格式。常用于日期时间类型的格式化。</p>
+<p>比如：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 指定 Date 类型序列化为 ISO 8601 格式字符串，并设置时区为 GMT</span>
+<span class="hljs-meta">@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;yyyy-MM-dd&#x27;T&#x27;HH:mm:ss.SSS&#x27;Z&#x27;&quot;, timezone = &quot;GMT&quot;)</span>
+<span class="hljs-keyword">private</span> Date date;
+</code></pre>
+<h3 id="扁平化-json-对象" tabindex="-1">扁平化 JSON 对象</h3>
+<p><code>@JsonUnwrapped</code> 注解作用于字段上，用于在序列化时将其嵌套对象的属性“提升”到当前对象的层级，反序列化时执行相反操作。这可以使 JSON 结构更扁平。</p>
+<p>假设有 <code>Account</code> 类，包含 <code>Location</code> 和 <code>PersonInfo</code> 两个嵌套对象。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Getter</span>
+<span class="hljs-meta">@Setter</span>
+<span class="hljs-meta">@ToString</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Account</span> {
+    <span class="hljs-keyword">private</span> Location location;
+    <span class="hljs-keyword">private</span> PersonInfo personInfo;
+
+  <span class="hljs-meta">@Getter</span>
+  <span class="hljs-meta">@Setter</span>
+  <span class="hljs-meta">@ToString</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Location</span> {
+     <span class="hljs-keyword">private</span> String provinceName;
+     <span class="hljs-keyword">private</span> String countyName;
+  }
+  <span class="hljs-meta">@Getter</span>
+  <span class="hljs-meta">@Setter</span>
+  <span class="hljs-meta">@ToString</span>
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PersonInfo</span> {
+    <span class="hljs-keyword">private</span> String userName;
+    <span class="hljs-keyword">private</span> String fullName;
+  }
+}
+
+</code></pre>
+<p>未扁平化之前的 JSON 结构：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;location&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;provinceName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;湖北&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;countyName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;武汉&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;personInfo&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;userName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;coder1234&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;fullName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;shaungkou&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>使用<code>@JsonUnwrapped</code> 扁平对象：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Getter</span>
+<span class="hljs-meta">@Setter</span>
+<span class="hljs-meta">@ToString</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Account</span> {
+    <span class="hljs-meta">@JsonUnwrapped</span>
+    <span class="hljs-keyword">private</span> Location location;
+    <span class="hljs-meta">@JsonUnwrapped</span>
+    <span class="hljs-keyword">private</span> PersonInfo personInfo;
+    ......
+}
+</code></pre>
+<p>扁平化后的 JSON 结构：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;provinceName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;湖北&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;countyName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;武汉&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;userName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;coder1234&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;fullName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;shaungkou&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<h2 id="测试" tabindex="-1">测试</h2>
+<p><code>@ActiveProfiles</code>一般作用于测试类上， 用于声明生效的 Spring 配置文件。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 指定在 RANDOM_PORT 上启动应用上下文，并激活 &quot;test&quot; profile</span>
+<span class="hljs-meta">@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)</span>
+<span class="hljs-meta">@ActiveProfiles(&quot;test&quot;)</span>
+<span class="hljs-meta">@Slf4j</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">TestBase</span> {
+    <span class="hljs-comment">// Common test setup or abstract methods...</span>
+}
+</code></pre>
+<p><code>@Test</code> 是 JUnit 框架（通常是 JUnit 5 Jupiter）提供的注解，用于标记一个方法为测试方法。虽然不是 Spring 自身的注解，但它是执行单元测试和集成测试的基础。</p>
+<p>由 Spring TestContext 在测试线程中管理的 <code>@Transactional</code> 测试方法默认会在测试结束后回滚，避免污染测试数据。需要注意，如果使用 <code>RANDOM_PORT</code> 发起真实 HTTP 请求，服务端处理运行在另一个线程和事务中，不会随测试线程的事务自动回滚，此时需要使用隔离数据库或显式清理数据。</p>
+<p><code>@WithMockUser</code> 是 Spring Security Test 模块提供的注解，用于在测试期间模拟一个已认证的用户。可以方便地指定用户名、密码、角色（authorities）等信息，从而测试受安全保护的端点或方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyServiceTest</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">TestBase</span> { <span class="hljs-comment">// Assuming TestBase provides Spring context</span>
+
+    <span class="hljs-meta">@Test</span>
+    <span class="hljs-meta">@Transactional</span> <span class="hljs-comment">// 测试数据将回滚</span>
+    <span class="hljs-meta">@WithMockUser(username = &quot;test-user&quot;, authorities = { &quot;ROLE_TEACHER&quot;, &quot;read&quot; })</span> <span class="hljs-comment">// 模拟一个名为 &quot;test-user&quot;，拥有 TEACHER 角色和 read 权限的用户</span>
+    <span class="hljs-type">void</span> <span class="hljs-title function_">should_perform_action_requiring_teacher_role</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
+        <span class="hljs-comment">// ... 测试逻辑 ...</span>
+        <span class="hljs-comment">// 这里可以调用需要 &quot;ROLE_TEACHER&quot; 权限的服务方法</span>
+    }
+}
+</code></pre>
+<!-- @include: @article-footer.snippet.md -->

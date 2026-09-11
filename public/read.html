@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读 · JavaGuide 离线小抄</title>
+<meta name="description" content="JavaGuide 离线正文：左侧便签目录可折叠、可逐节划掉，右上盖章标记整篇已读。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f9f6ee'/%3E%3Crect width='32' height='5' fill='%232f6db0'/%3E%3Cpath d='M32 0v9l-9-9z' fill='%23dcd3be'/%3E%3Crect x='6' y='12' width='20' height='2.5' fill='%2317181a'/%3E%3Crect x='6' y='18' width='13' height='2.5' fill='%23b0492f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/cheat.css">
+</head>
+<body>
+<a class="skip" href="#r-body">跳到正文</a>
+
+<div class="read-sheet">
+  <!-- DOM 顺序：纸面在前、目录在后；窄屏塌成单栏时正好是「正文在上、目录在下」 -->
+  <main class="read-clip">
+    <i class="fold" aria-hidden="true"></i>
+    <header class="read-band" id="band" style="--ch:#55606a">
+      <a class="crumb" href="/">桌面</a>
+      <span class="crumb" id="crumb"><span class="sep">/</span>—</span>
+      <span class="spacer"></span>
+      <button class="stamp-btn" id="stamp" type="button" aria-pressed="false" title="标记为已读">标记已读</button>
+    </header>
+    <div class="read-wrap">
+      <div>
+        <div class="read-head">
+          <h1 class="read-title" id="r-title"><span class="loading-line">铺开小抄</span></h1>
+          <div class="read-sub" id="r-sub"></div>
+        </div>
+        <article class="article" id="r-body"></article>
+      </div>
+      <footer class="read-foot" id="r-foot"></footer>
+    </div>
+  </main>
+  <nav class="toc" id="r-toc" aria-label="本节目录"></nav>
+
+  <!-- 右侧留白里的竖向导航（圆形按钮 = 穿孔的圆形语言）。
+       宽屏是纸面右边的第三列，正好落在纸面右侧那条空白里（正文限宽 780px、纸面 1010px）；
+       窄屏没有这条留白，改用右下角一小摞 —— 宁可压住角落，也不为了放按钮去收窄正文。 -->
+  <nav class="rail" id="rail" aria-label="页面导航">
+    <button class="rail-btn" id="rail-home" type="button" title="返回桌面" aria-label="返回桌面">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 10.9 12 3.9l8.4 7"/><path d="M5.8 9.4V20h12.4V9.4"/><path d="M9.9 20v-5.3h4.2V20"/></svg>
+    </button>
+    <button class="rail-btn" id="rail-up" type="button" title="返回上一级" aria-label="返回上一级">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 6.7 4.5 11.5l4.8 4.8"/><path d="M4.5 11.5h9.3a5.7 5.7 0 0 1 5.7 5.7v2.5"/></svg>
+    </button>
+    <button class="rail-btn" id="rail-top" type="button" title="返回最顶端" aria-label="返回最顶端">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.6 3.7h12.8"/><path d="M12 20.3V7.6"/><path d="M6.7 12.9 12 7.6l5.3 5.3"/></svg>
+    </button>
+  </nav>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="/colors.js"></script>
+<script src="/read.js"></script>
+</body>
+</html>

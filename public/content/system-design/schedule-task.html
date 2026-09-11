@@ -1,0 +1,350 @@
+<h2 id="为什么需要定时任务" tabindex="-1">为什么需要定时任务？</h2>
+<p>我们来看一下几个非常常见的业务场景：</p>
+<ol>
+<li>某系统凌晨 1 点要进行数据备份。</li>
+<li>某电商平台，用户下单半个小时未支付的情况下需要自动取消订单。</li>
+<li>某媒体聚合平台，每 10 分钟动态抓取某某网站的数据为自己所用。</li>
+<li>某博客平台，支持定时发送文章。</li>
+<li>某基金平台，每晚定时计算用户当日收益情况并推送给用户最新的数据。</li>
+<li>……</li>
+</ol>
+<p>这些场景往往都要求我们在某个特定的时间去做某个事情，也就是定时或者延时去做某个事情。</p>
+<ul>
+<li>定时任务：在指定时间点执行特定的任务，例如每天早上 8 点，每周一下午 3 点等。定时任务可以用来做一些周期性的工作，如数据备份，日志清理，报表生成等。</li>
+<li>延时任务：一定的延迟时间后执行特定的任务，例如 10 分钟后，3 小时后等。延时任务可以用来做一些异步的工作，如订单取消，推送通知，红包撤回等。</li>
+</ul>
+<p>尽管二者的适用场景有所区别，但它们的核心思想都是将任务的执行时间安排在未来的某个点上，以达到预期的调度效果。</p>
+<h2 id="单机定时任务" tabindex="-1">单机定时任务</h2>
+<h3 id="timer" tabindex="-1">Timer</h3>
+<p><code>java.util.Timer</code>是 JDK 1.3 开始就已经支持的一种定时任务的实现方式。</p>
+<p><code>Timer</code> 内部使用一个叫做 <code>TaskQueue</code> 的类存放定时任务，它是一个基于最小堆实现的优先级队列。<code>TaskQueue</code> 会按照任务距离下一次执行时间的大小将任务排序，保证在堆顶的任务最先执行。这样在需要执行任务时，每次只需要取出堆顶的任务运行即可！</p>
+<p><code>Timer</code> 使用起来比较简单，通过下面的方式我们就能创建一个 1s 之后执行的定时任务。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 示例代码：</span>
+<span class="hljs-type">TimerTask</span> <span class="hljs-variable">task</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TimerTask</span>() {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;当前时间: &quot;</span> + <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>() + <span class="hljs-string">&quot;\n&quot;</span> +
+                <span class="hljs-string">&quot;线程名称: &quot;</span> + Thread.currentThread().getName());
+    }
+};
+System.out.println(<span class="hljs-string">&quot;当前时间: &quot;</span> + <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>() + <span class="hljs-string">&quot;\n&quot;</span> +
+        <span class="hljs-string">&quot;线程名称: &quot;</span> + Thread.currentThread().getName());
+<span class="hljs-type">Timer</span> <span class="hljs-variable">timer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Timer</span>(<span class="hljs-string">&quot;Timer&quot;</span>);
+<span class="hljs-type">long</span> <span class="hljs-variable">delay</span> <span class="hljs-operator">=</span> <span class="hljs-number">1000L</span>;
+timer.schedule(task, delay);
+
+
+<span class="hljs-comment">//输出：</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">18</span>:<span class="hljs-number">47</span> CST <span class="hljs-number">2021</span>
+线程名称: main
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">18</span>:<span class="hljs-number">48</span> CST <span class="hljs-number">2021</span>
+线程名称: Timer
+</code></pre>
+<p>不过其缺陷较多。每个 <code>Timer</code> 只使用一个后台线程串行执行所有任务，某个任务执行过久会推迟其他任务。如果 <code>TimerTask#run()</code> 抛出未捕获的运行时异常或错误，该 <code>Timer</code> 的唯一执行线程会终止，后续任务也无法继续调度。这不是“<code>Timer</code> 只捕获 <code>InterruptedException</code>”可以准确概括的行为。</p>
+<p><code>Timer</code> 类上的有一段注释是这样写的：</p>
+<pre class="md-pre"><code class="hljs"> * This <span class="hljs-keyword">class</span> <span class="hljs-title class_">does</span> not offer real-time guarantees: it schedules
+ * tasks using the &lt;tt&gt;Object.wait(<span class="hljs-type">long</span>)&lt;/tt&gt; method.
+ *Java <span class="hljs-number">5.0</span> introduced the {<span class="hljs-meta">@code</span> java.util.concurrent} <span class="hljs-keyword">package</span> and
+ * one of the concurrency utilities therein is the {<span class="hljs-meta">@link</span>
+ * java.util.concurrent.ScheduledThreadPoolExecutor
+ * ScheduledThreadPoolExecutor} which is a thread pool <span class="hljs-keyword">for</span> repeatedly
+ * executing tasks at a given rate or delay.  It is effectively a more
+ * versatile replacement <span class="hljs-keyword">for</span> the {<span class="hljs-meta">@code</span> Timer}/{<span class="hljs-meta">@code</span> TimerTask}
+ * combination, as it allows multiple service threads, accepts various
+ * time units, and doesn<span class="hljs-string">&#x27;t require subclassing {@code TimerTask} (just
+ * implement {@code Runnable}).  Configuring {@code
+ * ScheduledThreadPoolExecutor} with one thread makes it equivalent to
+ * {@code Timer}.
+</span></code></pre>
+<p>大概的意思就是：<code>ScheduledThreadPoolExecutor</code> 支持多线程执行定时任务并且功能更强大，是 <code>Timer</code> 的替代品。</p>
+<h3 id="scheduledexecutorservice" tabindex="-1">ScheduledExecutorService</h3>
+<p><code>ScheduledExecutorService</code> 是一个接口，有多个实现类，比较常用的是 <code>ScheduledThreadPoolExecutor</code> 。</p>
+<p><img src="/img/20210607154324712-748f068e.png" alt="" loading="lazy"></p>
+<p><code>ScheduledThreadPoolExecutor</code> 本身就是一个线程池，支持任务并发执行。并且，其内部使用 <code>DelayedWorkQueue</code> 作为任务队列。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 示例代码：</span>
+<span class="hljs-type">TimerTask</span> <span class="hljs-variable">repeatedTask</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TimerTask</span>() {
+    <span class="hljs-meta">@SneakyThrows</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;当前时间: &quot;</span> + <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>() + <span class="hljs-string">&quot;\n&quot;</span> +
+                <span class="hljs-string">&quot;线程名称: &quot;</span> + Thread.currentThread().getName());
+    }
+};
+System.out.println(<span class="hljs-string">&quot;当前时间: &quot;</span> + <span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>() + <span class="hljs-string">&quot;\n&quot;</span> +
+        <span class="hljs-string">&quot;线程名称: &quot;</span> + Thread.currentThread().getName());
+<span class="hljs-type">ScheduledExecutorService</span> <span class="hljs-variable">executor</span> <span class="hljs-operator">=</span> Executors.newScheduledThreadPool(<span class="hljs-number">3</span>);
+<span class="hljs-type">long</span> <span class="hljs-variable">delay</span>  <span class="hljs-operator">=</span> <span class="hljs-number">1000L</span>;
+<span class="hljs-type">long</span> <span class="hljs-variable">period</span> <span class="hljs-operator">=</span> <span class="hljs-number">1000L</span>;
+executor.scheduleAtFixedRate(repeatedTask, delay, period, TimeUnit.MILLISECONDS);
+Thread.sleep(delay + period * <span class="hljs-number">5</span>);
+executor.shutdown();
+<span class="hljs-comment">//输出：</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">46</span> CST <span class="hljs-number">2021</span>
+线程名称: main
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">47</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">1</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">48</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">1</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">49</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">2</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">50</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">2</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">51</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">2</span>
+当前时间: Fri May <span class="hljs-number">28</span> <span class="hljs-number">15</span>:<span class="hljs-number">40</span>:<span class="hljs-number">52</span> CST <span class="hljs-number">2021</span>
+线程名称: pool-<span class="hljs-number">1</span>-thread-<span class="hljs-number">2</span>
+</code></pre>
+<p>不论是使用 <code>Timer</code> 还是 <code>ScheduledExecutorService</code> 都无法使用 Cron 表达式指定任务执行的具体时间。</p>
+<h3 id="delayqueue" tabindex="-1">DelayQueue</h3>
+<p><code>DelayQueue</code> 是 JUC 包(<code>java.util.concurrent)</code>为我们提供的延迟队列，用于实现延时任务比如订单下单 15 分钟未支付直接取消。它是 <code>BlockingQueue</code> 的一种，底层是一个基于 <code>PriorityQueue</code> 实现的一个无界队列，是线程安全的。关于<code>PriorityQueue</code>可以参考笔者编写的这篇文章：<a href="/read/java/collection/priorityqueue-source-code.html">PriorityQueue 源码分析</a> 。</p>
+<p><img src="/img/blocking-queue-hierarchy-755d1cd5.png" alt="" loading="lazy"></p>
+<p><code>DelayQueue</code> 和 <code>Timer/TimerTask</code> 都可以作为延时调度的基础。<code>DelayQueue</code> 使用优先级队列管理实现了 <code>Delayed</code> 接口的元素，只有延迟到期的元素才能被取出，但它本身不负责创建线程执行任务；通常还需要编写消费循环并选择合适的执行器。<code>Timer</code> 则自带一个执行线程。两者都可以在创建后继续添加任务，也都支持取消或移除任务，“<code>Timer</code> 只能在创建时指定任务”并不成立。</p>
+<p>关于 <code>DelayQueue</code> 的详细介绍，请参考我写的这篇文章：<a href="/read/java/collection/delayqueue-source-code.html"><code>DelayQueue</code> 源码分析</a>。</p>
+<h3 id="spring-task" tabindex="-1">Spring Task</h3>
+<p>我们直接通过 Spring 提供的 <code>@Scheduled</code> 注解即可定义定时任务，非常方便！</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * cron：使用Cron表达式。　每分钟的1，2秒运行
+ */</span>
+<span class="hljs-meta">@Scheduled(cron = &quot;1-2 * * * * ? &quot;)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">reportCurrentTimeWithCronExpression</span><span class="hljs-params">()</span> {
+  log.info(<span class="hljs-string">&quot;Cron Expression: The time is now {}&quot;</span>, dateFormat.format(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Date</span>()));
+}
+
+</code></pre>
+<p>我在大学那会做的一个 SSM 的企业级项目，就是用的 Spring Task 来做的定时任务。</p>
+<p>并且，Spring Task 还是支持 <strong>Cron 表达式</strong> 的。Cron 表达式主要用于定时作业(定时任务)系统定义执行时间或执行频率的表达式，非常厉害，你可以通过 Cron 表达式进行设置定时任务每天或者每个月什么时候执行等等操作。咱们要学习定时任务的话，Cron 表达式是一定是要重点关注的。推荐一个在线 Cron 表达式生成器：<a href="http://cron.qqe2.com/" target="_blank" rel="noopener">http://cron.qqe2.com/</a> 。</p>
+<p>但是，Spring 自带的定时调度只支持单机，并且提供的功能比较单一。之前写过一篇文章:<a href="https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&amp;mid=2247485563&amp;idx=1&amp;sn=7419341f04036a10b141b74624a3f8c9&amp;chksm=cea247b0f9d5cea6440759e6d49b4e77d06f4c99470243a10c1463834e873ca90266413fbc92&amp;token=2133161636&amp;lang=zh_CN#rd" target="_blank" rel="noopener">《5 分钟搞懂如何在 Spring Boot 中 Schedule Tasks》</a> ，不了解的小伙伴可以参考一下。</p>
+<p>Spring 通过 <code>TaskScheduler</code> 提供调度抽象，并不固定只有一种底层实现。常用的 <code>ThreadPoolTaskScheduler</code> 内部委托给 <code>ScheduledExecutorService</code>；在 Jakarta EE 等环境中也可以使用容器管理的调度器。<code>@Scheduled</code> 本身不提供集群协调，同一应用部署多个实例时，每个实例都可能触发任务。</p>
+<p><strong>优缺点总结：</strong></p>
+<ul>
+<li>优点：简单，轻量，支持 Cron 表达式</li>
+<li>缺点：功能单一</li>
+</ul>
+<h3 id="时间轮" tabindex="-1">时间轮</h3>
+<p>Kafka、Dubbo、ZooKeeper、Netty、Caffeine、Akka 中都有对时间轮的实现。</p>
+<p>时间轮简单来说就是一个环形的队列（底层一般基于数组实现），队列中的每一个元素（时间格）都可以存放一个定时任务列表。</p>
+<p>时间轮中的每个时间格代表了时间轮的基本时间跨度或者说时间精度，假如时间一秒走一个时间格的话，那么这个时间轮的最高精度就是 1 秒（也就是说 3 s 和 3.9s 会在同一个时间格中）。</p>
+<p>下图是一个有 12 个时间格的时间轮，转完一圈需要 12 s。当我们需要新建一个 3s 后执行的定时任务，只需要将定时任务放在下标为 3 的时间格中即可。当我们需要新建一个 9s 后执行的定时任务，只需要将定时任务放在下标为 9 的时间格中即可。</p>
+<p><img src="/img/one-layers-of-time-wheel-52b302cf.png" alt="" loading="lazy"></p>
+<p>那当我们需要创建一个 13s 后执行的定时任务怎么办呢？这个时候可以引入 <strong>圈数/轮数</strong> 的概念。任务仍位于下标为 1 的时间格，同时记录它需要等待的剩余轮数，完整走过一轮再经过 1s 后才执行。不同实现对“当前格是否计入轮数”的约定可能不同，不应脱离具体实现固定写成 2 圈。</p>
+<p>除了增加圈数这种方法之外，还有一种 <strong>多层次时间轮</strong> （类似手表），Kafka 采用的就是这种方案。</p>
+<p>针对下图的时间轮，我来举一个例子便于大家理解。</p>
+<p><img src="/img/three-layers-of-time-wheel-29645300.png" alt="" loading="lazy"></p>
+<p>上图的时间轮(ms -&gt; s)，第 1 层的时间精度为 1 ，第 2 层的时间精度为 20 ，第 3 层的时间精度为 400。假如我们需要添加一个 350s 后执行的任务 A 的话（当前时间是 0s），这个任务会被放在第 2 层（因为第二层的时间跨度为 20*20=400&gt;350）的第 350/20=17 个时间格子。</p>
+<p>当第一层转了 17 圈之后，时间过去了 340s ，第 2 层的指针此时来到第 17 个时间格子。此时，第 2 层第 17 个格子的任务会被移动到第 1 层。</p>
+<p>任务 A 当前是 10s 之后执行，因此它会被移动到第 1 层的第 10 个时间格子。</p>
+<p>这里在层与层之间的移动也叫做时间轮的升降级。参考手表来理解就好！</p>
+<p><strong>时间轮比较适合管理大量定时器的场景。在时间轮层数和每层槽数有界的典型实现中，定位槽位、插入和推进指针的开销通常可以做到接近 O(1)；但某个刻度的实际执行开销仍取决于到期任务数、级联迁移和具体实现。</strong></p>
+<h2 id="分布式定时任务" tabindex="-1">分布式定时任务</h2>
+<h3 id="redis" tabindex="-1">Redis</h3>
+<p>Redis 是可以用来做延时任务的，基于 Redis 实现延时任务的功能无非就下面两种方案：</p>
+<ol>
+<li>Redis 过期事件监听</li>
+<li>Redisson 内置的延时队列</li>
+</ol>
+<p>这部分内容的详细介绍我放在了<a href="/read/zhuanlan/back-end-interview-high-frequency-system-design-and-scenario-questions.html">《后端面试高频系统设计&amp;场景题》</a>中，有需要的同学可以进入星球后阅读学习。篇幅太多，这里就不重复分享了。</p>
+<p><img src="/img/back-end-interview-high-frequency-system-design--d512d87a.png" alt="" loading="lazy"></p>
+<h3 id="mq" tabindex="-1">MQ</h3>
+<p>大部分消息队列，例如 RocketMQ、RabbitMQ，都支持定时/延时消息。定时消息和延时消息本质其实是相同的，都是服务端根据消息设置的定时时间在某一固定时刻将消息投递给消费者消费。</p>
+<p>不过，在使用 MQ 定时消息之前一定要看清具体产品和版本的限制。例如，RocketMQ 4.x 的官方实现提供 18 个固定延时级别，最长为 2 小时；RocketMQ 5.x 改为按毫秒级 Unix 时间戳设置投递时间，默认允许的最大定时范围为 24 小时。不能把这两套版本机制合并为同一条限制。</p>
+<p><strong>优缺点总结：</strong></p>
+<ul>
+<li><strong>优点</strong>：可以与 Spring 集成、支持分布式、支持集群、性能不错</li>
+<li><strong>缺点</strong>：功能性较差、不灵活、需要保障消息可靠性</li>
+</ul>
+<h2 id="分布式任务调度框架" tabindex="-1">分布式任务调度框架</h2>
+<p>如果我们需要一些高级特性比如支持任务在分布式场景下的分片和高可用的话，我们就需要用到分布式任务调度框架了。</p>
+<p>通常情况下，一个分布式定时任务的执行往往涉及到下面这些角色：</p>
+<ul>
+<li><strong>任务</strong>：首先肯定是要执行的任务，这个任务就是具体的业务逻辑比如定时发送文章。</li>
+<li><strong>调度器</strong>：其次是调度中心，调度中心主要负责任务管理，会分配任务给执行器。</li>
+<li><strong>执行器</strong>：最后就是执行器，执行器接收调度器分派的任务并执行。</li>
+</ul>
+<h3 id="quartz" tabindex="-1">Quartz</h3>
+<p>一个很火的开源任务调度框架，完全由 Java 写成。Quartz 可以说是 Java 定时任务领域的老大哥或者说参考标准，其他的任务调度框架基本都是基于 Quartz 开发的，比如当当网的<code>elastic-job</code>就是基于 Quartz 二次开发之后的分布式调度解决方案。</p>
+<p>使用 Quartz 可以很方便地与 Spring 集成，并且支持动态添加任务和集群。但是，Quartz 使用起来也比较麻烦，API 繁琐。</p>
+<p>并且，Quartz 并没有内置 UI 管理控制台，不过你可以使用 <a href="https://github.com/zhaopeiym/quartzui" target="_blank" rel="noopener">quartzui</a> 这个开源项目来解决这个问题。</p>
+<p>另外，Quartz 虽然也支持分布式任务。但是，它是在数据库层面，通过数据库的锁机制做的，有非常多的弊端比如系统侵入性严重、节点负载不均衡。有点伪分布式的味道。</p>
+<p><strong>优缺点总结：</strong></p>
+<ul>
+<li>优点：可以与 Spring 集成，并且支持动态添加任务和集群。</li>
+<li>缺点：分布式支持不友好，不支持任务可视化管理、使用麻烦（相比于其他同类型框架来说）</li>
+</ul>
+<h3 id="elastic-job" tabindex="-1">Elastic-Job</h3>
+<p>ElasticJob 最初由当当网开源，历史上曾分为 ElasticJob-Lite 和 ElasticJob-Cloud 两个子项目。这种分类以及 ElasticJob-Cloud 对 Mesos 的依赖属于早期版本语境，不应作为当前选型表。当前官方将 ElasticJob 描述为提供分布式任务分片的轻量级、去中心化解决方案，注册中心支持 ZooKeeper 和 etcd。</p>
+<p><code>ElasticJob</code> 支持任务在分布式场景下的分片和高可用、任务可视化管理等功能。</p>
+<p><img src="/img/elasticjob-feature-list-56ba3f1c.png" alt="" loading="lazy"></p>
+<p>下面是早期 ElasticJob-Lite 以 ZooKeeper 为注册中心的架构图，用于理解其去中心化调度思路；当前版本还支持 etcd，不能把图中的组件当成唯一部署方式。</p>
+<p><img src="/img/elasticjob-lite-architecture-design-dea99a80.png" alt="" loading="lazy"></p>
+<p>在这种部署中，ElasticJob 不设置中心化调度服务，而是使用 ZooKeeper 协调各节点的任务分片。当前版本也可以选择 etcd 作为注册中心。</p>
+<p>Elastic-Job 中的定时调度都是由执行器自行触发，这种设计也被称为去中心化设计（调度和处理都是执行器单独完成）。</p>
+<p>当前官方 Spring Boot Starter 通过 Spring Bean 和配置文件注册任务，不提供 <code>@ElasticJobConf</code> 注解。下面以 ZooKeeper 注册中心为例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Component</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">TestJob</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">SimpleJob</span> {
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">execute</span><span class="hljs-params">(ShardingContext context)</span> {
+        System.out.printf(<span class="hljs-string">&quot;任务名：%s，分片总数：%d，当前分片参数：%s%n&quot;</span>,
+                context.getJobName(),
+                context.getShardingTotalCount(),
+                context.getShardingParameter());
+    }
+}
+</code></pre>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">elasticjob:</span>
+  <span class="hljs-attr">regCenter:</span>
+    <span class="hljs-attr">serverLists:</span> <span class="hljs-string">localhost:2181</span>
+    <span class="hljs-attr">namespace:</span> <span class="hljs-string">elasticjob-demo</span>
+  <span class="hljs-attr">jobs:</span>
+    <span class="hljs-attr">dayJob:</span>
+      <span class="hljs-attr">elasticJobClass:</span> <span class="hljs-string">com.example.job.TestJob</span>
+      <span class="hljs-attr">cron:</span> <span class="hljs-number">0</span><span class="hljs-string">/10</span> <span class="hljs-string">*</span> <span class="hljs-string">*</span> <span class="hljs-string">*</span> <span class="hljs-string">*</span> <span class="hljs-string">?</span>
+      <span class="hljs-attr">shardingTotalCount:</span> <span class="hljs-number">2</span>
+      <span class="hljs-attr">shardingItemParameters:</span> <span class="hljs-number">0</span><span class="hljs-string">=AAAA,1=BBBB</span>
+</code></pre>
+<p>配置属性和注册中心类型会随版本演进，接入时应以所用版本的 <a href="https://shardingsphere.apache.org/elasticjob/current/en/user-manual/usage/job-api/spring-boot-starter/" target="_blank" rel="noopener">Spring Boot Starter 文档</a>和<a href="https://shardingsphere.apache.org/elasticjob/current/en/user-manual/configuration/registry-center/" target="_blank" rel="noopener">注册中心文档</a>为准。</p>
+<p><strong>相关地址：</strong></p>
+<ul>
+<li>GitHub 地址：<a href="https://github.com/apache/shardingsphere-elasticjob" target="_blank" rel="noopener">https://github.com/apache/shardingsphere-elasticjob</a>。</li>
+<li>官方网站：<a href="https://shardingsphere.apache.org/elasticjob/index_zh.html" target="_blank" rel="noopener">https://shardingsphere.apache.org/elasticjob/index_zh.html</a> 。</li>
+</ul>
+<p><strong>优缺点总结：</strong></p>
+<ul>
+<li>优点：可以与 Spring 集成、支持分布式、支持集群、性能不错、支持任务可视化管理</li>
+<li>缺点：需要额外部署 ZooKeeper 或 etcd 等注册中心，会增加系统复杂度和维护成本</li>
+</ul>
+<h3 id="xxl-job" tabindex="-1">XXL-JOB</h3>
+<p><code>XXL-JOB</code> 于 2015 年开源，是一款优秀的轻量级分布式任务调度框架，支持任务可视化管理、弹性扩容缩容、任务失败重试和告警、任务分片等功能，</p>
+<p><img src="/img/xxljob-feature-list-9bb2bec9.png" alt="" loading="lazy"></p>
+<p>根据 <code>XXL-JOB</code> 官网介绍，其解决了很多 Quartz 的不足。</p>
+<blockquote>
+<p>Quartz 作为开源作业调度中的佼佼者，是作业调度的首选。但是集群环境中 Quartz 采用 API 的方式对任务进行管理，从而可以避免上述问题，但是同样存在以下问题：</p>
+<ul>
+<li>问题一：调用 API 的方式操作任务，不人性化；</li>
+<li>问题二：需要持久化业务 QuartzJobBean 到底层数据表中，系统侵入性相当严重。</li>
+<li>问题三：调度逻辑和 QuartzJobBean 耦合在同一个项目中，这将导致一个问题，在调度任务数量逐渐增多，同时调度任务逻辑逐渐加重的情况下，此时调度系统的性能将大大受限于业务；</li>
+<li>问题四：quartz 底层以“抢占式”获取 DB 锁并由抢占成功节点负责运行任务，会导致节点负载悬殊非常大；而 XXL-JOB 通过执行器实现“协同分配式”运行任务，充分发挥集群优势，负载各节点均衡。</li>
+</ul>
+<p>XXL-JOB 弥补了 quartz 的上述不足之处。</p>
+</blockquote>
+<p><code>XXL-JOB</code> 的架构设计如下图所示：</p>
+<p><img src="/img/xxljob-architecture-design-v2-1-0-3abf925a.png" alt="" loading="lazy"></p>
+<p>从上图可以看出，<code>XXL-JOB</code> 由 <strong>调度中心</strong> 和 <strong>执行器</strong> 两大部分组成。调度中心主要负责任务管理、执行器管理以及日志管理。执行器主要是接收调度信号并处理。另外，调度中心进行任务调度时，是通过自研 RPC 来实现的。</p>
+<p>不同于 Elastic-Job 的去中心化设计， <code>XXL-JOB</code> 的这种设计也被称为中心化设计（调度中心调度多个执行器执行任务）。</p>
+<p>和 <code>Quzrtz</code> 类似 <code>XXL-JOB</code> 也是基于数据库锁调度任务，存在性能瓶颈。不过，一般在任务量不是特别大的情况下，没有什么影响的，可以满足绝大部分公司的要求。</p>
+<p>当前版本推荐在 Spring Bean 的无参 <code>void</code> 方法上使用 <code>@XxlJob</code>。任务参数、日志和执行结果通过 <code>XxlJobHelper</code> 处理；<code>@JobHandler</code>、带 <code>String</code> 入参并返回 <code>ReturnT</code> 的写法属于旧版 API。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Component</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyApiJobHandler</span> {
+
+    <span class="hljs-meta">@XxlJob(&quot;myApiJobHandler&quot;)</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">execute</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">String</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> XxlJobHelper.getJobParam();
+        XxlJobHelper.log(<span class="hljs-string">&quot;任务参数：{}&quot;</span>, param);
+        <span class="hljs-comment">// 执行业务逻辑；默认执行结果为成功，失败时可调用 XxlJobHelper.handleFail(...)</span>
+    }
+}
+</code></pre>
+<p><img src="/img/xxljob-admin-task-management-e968a1f8.png" alt="" loading="lazy"></p>
+<p><strong>相关地址：</strong></p>
+<ul>
+<li>GitHub 地址：<a href="https://github.com/xuxueli/xxl-job/" target="_blank" rel="noopener">https://github.com/xuxueli/xxl-job/</a>。</li>
+<li>官方介绍：<a href="https://www.xuxueli.com/xxl-job/" target="_blank" rel="noopener">https://www.xuxueli.com/xxl-job/</a> 。</li>
+</ul>
+<p><strong>优缺点总结：</strong></p>
+<ul>
+<li>优点：开箱即用（学习成本比较低）、与 Spring 集成、支持分布式、支持集群、支持任务可视化管理。</li>
+<li>缺点：不支持动态添加任务（如果一定想要动态创建任务也是支持的，参见：<a href="https://github.com/xuxueli/xxl-job/issues/277" target="_blank" rel="noopener">xxl-job issue277</a>）。</li>
+</ul>
+<h3 id="powerjob" tabindex="-1">PowerJob</h3>
+<p>非常值得关注的一个分布式任务调度框架，分布式任务调度领域的新星。目前，已经有很多公司接入比如 OPPO、京东、中通、思科。</p>
+<p>这个框架的诞生也挺有意思的，PowerJob 的作者当时在阿里巴巴实习过，阿里巴巴那会使用的是内部自研的 SchedulerX（阿里云付费产品）。实习期满之后，PowerJob 的作者离开了阿里巴巴。想着说自研一个 SchedulerX，防止哪天 SchedulerX 满足不了需求，于是 PowerJob 就诞生了。</p>
+<p>更多关于 PowerJob 的故事，小伙伴们可以去看看 PowerJob 作者的视频 <a href="https://www.bilibili.com/video/BV1SK411A7F3/" target="_blank" rel="noopener">《我和我的任务调度中间件》</a>。简单点概括就是：“游戏没啥意思了，我要扛起了新一代分布式任务调度与计算框架的大旗！”。</p>
+<p>由于 SchedulerX 属于人民币产品，我这里就不过多介绍。PowerJob 官方也对比过其和 QuartZ、XXL-JOB 以及 SchedulerX。下表是项目方的功能对比，不是独立基准测试；性能和容量仍需结合版本、数据库、部署规模与业务负载验证。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>QuartZ</th>
+<th>xxl-job</th>
+<th>SchedulerX 2.0</th>
+<th>PowerJob</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定时类型</td>
+<td>CRON</td>
+<td>CRON</td>
+<td>CRON、固定频率、固定延迟、OpenAPI</td>
+<td><strong>CRON、固定频率、固定延迟、OpenAPI</strong></td>
+</tr>
+<tr>
+<td>任务类型</td>
+<td>内置 Java</td>
+<td>内置 Java、GLUE Java、Shell、Python 等脚本</td>
+<td>内置 Java、外置 Java（FatJar）、Shell、Python 等脚本</td>
+<td><strong>内置 Java、外置 Java（容器）、Shell、Python 等脚本</strong></td>
+</tr>
+<tr>
+<td>分布式计算</td>
+<td>无</td>
+<td>静态分片</td>
+<td>MapReduce 动态分片</td>
+<td><strong>MapReduce 动态分片</strong></td>
+</tr>
+<tr>
+<td>在线任务治理</td>
+<td>不支持</td>
+<td>支持</td>
+<td>支持</td>
+<td><strong>支持</strong></td>
+</tr>
+<tr>
+<td>日志白屏化</td>
+<td>不支持</td>
+<td>支持</td>
+<td>不支持</td>
+<td><strong>支持</strong></td>
+</tr>
+<tr>
+<td>调度方式及性能</td>
+<td>基于数据库锁，有性能瓶颈</td>
+<td>基于数据库锁，有性能瓶颈</td>
+<td>不详</td>
+<td><strong>项目方称采用无锁化设计，实际容量需压测</strong></td>
+</tr>
+<tr>
+<td>报警监控</td>
+<td>无</td>
+<td>邮件</td>
+<td>短信</td>
+<td><strong>WebHook、邮件、钉钉与自定义扩展</strong></td>
+</tr>
+<tr>
+<td>系统依赖</td>
+<td>JDBC 支持的关系型数据库（MySQL、Oracle...）</td>
+<td>MySQL</td>
+<td>人民币</td>
+<td><strong>任意 Spring Data Jpa 支持的关系型数据库（MySQL、Oracle...）</strong></td>
+</tr>
+<tr>
+<td>DAG 工作流</td>
+<td>不支持</td>
+<td>不支持</td>
+<td>支持</td>
+<td><strong>支持</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="定时任务方案总结" tabindex="-1">定时任务方案总结</h2>
+<p>单机定时任务的常见解决方案有 <code>Timer</code>、<code>ScheduledExecutorService</code>、<code>DelayQueue</code>、Spring Task 和时间轮。对普通 Java 周期或延时任务，通常优先使用 <code>ScheduledExecutorService</code> 或 Spring Task；时间轮更适合大量定时器、允许一定时间精度换取调度性能的场景，并不是所有单机任务的默认最佳方案。</p>
+<p>Redis 和 MQ 虽然可以实现分布式延时触发，但它们通常不提供完整的任务编排、分片、失败补偿和可视化管理。可靠 MQ 的常见交付语义是“至少一次”，在超时、重试或故障切换时可能出现重复投递，因此消费端必须做幂等处理。周期任务需要调度器持续产生新的触发事件，与一条消息能否被“消费多次”没有直接关系。MQ 仍然很适合订单超时取消等一次性延时触发，也能用于解耦调度与执行。</p>
+<p>无论选择哪种方案，上生产前都应明确以下语义：</p>
+<ul>
+<li>任务是否幂等，如何处理重复执行；</li>
+<li>应用停机或错过执行时间后，是补执行、跳过还是合并执行；</li>
+<li>超时、重试、退避、最大尝试次数和死信/人工补偿策略；</li>
+<li>时区、夏令时、时钟回拨以及集群时钟偏差的处理方式；</li>
+<li>集群中如何避免非预期的重复调度，并对延迟、成功率、重试和积压建立监控告警。</li>
+</ul>
+<p>Quartz、Elastic-Job、XXL-JOB 和 PowerJob 这几个是专门用来做分布式调度的框架，提供的分布式定时任务的功能更为完善和强大，更加适合执行周期性的定时任务。除了 Quartz 之外，另外三者都是支持任务可视化管理的。</p>
+<p>XXL-JOB 2015 年推出，使用门槛相对较低，采用中心化调度；ElasticJob 采用去中心化调度，并通过 ZooKeeper 或 etcd 协调任务分片。两者的架构和运维依赖不同，不能据此直接断言某一个框架“性能更好”。选型时应针对实际版本、任务数量、触发频率、分片规模、故障恢复要求和数据库或注册中心负载进行压测。PowerJob 等其他框架也应按相同维度验证，不宜只依据项目方的功能对比表下结论。</p>
+<p>这篇文章并没有介绍到实际使用，但是，并不代表实际使用不重要。我在写这篇文章之前，已经动手写过相应的 Demo。像 Quartz，我在大学那会就用过。不过，当时用的是 Spring 。为了能够更好地体验，我自己又在 Spring Boot 上实际体验了一下。如果你并没有实际使用某个框架，就直接说它并不好用的话，是站不住脚的。</p>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,48 @@
+<p>Maven 是 Java 后端项目中最常见的构建和依赖管理工具。学习 Maven 时，不要只会复制 <code>pom.xml</code>，还要理解坐标、仓库、依赖传递、生命周期、插件和多模块管理这些基础概念。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在学习 Java 项目构建和依赖管理的同学。</li>
+<li>使用 Maven 写项目，但遇到依赖冲突、版本不统一、多模块管理、CI 构建时容易卡住的开发者。</li>
+<li>准备面试，需要讲清 Maven 核心概念和最佳实践的读者。</li>
+<li>需要维护 Spring Boot、微服务或多模块 Java 项目的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>POM 是 Maven 项目的核心配置，坐标用于唯一标识一个构件。</li>
+<li>Maven 仓库分为本地仓库、私服仓库和中央仓库，依赖解析会按一定顺序查找。</li>
+<li>依赖范围、依赖传递、依赖排除和版本管理决定项目最终使用哪些 Jar 包。</li>
+<li>生命周期定义构建阶段，插件负责真正执行编译、测试、打包等任务。</li>
+<li>Maven Wrapper 能固定项目使用的 Maven 版本，适合团队协作和 CI 环境。</li>
+<li>多模块项目要重点关注父 POM、<code>dependencyManagement</code>、<code>pluginManagement</code> 和模块边界。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a>：先理解 POM、坐标、仓库、依赖、生命周期、插件和多模块项目。</li>
+<li><a href="/read/tools/maven/maven-best-practices.html">Maven 最佳实践</a>：再学习标准目录结构、编译版本、BOM、依赖版本管理、Maven Wrapper、CI 和常见实践。</li>
+<li>结合一个 Spring Boot 项目查看 <code>pom.xml</code>：重点看父工程、依赖范围、插件配置和最终依赖树。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a>：系统介绍 Maven 的定位、POM、坐标、仓库、依赖、生命周期、插件和多模块项目。</li>
+<li><a href="/read/tools/maven/maven-best-practices.html">Maven 最佳实践</a>：整理标准目录结构、编译版本、依赖版本统一、Maven Wrapper、CI 和日常使用建议。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Maven 是什么？它主要解决哪些问题？</li>
+<li>POM、groupId、artifactId、version 分别是什么？</li>
+<li>本地仓库、私服仓库、中央仓库有什么区别？</li>
+<li>Maven 依赖传递是什么？依赖冲突如何排查？</li>
+<li><code>dependencyManagement</code> 和 <code>dependencies</code> 有什么区别？</li>
+<li>Maven 生命周期和插件是什么关系？</li>
+<li>为什么团队项目建议提交 Maven Wrapper？</li>
+<li><code>compile</code>、<code>provided</code>、<code>runtime</code>、<code>test</code> 等依赖范围有什么区别？</li>
+<li>多模块项目为什么通常需要父 POM？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/tools/README.html">开发工具知识体系</a></li>
+<li><a href="/read/tools/gradle/gradle-core-concepts.html">Gradle 核心概念总结</a></li>
+<li><a href="/read/tools/git/README.html">Git 专题</a></li>
+<li><a href="/read/java/basis/java-basic-questions-01.html">Java 基础</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

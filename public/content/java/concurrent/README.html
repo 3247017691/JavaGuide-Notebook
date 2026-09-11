@@ -1,0 +1,76 @@
+<p>Java 并发编程是后端开发和面试中最重要、也最容易混淆的模块之一。学习并发不能只背 API，要把线程生命周期、锁机制、内存模型、原子操作、线程池和并发工具类放在同一条主线上理解。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统学习 Java 并发编程的后端开发者。</li>
+<li>准备线程、锁、JMM、CAS、AQS、线程池等面试题的同学。</li>
+<li>已经在项目中使用多线程，但对死锁、线程池参数、ThreadLocal 泄漏等问题不够熟的读者。</li>
+<li>想理解并发容器、CompletableFuture、虚拟线程等工程实践能力的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>线程创建、生命周期、上下文切换、线程安全和常见并发问题。</li>
+<li><code>synchronized</code>、<code>volatile</code>、<code>ReentrantLock</code>、互斥锁、读写锁、乐观锁、悲观锁的适用边界。</li>
+<li>JMM、happens-before、指令重排、可见性、原子性和有序性。</li>
+<li>CAS、Atomic 原子类、AQS、并发容器和阻塞队列的底层思路。</li>
+<li>线程池核心参数、拒绝策略、任务队列、参数配置和生产实践。</li>
+<li>CompletableFuture、ThreadLocal、虚拟线程在真实项目中的使用方式和风险。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/java/concurrent/java-concurrent-questions-01.html">Java并发常见面试题总结（上）</a>：先建立线程、锁和线程安全的基础问题清单。</li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-02.html">Java并发常见面试题总结（中）</a> 和 <a href="/read/java/concurrent/java-concurrent-questions-03.html">Java并发常见面试题总结（下）</a>：继续补齐 JMM、CAS、AQS、线程池和并发工具。</li>
+<li><a href="/read/java/concurrent/java-lock.html">Java 锁详解</a>、<a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a>、<a href="/read/java/concurrent/cas.html">CAS 详解</a>、<a href="/read/java/concurrent/jmm.html">JMM（Java 内存模型）详解</a>：先建立锁体系，再理解并发控制的底层语义。</li>
+<li><a href="/read/java/concurrent/aqs.html">AQS 详解</a>、<a href="/read/java/concurrent/reentrantlock.html">从ReentrantLock的实现看AQS的原理及应用</a>：深入理解 Java 锁和同步器。</li>
+<li><a href="/read/java/concurrent/java-thread-pool-summary.html">Java 线程池详解</a> 和 <a href="/read/java/concurrent/java-thread-pool-best-practices.html">Java 线程池最佳实践</a>：掌握生产中最常用的并发基础设施。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="并发面试题" tabindex="-1">并发面试题</h3>
+<ul>
+<li><a href="/read/java/concurrent/java-concurrent-questions-01.html">Java并发常见面试题总结（上）</a>：覆盖线程基础、线程安全、锁和常见并发问题。</li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-02.html">Java并发常见面试题总结（中）</a>：继续梳理 JMM、volatile、CAS、AQS 等核心知识。</li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-03.html">Java并发常见面试题总结（下）</a>：补齐线程池、并发工具类、CompletableFuture 和虚拟线程等内容。</li>
+</ul>
+<h3 id="锁内存模型与同步器" tabindex="-1">锁、内存模型与同步器</h3>
+<ul>
+<li><a href="/read/java/concurrent/java-lock.html">Java 锁详解</a>：从互斥锁、读写锁、自旋锁到 <code>synchronized</code>、<code>ReentrantLock</code>、AQS，建立 Java 锁体系。</li>
+<li><a href="/read/java/concurrent/optimistic-lock-and-pessimistic-lock.html">乐观锁和悲观锁详解</a>：理解不同并发冲突处理策略。</li>
+<li><a href="/read/java/concurrent/cas.html">CAS 详解</a>：理解比较并交换、ABA 问题和自旋开销。</li>
+<li><a href="/read/java/concurrent/jmm.html">JMM（Java 内存模型）详解</a>：掌握可见性、原子性、有序性和 happens-before。</li>
+<li><a href="/read/java/concurrent/aqs.html">AQS 详解</a>：理解同步队列、独占/共享模式和常见同步器底层。</li>
+<li><a href="/read/java/concurrent/reentrantlock.html">从ReentrantLock的实现看AQS的原理及应用</a>：通过 ReentrantLock 深入理解 AQS。</li>
+</ul>
+<h3 id="并发工具与工程实践" tabindex="-1">并发工具与工程实践</h3>
+<ul>
+<li><a href="/read/java/concurrent/java-thread-pool-summary.html">Java 线程池详解</a>：理解核心参数、任务队列、拒绝策略和执行流程。</li>
+<li><a href="/read/java/concurrent/java-thread-pool-best-practices.html">Java 线程池最佳实践</a>：总结生产环境中线程池隔离、参数配置和监控建议。</li>
+<li><a href="/read/java/concurrent/java-concurrent-collections.html">Java 常见并发容器总结</a>：梳理 ConcurrentHashMap、CopyOnWriteArrayList、BlockingQueue 等容器。</li>
+<li><a href="/read/java/concurrent/atomic-classes.html">Atomic 原子类总结</a>：理解原子更新基本类型、数组、引用和字段。</li>
+<li><a href="/read/java/concurrent/threadlocal.html">ThreadLocal 详解</a>：理解线程本地变量、ThreadLocalMap 和内存泄漏风险。</li>
+<li><a href="/read/java/concurrent/completablefuture-intro.html">CompletableFuture 详解</a>：掌握异步编排、异常处理和线程池使用。</li>
+<li><a href="/read/java/concurrent/virtual-thread.html">虚拟线程常见问题总结</a>：理解虚拟线程的定位、适用场景和使用限制。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>线程和进程有什么区别？线程有哪些状态？</li>
+<li>什么是线程安全？如何定位死锁？</li>
+<li>互斥锁、读写锁、自旋锁有什么区别？</li>
+<li><code>synchronized</code> 和 <code>ReentrantLock</code> 有什么区别？</li>
+<li><code>volatile</code> 能保证原子性吗？它解决什么问题？</li>
+<li>JMM 是什么？happens-before 规则有什么用？</li>
+<li>CAS 有什么优缺点？ABA 问题如何解决？</li>
+<li>AQS 的核心思想是什么？哪些工具类基于 AQS？</li>
+<li>线程池核心参数如何配置？拒绝策略如何选择？</li>
+<li>为什么不建议直接使用 <code>Executors</code> 创建线程池？</li>
+<li><code>ThreadLocal</code> 为什么可能内存泄漏？</li>
+<li>CompletableFuture 默认线程池有什么风险？</li>
+<li>虚拟线程适合 CPU 密集型任务吗？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/java/README.html">Java 知识体系</a></li>
+<li><a href="/read/java/collection/README.html">Java 集合专题</a></li>
+<li><a href="/read/java/jvm/README.html">JVM 专题</a></li>
+<li><a href="/read/java/io/README.html">Java IO 专题</a></li>
+<li><a href="/read/cs-basics/operating-system/README.html">操作系统</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

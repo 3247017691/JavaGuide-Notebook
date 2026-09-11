@@ -1,0 +1,627 @@
+<blockquote>
+<p>本文来自末读代码投稿：<a href="https://mp.weixin.qq.com/s/AHWzboztt53ZfFZmsSnMSw" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/AHWzboztt53ZfFZmsSnMSw</a>，JavaGuide 对原文进行了大篇幅改进优化。</p>
+</blockquote>
+<p>上一篇文章介绍了 HashMap 源码，反响不错，也有很多同学发表了自己的观点，这次又来了，这次是 <code>ConcurrentHashMap</code> 了，作为线程安全的 HashMap，它的使用频率也是很高。那么它的存储结构和实现原理是怎么样的呢？</p>
+<h2 id="1-concurrenthashmap-17" tabindex="-1">1. ConcurrentHashMap 1.7</h2>
+<h3 id="1-存储结构" tabindex="-1">1. 存储结构</h3>
+<p><img src="/img/java7_concurrenthashmap-7779115b.png" alt="" loading="lazy"></p>
+<p>Java 7 中 <code>ConcurrentHashMap</code> 的存储结构如上图，<code>ConcurrentHashMap</code> 由很多个 <code>Segment</code> 组合，而每一个 <code>Segment</code> 是一个类似于 <code>HashMap</code> 的结构，所以每一个 <code>HashMap</code> 的内部可以进行扩容。但是 <code>Segment</code> 的个数一旦<strong>初始化就不能改变</strong>，默认 <code>Segment</code> 的个数是 16 个，因此默认最多可以有 16 个分段同时执行更新操作。</p>
+<h3 id="2-初始化" tabindex="-1">2. 初始化</h3>
+<p>通过 <code>ConcurrentHashMap</code> 的无参构造探寻 <code>ConcurrentHashMap</code> 的初始化流程。</p>
+<pre class="md-pre"><code class="hljs">    <span class="hljs-comment">/**
+     * Creates a new, empty map with a default initial capacity (16),
+     * load factor (0.75) and concurrencyLevel (16).
+     */</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">ConcurrentHashMap</span><span class="hljs-params">()</span> {
+        <span class="hljs-built_in">this</span>(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
+    }
+</code></pre>
+<p>无参构造中调用了有参构造，传入了三个参数的默认值，他们的值是。</p>
+<pre class="md-pre"><code class="hljs">    <span class="hljs-comment">/**
+     * 默认初始化容量
+     */</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">DEFAULT_INITIAL_CAPACITY</span> <span class="hljs-operator">=</span> <span class="hljs-number">16</span>;
+
+    <span class="hljs-comment">/**
+     * 默认负载因子
+     */</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">float</span> <span class="hljs-variable">DEFAULT_LOAD_FACTOR</span> <span class="hljs-operator">=</span> <span class="hljs-number">0.75f</span>;
+
+    <span class="hljs-comment">/**
+     * 默认并发级别
+     */</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">DEFAULT_CONCURRENCY_LEVEL</span> <span class="hljs-operator">=</span> <span class="hljs-number">16</span>;
+</code></pre>
+<p>接着看下这个有参构造函数的内部实现逻辑。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
+<span class="hljs-type">public</span> <span class="hljs-title function_">ConcurrentHashMap</span><span class="hljs-params">(<span class="hljs-type">int</span> initialCapacity,<span class="hljs-type">float</span> loadFactor, <span class="hljs-type">int</span> concurrencyLevel)</span> {
+    <span class="hljs-comment">// 参数校验</span>
+    <span class="hljs-keyword">if</span> (!(loadFactor &gt; <span class="hljs-number">0</span>) || initialCapacity &lt; <span class="hljs-number">0</span> || concurrencyLevel &lt;= <span class="hljs-number">0</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>();
+    <span class="hljs-comment">// 校验并发级别大小，大于 1&lt;&lt;16，重置为 65536</span>
+    <span class="hljs-keyword">if</span> (concurrencyLevel &gt; MAX_SEGMENTS)
+        concurrencyLevel = MAX_SEGMENTS;
+    <span class="hljs-comment">// Find power-of-two sizes best matching arguments</span>
+    <span class="hljs-comment">// 2的多少次方</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">sshift</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">ssize</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// 这个循环可以找到 concurrencyLevel 之上最近的 2的次方值</span>
+    <span class="hljs-keyword">while</span> (ssize &lt; concurrencyLevel) {
+        ++sshift;
+        ssize &lt;&lt;= <span class="hljs-number">1</span>;
+    }
+    <span class="hljs-comment">// 记录段偏移量</span>
+    <span class="hljs-built_in">this</span>.segmentShift = <span class="hljs-number">32</span> - sshift;
+    <span class="hljs-comment">// 记录段掩码</span>
+    <span class="hljs-built_in">this</span>.segmentMask = ssize - <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// 设置容量</span>
+    <span class="hljs-keyword">if</span> (initialCapacity &gt; MAXIMUM_CAPACITY)
+        initialCapacity = MAXIMUM_CAPACITY;
+    <span class="hljs-comment">// c = 容量 / ssize ，默认 16 / 16 = 1，这里是计算每个 Segment 中的类似于 HashMap 的容量</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> initialCapacity / ssize;
+    <span class="hljs-keyword">if</span> (c * ssize &lt; initialCapacity)
+        ++c;
+    <span class="hljs-type">int</span> <span class="hljs-variable">cap</span> <span class="hljs-operator">=</span> MIN_SEGMENT_TABLE_CAPACITY;
+    <span class="hljs-comment">//Segment 中的类似于 HashMap 的容量至少是2或者2的倍数</span>
+    <span class="hljs-keyword">while</span> (cap &lt; c)
+        cap &lt;&lt;= <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// create segments and segments[0]</span>
+    <span class="hljs-comment">// 创建 Segment 数组，设置 segments[0]</span>
+    <span class="hljs-type">Segment</span>&lt;K,V&gt; <span class="hljs-variable">s0</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Segment</span>&lt;K,V&gt;(loadFactor, (<span class="hljs-type">int</span>)(cap * loadFactor),
+                         (HashEntry&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>[cap]);
+    <span class="hljs-type">Segment</span>&lt;K,V&gt;[] <span class="hljs-variable">ss</span> <span class="hljs-operator">=</span> (Segment&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">Segment</span>[ssize];
+    UNSAFE.putOrderedObject(ss, SBASE, s0); <span class="hljs-comment">// ordered write of segments[0]</span>
+    <span class="hljs-built_in">this</span>.segments = ss;
+}
+</code></pre>
+<p>总结一下在 Java 7 中 ConcurrentHashMap 的初始化逻辑。</p>
+<ol>
+<li>必要参数校验。</li>
+<li>校验并发级别 <code>concurrencyLevel</code> 大小，如果大于最大值，重置为最大值。无参构造<strong>默认值是 16.</strong></li>
+<li>寻找并发级别 <code>concurrencyLevel</code> 之上最近的 <strong>2 的幂次方</strong>值，作为 <code>segments</code> 数组的长度，<strong>默认是 16</strong>。</li>
+<li>记录 <code>segmentShift</code> 偏移量，这个值为 <strong>32 - sshift</strong>，在后面 Put 时计算位置时会用到，默认是 28。</li>
+<li>记录 <code>segmentMask</code>，默认是 ssize - 1 = 16 -1 = 15.</li>
+<li><strong>初始化 <code>segments[0]</code></strong>，<strong>默认大小为 2</strong>，<strong>负载因子 0.75</strong>，<strong>扩容阀值是 2*0.75=1.5</strong>，插入第二个值时才会进行扩容。</li>
+</ol>
+<h3 id="3-put" tabindex="-1">3. put</h3>
+<p>接着上面的初始化参数继续查看 put 方法源码。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Maps the specified key to the specified value in this table.
+ * Neither the key nor the value can be null.
+ *
+ * &lt;p&gt; The value can be retrieved by calling the &lt;tt&gt;get&lt;/tt&gt; method
+ * with a key that is equal to the original key.
+ *
+ * <span class="hljs-doctag">@param</span> key key with which the specified value is to be associated
+ * <span class="hljs-doctag">@param</span> value value to be associated with the specified key
+ * <span class="hljs-doctag">@return</span> the previous value associated with &lt;tt&gt;key&lt;/tt&gt;, or
+ *         &lt;tt&gt;null&lt;/tt&gt; if there was no mapping for &lt;tt&gt;key&lt;/tt&gt;
+ * <span class="hljs-doctag">@throws</span> NullPointerException if the specified key or value is null
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">V</span> <span class="hljs-title function_">put</span><span class="hljs-params">(K key, V value)</span> {
+    Segment&lt;K,V&gt; s;
+    <span class="hljs-keyword">if</span> (value == <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
+    <span class="hljs-type">int</span> <span class="hljs-variable">hash</span> <span class="hljs-operator">=</span> hash(key);
+    <span class="hljs-comment">// hash 值无符号右移 28位（初始化时获得），然后与 segmentMask=15 做与运算</span>
+    <span class="hljs-comment">// 其实也就是把高4位与segmentMask（1111）做与运算</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> (hash &gt;&gt;&gt; segmentShift) &amp; segmentMask;
+    <span class="hljs-keyword">if</span> ((s = (Segment&lt;K,V&gt;)UNSAFE.getObject          <span class="hljs-comment">// nonvolatile; recheck</span>
+         (segments, (j &lt;&lt; SSHIFT) + SBASE)) == <span class="hljs-literal">null</span>) <span class="hljs-comment">//  in ensureSegment</span>
+        <span class="hljs-comment">// 如果查找到的 Segment 为空，初始化</span>
+        s = ensureSegment(j);
+    <span class="hljs-keyword">return</span> s.put(key, hash, value, <span class="hljs-literal">false</span>);
+}
+
+<span class="hljs-comment">/**
+ * Returns the segment for the given index, creating it and
+ * recording in segment table (via CAS) if not already present.
+ *
+ * <span class="hljs-doctag">@param</span> k the index
+ * <span class="hljs-doctag">@return</span> the segment
+ */</span>
+<span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
+<span class="hljs-keyword">private</span> <span class="hljs-type">Segment</span>&lt;K,V&gt; <span class="hljs-title function_">ensureSegment</span><span class="hljs-params">(<span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-keyword">final</span> <span class="hljs-type">Segment</span>&lt;K,V&gt;[] <span class="hljs-variable">ss</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.segments;
+    <span class="hljs-type">long</span> <span class="hljs-variable">u</span> <span class="hljs-operator">=</span> (k &lt;&lt; SSHIFT) + SBASE; <span class="hljs-comment">// raw offset</span>
+    Segment&lt;K,V&gt; seg;
+    <span class="hljs-comment">// 判断 u 位置的 Segment 是否为null</span>
+    <span class="hljs-keyword">if</span> ((seg = (Segment&lt;K,V&gt;)UNSAFE.getObjectVolatile(ss, u)) == <span class="hljs-literal">null</span>) {
+        <span class="hljs-type">Segment</span>&lt;K,V&gt; <span class="hljs-variable">proto</span> <span class="hljs-operator">=</span> ss[<span class="hljs-number">0</span>]; <span class="hljs-comment">// use segment 0 as prototype</span>
+        <span class="hljs-comment">// 获取0号 segment 里的 HashEntry&lt;K,V&gt; 初始化长度</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">cap</span> <span class="hljs-operator">=</span> proto.table.length;
+        <span class="hljs-comment">// 获取0号 segment 里的 hash 表里的扩容负载因子，所有的 segment 的 loadFactor 是相同的</span>
+        <span class="hljs-type">float</span> <span class="hljs-variable">lf</span> <span class="hljs-operator">=</span> proto.loadFactor;
+        <span class="hljs-comment">// 计算扩容阀值</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">threshold</span> <span class="hljs-operator">=</span> (<span class="hljs-type">int</span>)(cap * lf);
+        <span class="hljs-comment">// 创建一个 cap 容量的 HashEntry 数组</span>
+        <span class="hljs-type">HashEntry</span>&lt;K,V&gt;[] <span class="hljs-variable">tab</span> <span class="hljs-operator">=</span> (HashEntry&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>[cap];
+        <span class="hljs-keyword">if</span> ((seg = (Segment&lt;K,V&gt;)UNSAFE.getObjectVolatile(ss, u)) == <span class="hljs-literal">null</span>) { <span class="hljs-comment">// recheck</span>
+            <span class="hljs-comment">// 再次检查 u 位置的 Segment 是否为null，因为这时可能有其他线程进行了操作</span>
+            <span class="hljs-type">Segment</span>&lt;K,V&gt; <span class="hljs-variable">s</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Segment</span>&lt;K,V&gt;(lf, threshold, tab);
+            <span class="hljs-comment">// 自旋检查 u 位置的 Segment 是否为null</span>
+            <span class="hljs-keyword">while</span> ((seg = (Segment&lt;K,V&gt;)UNSAFE.getObjectVolatile(ss, u))
+                   == <span class="hljs-literal">null</span>) {
+                <span class="hljs-comment">// 使用CAS 赋值，只会成功一次</span>
+                <span class="hljs-keyword">if</span> (UNSAFE.compareAndSwapObject(ss, u, <span class="hljs-literal">null</span>, seg = s))
+                    <span class="hljs-keyword">break</span>;
+            }
+        }
+    }
+    <span class="hljs-keyword">return</span> seg;
+}
+</code></pre>
+<p>上面的源码分析了 <code>ConcurrentHashMap</code> 在 put 一个数据时的处理流程，下面梳理下具体流程。</p>
+<ol>
+<li>
+<p>计算要 put 的 key 的位置，获取指定位置的 <code>Segment</code>。</p>
+</li>
+<li>
+<p>如果指定位置的 <code>Segment</code> 为空，则初始化这个 <code>Segment</code>.</p>
+<p><strong>初始化 Segment 流程：</strong></p>
+<ol>
+<li>检查计算得到的位置的 <code>Segment</code> 是否为 null.</li>
+<li>为 null 继续初始化，使用 <code>Segment[0]</code> 的容量和负载因子创建一个 <code>HashEntry</code> 数组。</li>
+<li>再次检查计算得到的指定位置的 <code>Segment</code> 是否为 null.</li>
+<li>使用创建的 <code>HashEntry</code> 数组初始化这个 Segment.</li>
+<li>自旋判断计算得到的指定位置的 <code>Segment</code> 是否为 null，使用 CAS 在这个位置赋值为 <code>Segment</code>.</li>
+</ol>
+</li>
+<li>
+<p><code>Segment.put</code> 插入 key,value 值。</p>
+</li>
+</ol>
+<p>上面探究了获取 <code>Segment</code> 段和初始化 <code>Segment</code> 段的操作。最后一行的 <code>Segment</code> 的 put 方法还没有查看，继续分析。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">final</span> <span class="hljs-type">V</span> <span class="hljs-title function_">put</span><span class="hljs-params">(K key, <span class="hljs-type">int</span> hash, V value, <span class="hljs-type">boolean</span> onlyIfAbsent)</span> {
+    <span class="hljs-comment">// 获取 ReentrantLock 独占锁，获取不到，scanAndLockForPut 获取。</span>
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> tryLock() ? <span class="hljs-literal">null</span> : scanAndLockForPut(key, hash, value);
+    V oldValue;
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-type">HashEntry</span>&lt;K,V&gt;[] <span class="hljs-variable">tab</span> <span class="hljs-operator">=</span> table;
+        <span class="hljs-comment">// 计算要put的数据位置</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> (tab.length - <span class="hljs-number">1</span>) &amp; hash;
+        <span class="hljs-comment">// CAS 获取 index 坐标的值</span>
+        <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">first</span> <span class="hljs-operator">=</span> entryAt(tab, index);
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> first;;) {
+            <span class="hljs-keyword">if</span> (e != <span class="hljs-literal">null</span>) {
+                <span class="hljs-comment">// 检查是否 key 已经存在，如果存在，则遍历链表寻找位置，找到后替换 value</span>
+                K k;
+                <span class="hljs-keyword">if</span> ((k = e.key) == key ||
+                    (e.hash == hash &amp;&amp; key.equals(k))) {
+                    oldValue = e.value;
+                    <span class="hljs-keyword">if</span> (!onlyIfAbsent) {
+                        e.value = value;
+                        ++modCount;
+                    }
+                    <span class="hljs-keyword">break</span>;
+                }
+                e = e.next;
+            }
+            <span class="hljs-keyword">else</span> {
+                <span class="hljs-comment">// first 有值没说明 index 位置已经有值了，有冲突，链表头插法。</span>
+                <span class="hljs-keyword">if</span> (node != <span class="hljs-literal">null</span>)
+                    node.setNext(first);
+                <span class="hljs-keyword">else</span>
+                    node = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>&lt;K,V&gt;(hash, key, value, first);
+                <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> count + <span class="hljs-number">1</span>;
+                <span class="hljs-comment">// 容量大于扩容阀值，小于最大容量，进行扩容</span>
+                <span class="hljs-keyword">if</span> (c &gt; threshold &amp;&amp; tab.length &lt; MAXIMUM_CAPACITY)
+                    rehash(node);
+                <span class="hljs-keyword">else</span>
+                    <span class="hljs-comment">// index 位置赋值 node，node 可能是一个元素，也可能是一个链表的表头</span>
+                    setEntryAt(tab, index, node);
+                ++modCount;
+                count = c;
+                oldValue = <span class="hljs-literal">null</span>;
+                <span class="hljs-keyword">break</span>;
+            }
+        }
+    } <span class="hljs-keyword">finally</span> {
+        unlock();
+    }
+    <span class="hljs-keyword">return</span> oldValue;
+}
+</code></pre>
+<p>由于 <code>Segment</code> 继承了 <code>ReentrantLock</code>，所以 <code>Segment</code> 内部可以很方便的获取锁，put 流程就用到了这个功能。</p>
+<ol>
+<li>
+<p><code>tryLock()</code> 获取锁，获取不到使用 <strong><code>scanAndLockForPut</code></strong> 方法继续获取。</p>
+</li>
+<li>
+<p>计算 put 的数据要放入的 index 位置，然后获取这个位置上的 <code>HashEntry</code>。</p>
+</li>
+<li>
+<p>遍历 put 新元素，为什么要遍历？因为这里获取的 <code>HashEntry</code> 可能是一个空元素，也可能是链表已存在，所以要区别对待。</p>
+<p>如果这个位置上的 <strong><code>HashEntry</code> 不存在</strong>：</p>
+<ol>
+<li>如果当前容量大于扩容阀值，小于最大容量，<strong>进行扩容</strong>。</li>
+<li>直接头插法插入。</li>
+</ol>
+<p>如果这个位置上的 <strong><code>HashEntry</code> 存在</strong>：</p>
+<ol>
+<li>判断链表当前元素 key 和 hash 值是否和要 put 的 key 和 hash 值一致。一致则替换值</li>
+<li>不一致，获取链表下一个节点，直到发现相同进行值替换，或者链表表里完毕没有相同的。
+<ol>
+<li>如果当前容量大于扩容阀值，小于最大容量，<strong>进行扩容</strong>。</li>
+<li>直接链表头插法插入。</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>
+<p>如果要插入的位置之前已经存在，替换后返回旧值，否则返回 null.</p>
+</li>
+</ol>
+<p>这里面的第一步中的 <code>scanAndLockForPut</code> 操作这里没有介绍，这个方法做的操作就是不断的自旋 <code>tryLock()</code> 获取锁。当自旋次数大于指定次数时，使用 <code>lock()</code> 阻塞获取锁。在自旋时顺表获取下 hash 位置的 <code>HashEntry</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-title function_">scanAndLockForPut</span><span class="hljs-params">(K key, <span class="hljs-type">int</span> hash, V value)</span> {
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">first</span> <span class="hljs-operator">=</span> entryForHash(<span class="hljs-built_in">this</span>, hash);
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> first;
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">retries</span> <span class="hljs-operator">=</span> -<span class="hljs-number">1</span>; <span class="hljs-comment">// negative while locating node</span>
+    <span class="hljs-comment">// 自旋获取锁</span>
+    <span class="hljs-keyword">while</span> (!tryLock()) {
+        HashEntry&lt;K,V&gt; f; <span class="hljs-comment">// to recheck first below</span>
+        <span class="hljs-keyword">if</span> (retries &lt; <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">if</span> (e == <span class="hljs-literal">null</span>) {
+                <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) <span class="hljs-comment">// speculatively create node</span>
+                    node = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>&lt;K,V&gt;(hash, key, value, <span class="hljs-literal">null</span>);
+                retries = <span class="hljs-number">0</span>;
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (key.equals(e.key))
+                retries = <span class="hljs-number">0</span>;
+            <span class="hljs-keyword">else</span>
+                e = e.next;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (++retries &gt; MAX_SCAN_RETRIES) {
+            <span class="hljs-comment">// 自旋达到指定次数后，阻塞等到只到获取到锁</span>
+            lock();
+            <span class="hljs-keyword">break</span>;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((retries &amp; <span class="hljs-number">1</span>) == <span class="hljs-number">0</span> &amp;&amp;
+                 (f = entryForHash(<span class="hljs-built_in">this</span>, hash)) != first) {
+            e = first = f; <span class="hljs-comment">// re-traverse if entry changed</span>
+            retries = -<span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> node;
+}
+
+</code></pre>
+<h3 id="4-扩容-rehash" tabindex="-1">4. 扩容 rehash</h3>
+<p><code>ConcurrentHashMap</code> 的扩容只会扩容到原来的两倍。老数组里的数据移动到新的数组时，位置要么不变，要么变为 <code>index+ oldSize</code>，参数里的 node 会在扩容之后使用链表<strong>头插法</strong>插入到指定位置。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-type">void</span> <span class="hljs-title function_">rehash</span><span class="hljs-params">(HashEntry&lt;K,V&gt; node)</span> {
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt;[] <span class="hljs-variable">oldTable</span> <span class="hljs-operator">=</span> table;
+    <span class="hljs-comment">// 老容量</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">oldCapacity</span> <span class="hljs-operator">=</span> oldTable.length;
+    <span class="hljs-comment">// 新容量，扩大两倍</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">newCapacity</span> <span class="hljs-operator">=</span> oldCapacity &lt;&lt; <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// 新的扩容阀值</span>
+    threshold = (<span class="hljs-type">int</span>)(newCapacity * loadFactor);
+    <span class="hljs-comment">// 创建新的数组</span>
+    <span class="hljs-type">HashEntry</span>&lt;K,V&gt;[] <span class="hljs-variable">newTable</span> <span class="hljs-operator">=</span> (HashEntry&lt;K,V&gt;[]) <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>[newCapacity];
+    <span class="hljs-comment">// 新的掩码，默认2扩容后是4，-1是3，二进制就是11。</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">sizeMask</span> <span class="hljs-operator">=</span> newCapacity - <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; oldCapacity ; i++) {
+        <span class="hljs-comment">// 遍历老数组</span>
+        <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> oldTable[i];
+        <span class="hljs-keyword">if</span> (e != <span class="hljs-literal">null</span>) {
+            <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">next</span> <span class="hljs-operator">=</span> e.next;
+            <span class="hljs-comment">// 计算新的位置，新的位置只可能是不变或者是老的位置+老的容量。</span>
+            <span class="hljs-type">int</span> <span class="hljs-variable">idx</span> <span class="hljs-operator">=</span> e.hash &amp; sizeMask;
+            <span class="hljs-keyword">if</span> (next == <span class="hljs-literal">null</span>)   <span class="hljs-comment">//  Single node on list</span>
+                <span class="hljs-comment">// 如果当前位置还不是链表，只是一个元素，直接赋值</span>
+                newTable[idx] = e;
+            <span class="hljs-keyword">else</span> { <span class="hljs-comment">// Reuse consecutive sequence at same slot</span>
+                <span class="hljs-comment">// 如果是链表了</span>
+                <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">lastRun</span> <span class="hljs-operator">=</span> e;
+                <span class="hljs-type">int</span> <span class="hljs-variable">lastIdx</span> <span class="hljs-operator">=</span> idx;
+                <span class="hljs-comment">// 新的位置只可能是不变或者是老的位置+老的容量。</span>
+                <span class="hljs-comment">// 遍历结束后，lastRun 后面的元素位置都是相同的</span>
+                <span class="hljs-keyword">for</span> (<span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">last</span> <span class="hljs-operator">=</span> next; last != <span class="hljs-literal">null</span>; last = last.next) {
+                    <span class="hljs-type">int</span> <span class="hljs-variable">k</span> <span class="hljs-operator">=</span> last.hash &amp; sizeMask;
+                    <span class="hljs-keyword">if</span> (k != lastIdx) {
+                        lastIdx = k;
+                        lastRun = last;
+                    }
+                }
+                <span class="hljs-comment">// ，lastRun 后面的元素位置都是相同的，直接作为链表赋值到新位置。</span>
+                newTable[lastIdx] = lastRun;
+                <span class="hljs-comment">// Clone remaining nodes</span>
+                <span class="hljs-keyword">for</span> (<span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">p</span> <span class="hljs-operator">=</span> e; p != lastRun; p = p.next) {
+                    <span class="hljs-comment">// 遍历剩余元素，头插法到指定 k 位置。</span>
+                    <span class="hljs-type">V</span> <span class="hljs-variable">v</span> <span class="hljs-operator">=</span> p.value;
+                    <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> p.hash;
+                    <span class="hljs-type">int</span> <span class="hljs-variable">k</span> <span class="hljs-operator">=</span> h &amp; sizeMask;
+                    <span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">n</span> <span class="hljs-operator">=</span> newTable[k];
+                    newTable[k] = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashEntry</span>&lt;K,V&gt;(h, p.key, v, n);
+                }
+            }
+        }
+    }
+    <span class="hljs-comment">// 头插法插入新的节点</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">nodeIndex</span> <span class="hljs-operator">=</span> node.hash &amp; sizeMask; <span class="hljs-comment">// add the new node</span>
+    node.setNext(newTable[nodeIndex]);
+    newTable[nodeIndex] = node;
+    table = newTable;
+}
+</code></pre>
+<p>有些同学可能会对最后的两个 for 循环有疑惑，这里第一个 for 是为了寻找这样一个节点，这个节点后面的所有 next 节点的新位置都是相同的。然后把这个作为一个链表赋值到新位置。第二个 for 循环是为了把剩余的元素通过头插法插入到指定位置链表。<s>这样实现的原因可能是基于概率统计，有深入研究的同学可以发表下意见。</s></p>
+<p>内部第二个 <code>for</code> 循环中使用了 <code>new HashEntry&lt;K,V&gt;(h, p.key, v, n)</code> 创建了一个新的 <code>HashEntry</code>，而不是复用之前的，是因为如果复用之前的，那么会导致正在遍历（如正在执行 <code>get</code> 方法）的线程由于指针的修改无法遍历下去。正如注释中所说的：</p>
+<blockquote>
+<p>当它们不再被可能正在并发遍历表的任何读取线程引用时，被替换的节点将被垃圾回收。</p>
+<p>The nodes they replace will be garbage collectable as soon as they are no longer referenced by any reader thread that may be in the midst of concurrently traversing table</p>
+</blockquote>
+<p>为什么需要再使用一个 <code>for</code> 循环找到 <code>lastRun</code>，其实是为了减少对象创建的次数，正如注解中所说的：</p>
+<blockquote>
+<p>从统计上看，在默认的阈值下，当表容量加倍时，只有大约六分之一的节点需要被克隆。</p>
+<p>Statistically, at the default threshold, only about one-sixth of them need cloning when a table doubles.</p>
+</blockquote>
+<h3 id="5-get" tabindex="-1">5. get</h3>
+<p>到这里就很简单了，get 方法只需要两步即可。</p>
+<ol>
+<li>计算得到 key 的存放位置。</li>
+<li>遍历指定位置查找相同 key 的 value 值。</li>
+</ol>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">V</span> <span class="hljs-title function_">get</span><span class="hljs-params">(Object key)</span> {
+    Segment&lt;K,V&gt; s; <span class="hljs-comment">// manually integrate access methods to reduce overhead</span>
+    HashEntry&lt;K,V&gt;[] tab;
+    <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> hash(key);
+    <span class="hljs-type">long</span> <span class="hljs-variable">u</span> <span class="hljs-operator">=</span> (((h &gt;&gt;&gt; segmentShift) &amp; segmentMask) &lt;&lt; SSHIFT) + SBASE;
+    <span class="hljs-comment">// 计算得到 key 的存放位置</span>
+    <span class="hljs-keyword">if</span> ((s = (Segment&lt;K,V&gt;)UNSAFE.getObjectVolatile(segments, u)) != <span class="hljs-literal">null</span> &amp;&amp;
+        (tab = s.table) != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">HashEntry</span>&lt;K,V&gt; <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> (HashEntry&lt;K,V&gt;) UNSAFE.getObjectVolatile
+                 (tab, ((<span class="hljs-type">long</span>)(((tab.length - <span class="hljs-number">1</span>) &amp; h)) &lt;&lt; TSHIFT) + TBASE);
+             e != <span class="hljs-literal">null</span>; e = e.next) {
+            <span class="hljs-comment">// 如果是链表，遍历查找到相同 key 的 value。</span>
+            K k;
+            <span class="hljs-keyword">if</span> ((k = e.key) == key || (e.hash == h &amp;&amp; key.equals(k)))
+                <span class="hljs-keyword">return</span> e.value;
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+</code></pre>
+<h2 id="2-concurrenthashmap-18" tabindex="-1">2. ConcurrentHashMap 1.8</h2>
+<p>总的来说，<code>ConcurrentHashMap</code> 在 Java8 中相对于 Java7 来说变化还是挺大的，</p>
+<h3 id="1-存储结构-2" tabindex="-1">1. 存储结构</h3>
+<p><img src="/img/java8_concurrenthashmap-294aa9f0.png" alt="" loading="lazy"></p>
+<p>可以发现 Java8 的 ConcurrentHashMap 相对于 Java7 来说变化比较大，不再是之前的 <strong>Segment 数组 + HashEntry 数组 + 链表</strong>，而是 <strong>Node 数组 + 链表 / 红黑树</strong>。当冲突链表达到一定长度时，链表会转换成红黑树。</p>
+<h3 id="2-初始化-inittable" tabindex="-1">2. 初始化 initTable</h3>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Initializes table, using the size recorded in sizeCtl.
+ */</span>
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Node</span>&lt;K,V&gt;[] <span class="hljs-title function_">initTable</span><span class="hljs-params">()</span> {
+    Node&lt;K,V&gt;[] tab; <span class="hljs-type">int</span> sc;
+    <span class="hljs-keyword">while</span> ((tab = table) == <span class="hljs-literal">null</span> || tab.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-comment">//　如果 sizeCtl &lt; 0 ,说明另外的线程执行CAS 成功，正在进行初始化。</span>
+        <span class="hljs-keyword">if</span> ((sc = sizeCtl) &lt; <span class="hljs-number">0</span>)
+            <span class="hljs-comment">// 让出 CPU 使用权</span>
+            Thread.<span class="hljs-keyword">yield</span>(); <span class="hljs-comment">// lost initialization race; just spin</span>
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (U.compareAndSwapInt(<span class="hljs-built_in">this</span>, SIZECTL, sc, -<span class="hljs-number">1</span>)) {
+            <span class="hljs-keyword">try</span> {
+                <span class="hljs-keyword">if</span> ((tab = table) == <span class="hljs-literal">null</span> || tab.length == <span class="hljs-number">0</span>) {
+                    <span class="hljs-type">int</span> <span class="hljs-variable">n</span> <span class="hljs-operator">=</span> (sc &gt; <span class="hljs-number">0</span>) ? sc : DEFAULT_CAPACITY;
+                    <span class="hljs-meta">@SuppressWarnings(&quot;unchecked&quot;)</span>
+                    <span class="hljs-type">Node</span>&lt;K,V&gt;[] <span class="hljs-variable">nt</span> <span class="hljs-operator">=</span> (Node&lt;K,V&gt;[])<span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;?,?&gt;[n];
+                    table = tab = nt;
+                    sc = n - (n &gt;&gt;&gt; <span class="hljs-number">2</span>);
+                }
+            } <span class="hljs-keyword">finally</span> {
+                sizeCtl = sc;
+            }
+            <span class="hljs-keyword">break</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> tab;
+}
+</code></pre>
+<p>从源码中可以发现 <code>ConcurrentHashMap</code> 的初始化是通过<strong>自旋和 CAS</strong> 操作完成的。里面需要注意的是变量 <code>sizeCtl</code>（sizeControl 的缩写），它的值决定着当前的初始化状态。</p>
+<ol>
+<li>-1 说明正在初始化，其他线程需要自旋等待</li>
+<li>-N 说明 table 正在进行扩容，高 16 位表示扩容的标识戳，低 16 位减 1 为正在进行扩容的线程数</li>
+<li>0 表示 table 尚未初始化，初始化时使用默认容量</li>
+<li>&gt;0 表示 table 扩容的阈值，如果 table 已经初始化。</li>
+</ol>
+<h3 id="3-put-2" tabindex="-1">3. put</h3>
+<p>直接过一遍 put 源码。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">V</span> <span class="hljs-title function_">put</span><span class="hljs-params">(K key, V value)</span> {
+    <span class="hljs-keyword">return</span> putVal(key, value, <span class="hljs-literal">false</span>);
+}
+
+<span class="hljs-comment">/** Implementation for put and putIfAbsent */</span>
+<span class="hljs-keyword">final</span> <span class="hljs-type">V</span> <span class="hljs-title function_">putVal</span><span class="hljs-params">(K key, V value, <span class="hljs-type">boolean</span> onlyIfAbsent)</span> {
+    <span class="hljs-comment">// key 和 value 不能为空</span>
+    <span class="hljs-keyword">if</span> (key == <span class="hljs-literal">null</span> || value == <span class="hljs-literal">null</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
+    <span class="hljs-type">int</span> <span class="hljs-variable">hash</span> <span class="hljs-operator">=</span> spread(key.hashCode());
+    <span class="hljs-type">int</span> <span class="hljs-variable">binCount</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">Node</span>&lt;K,V&gt;[] <span class="hljs-variable">tab</span> <span class="hljs-operator">=</span> table;;) {
+        <span class="hljs-comment">// f = 目标位置元素</span>
+        Node&lt;K,V&gt; f; <span class="hljs-type">int</span> n, i, fh;<span class="hljs-comment">// fh 后面存放目标位置的元素 hash 值</span>
+        <span class="hljs-keyword">if</span> (tab == <span class="hljs-literal">null</span> || (n = tab.length) == <span class="hljs-number">0</span>)
+            <span class="hljs-comment">// 数组桶为空，初始化数组桶（自旋+CAS)</span>
+            tab = initTable();
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((f = tabAt(tab, i = (n - <span class="hljs-number">1</span>) &amp; hash)) == <span class="hljs-literal">null</span>) {
+            <span class="hljs-comment">// 桶内为空，CAS 放入，不加锁，成功了就直接 break 跳出</span>
+            <span class="hljs-keyword">if</span> (casTabAt(tab, i, <span class="hljs-literal">null</span>,<span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;K,V&gt;(hash, key, value, <span class="hljs-literal">null</span>)))
+                <span class="hljs-keyword">break</span>;  <span class="hljs-comment">// no lock when adding to empty bin</span>
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ((fh = f.hash) == MOVED)
+            tab = helpTransfer(tab, f);
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-type">V</span> <span class="hljs-variable">oldVal</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+            <span class="hljs-comment">// 使用 synchronized 加锁加入节点</span>
+            <span class="hljs-keyword">synchronized</span> (f) {
+                <span class="hljs-keyword">if</span> (tabAt(tab, i) == f) {
+                    <span class="hljs-comment">// 说明是链表</span>
+                    <span class="hljs-keyword">if</span> (fh &gt;= <span class="hljs-number">0</span>) {
+                        binCount = <span class="hljs-number">1</span>;
+                        <span class="hljs-comment">// 循环加入新的或者覆盖节点</span>
+                        <span class="hljs-keyword">for</span> (<span class="hljs-type">Node</span>&lt;K,V&gt; <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> f;; ++binCount) {
+                            K ek;
+                            <span class="hljs-keyword">if</span> (e.hash == hash &amp;&amp;
+                                ((ek = e.key) == key ||
+                                 (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek)))) {
+                                oldVal = e.val;
+                                <span class="hljs-keyword">if</span> (!onlyIfAbsent)
+                                    e.val = value;
+                                <span class="hljs-keyword">break</span>;
+                            }
+                            <span class="hljs-type">Node</span>&lt;K,V&gt; <span class="hljs-variable">pred</span> <span class="hljs-operator">=</span> e;
+                            <span class="hljs-keyword">if</span> ((e = e.next) == <span class="hljs-literal">null</span>) {
+                                pred.next = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>&lt;K,V&gt;(hash, key,
+                                                          value, <span class="hljs-literal">null</span>);
+                                <span class="hljs-keyword">break</span>;
+                            }
+                        }
+                    }
+                    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (f <span class="hljs-keyword">instanceof</span> TreeBin) {
+                        <span class="hljs-comment">// 红黑树</span>
+                        Node&lt;K,V&gt; p;
+                        binCount = <span class="hljs-number">2</span>;
+                        <span class="hljs-keyword">if</span> ((p = ((TreeBin&lt;K,V&gt;)f).putTreeVal(hash, key,
+                                                       value)) != <span class="hljs-literal">null</span>) {
+                            oldVal = p.val;
+                            <span class="hljs-keyword">if</span> (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                }
+            }
+            <span class="hljs-keyword">if</span> (binCount != <span class="hljs-number">0</span>) {
+                <span class="hljs-keyword">if</span> (binCount &gt;= TREEIFY_THRESHOLD)
+                    treeifyBin(tab, i);
+                <span class="hljs-keyword">if</span> (oldVal != <span class="hljs-literal">null</span>)
+                    <span class="hljs-keyword">return</span> oldVal;
+                <span class="hljs-keyword">break</span>;
+            }
+        }
+    }
+    addCount(<span class="hljs-number">1L</span>, binCount);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+</code></pre>
+<ol>
+<li>
+<p>根据 key 计算出 hashcode。</p>
+</li>
+<li>
+<p>判断是否需要进行初始化。</p>
+</li>
+<li>
+<p>如果当前 key 定位出的 Node 为空，表示当前位置可以写入数据，利用 CAS 尝试写入；失败后重新进入循环并判断最新状态。</p>
+</li>
+<li>
+<p>如果当前位置的 <code>hashcode == MOVED == -1</code>,则需要进行扩容。</p>
+</li>
+<li>
+<p>如果都不满足，则利用 synchronized 锁写入数据。</p>
+</li>
+<li>
+<p>如果数量大于 <code>TREEIFY_THRESHOLD</code> 则要执行树化方法，在 <code>treeifyBin</code> 中会首先判断当前数组长度 ≥64 时才会将链表转换为红黑树。</p>
+</li>
+</ol>
+<h3 id="4-get" tabindex="-1">4. get</h3>
+<p>get 流程比较简单，直接过一遍源码。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">V</span> <span class="hljs-title function_">get</span><span class="hljs-params">(Object key)</span> {
+    Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; e, p; <span class="hljs-type">int</span> n, eh; K ek;
+    <span class="hljs-comment">// key 所在的 hash 位置</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> spread(key.hashCode());
+    <span class="hljs-keyword">if</span> ((tab = table) != <span class="hljs-literal">null</span> &amp;&amp; (n = tab.length) &gt; <span class="hljs-number">0</span> &amp;&amp;
+        (e = tabAt(tab, (n - <span class="hljs-number">1</span>) &amp; h)) != <span class="hljs-literal">null</span>) {
+        <span class="hljs-comment">// 如果指定位置元素存在，头结点hash值相同</span>
+        <span class="hljs-keyword">if</span> ((eh = e.hash) == h) {
+            <span class="hljs-keyword">if</span> ((ek = e.key) == key || (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek)))
+                <span class="hljs-comment">// key hash 值相等，key值相同，直接返回元素 value</span>
+                <span class="hljs-keyword">return</span> e.val;
+        }
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (eh &lt; <span class="hljs-number">0</span>)
+            <span class="hljs-comment">// 头结点hash值小于0，说明正在扩容或者是红黑树，find查找</span>
+            <span class="hljs-keyword">return</span> (p = e.find(h, key)) != <span class="hljs-literal">null</span> ? p.val : <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">while</span> ((e = e.next) != <span class="hljs-literal">null</span>) {
+            <span class="hljs-comment">// 是链表，遍历查找</span>
+            <span class="hljs-keyword">if</span> (e.hash == h &amp;&amp;
+                ((ek = e.key) == key || (ek != <span class="hljs-literal">null</span> &amp;&amp; key.equals(ek))))
+                <span class="hljs-keyword">return</span> e.val;
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+}
+</code></pre>
+<p>总结一下 get 过程：</p>
+<ol>
+<li>根据 hash 值计算位置。</li>
+<li>查找到指定位置，如果头节点就是要找的，直接返回它的 value.</li>
+<li>如果头节点 hash 值小于 0，说明正在扩容或者是红黑树，查找之。</li>
+<li>如果是链表，遍历查找之。</li>
+</ol>
+<h3 id="5-size-计数" tabindex="-1">5. size 计数</h3>
+<p><code>ConcurrentHashMap</code> 的 <code>size()</code> 方法用来获取当前 Map 中元素的总数，但在高并发场景下，如何准确且高效地统计元素数量是一个技术难点。Java8 采用了一套精巧的分段计数机制来解决这个问题。</p>
+<h4 id="51-为什么需要分段计数" tabindex="-1">5.1 为什么需要分段计数</h4>
+<p>在并发环境下，如果多个线程同时执行 <code>put</code> 操作，它们都需要更新元素总数。如果使用一个共享的计数器变量，就会导致激烈的竞争——所有线程都在争抢同一个变量的修改权，这会严重影响性能。</p>
+<p>为了解决这个问题，<code>ConcurrentHashMap</code> 采用了<strong>分散热点</strong>的设计思想：不使用单一计数器，而是将计数分散到多个变量中。就像银行不会只开一个窗口办业务，而是开多个窗口分流客户一样，这样可以大大减少冲突。</p>
+<h4 id="52-basecount-和-countercells-的设计" tabindex="-1">5.2 baseCount 和 counterCells 的设计</h4>
+<p><code>ConcurrentHashMap</code> 内部维护了两个关键的计数相关字段：</p>
+<ul>
+<li><strong>baseCount</strong>：基础计数器，在没有竞争的情况下，直接通过 CAS 更新这个变量。可以把它理解为“主计数器”。</li>
+<li><strong>counterCells</strong>：计数器数组。当多个线程竞争 <code>baseCount</code> 失败时，会尝试将计数增量分散到 <code>counterCells</code> 数组的不同位置。
+<ul>
+<li>每个线程根据自己的 <strong>Probe 值</strong>（可理解为线程 ID 生成的一种哈希码）映射到数组的某个槽位，优先在这个“偏向的格子”里进行累加。</li>
+<li><strong>注意</strong>：这个格子并不是严格意义上的“线程私有”，当哈希冲突时，多个线程仍然可能映射到同一个槽位并发更新。</li>
+</ul>
+</li>
+</ul>
+<p><strong>举个例子</strong>：假设有 10 个线程同时往 Map 中添加元素。第一个线程成功通过 CAS 更新了 <code>baseCount</code>，但后面 9 个线程在更新 <code>baseCount</code> 时发现有竞争，就会转而去 <code>counterCells</code> 数组中找一个位置进行累加。这 9 个线程可能分散到数组的不同位置（比如线程 2 在 <code>counterCells[1]</code>，线程 3 在 <code>counterCells[2]</code>），从而将竞争从一个点分散到了多个点。。</p>
+<h4 id="53-put-元素时如何更新计数" tabindex="-1">5.3 put 元素时如何更新计数</h4>
+<p>在 <code>putVal</code> 方法的最后，我们可以看到调用了 <code>addCount(1L, binCount)</code> 方法，这个方法就是用来更新元素计数的。</p>
+<p><code>addCount</code> 的执行逻辑大致可以概括为：</p>
+<ol>
+<li>
+<p><strong>优先尝试更新 baseCount</strong></p>
+<ul>
+<li>如果当前还没有启用 <code>counterCells</code>（<code>counterCells == null</code>），线程会先尝试通过 CAS 直接更新 <code>baseCount</code>。</li>
+<li>如果 CAS 成功，说明竞争不激烈，直接返回即可。</li>
+</ul>
+</li>
+<li>
+<p><strong>竞争出现时，转向 counterCells</strong></p>
+<ul>
+<li>如果 CAS 更新 <code>baseCount</code> 失败（说明有其他线程在竞争），或者 <code>counterCells</code> 已经存在（说明系统之前已经遇到过竞争），线程就会尝试在 <code>counterCells</code> 中更新：
+<ul>
+<li>根据自己的 probe 值映射到某个槽位；</li>
+<li>对该槽位对应的 <code>CounterCell</code> 做一次 CAS 累加。</li>
+</ul>
+</li>
+<li>如果这个槽位为空或 CAS 仍然冲突，就会进入一个更“重”的路径 <code>fullAddCount</code>，在里面负责初始化槽位、重新选择槽位等。</li>
+</ul>
+</li>
+<li>
+<p><strong>动态初始化与扩容 counterCells</strong></p>
+<ul>
+<li>当检测到竞争比较激烈（例如：某个 cell 的 CAS 也频繁失败）时，<code>fullAddCount</code> 会在一个轻量级的自旋锁 <code>cellsBusy</code> 保护下：
+<ul>
+<li>如果 <code>counterCells</code> 还没初始化，就初始化一个较小的数组（比如长度 2）；</li>
+<li>如果已经存在并且长度还没达到上限（通常不超过 CPU 核数），就按 2 倍进行扩容，增加更多的计数槽位，把线程进一步打散。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>这种设计保证了：在低并发时只使用简单的 <code>baseCount</code>，路径非常短；在高并发时则自动切换到分段计数，通过 <code>counterCells</code> 和扩容机制摊薄竞争，兼顾了性能和准确性。</p>
+<h4 id="54-sumcount-如何计算元素总数" tabindex="-1">5.4 sumCount 如何计算元素总数</h4>
+<p>当我们调用 <code>size()</code> 方法时，最终会调用 <code>sumCount()</code> 方法来计算元素总数。<code>sumCount()</code> 的逻辑非常简单直接：</p>
+<ol>
+<li>读取 <code>baseCount</code> 的值作为基础值。</li>
+<li>遍历 <code>counterCells</code> 数组，将所有非空位置的计数值累加到基础值上。</li>
+<li>返回累加结果。</li>
+</ol>
+<p><strong>注意</strong>：</p>
+<ul>
+<li><strong>弱一致性</strong>：<code>sumCount()</code> 全程<strong>不加锁</strong>。在计算期间如果有其他线程插入数据，返回的结果只是一个<strong>近似值</strong>。但在高并发场景下，追求“刹那间的精确总数”代价过大且无意义，近似值通常已足够。</li>
+<li><strong>整型溢出</strong>：<code>size()</code> 方法返回 <code>int</code> 类型。如果元素数量超过 <code>Integer.MAX_VALUE</code>，它只会返回 <code>Integer.MAX_VALUE</code>。Java 8 新增的 <strong><code>mappingCount()</code></strong> 方法返回 <code>long</code> 类型，适合表示更大的计数，但并发更新期间返回的仍是估计值。</li>
+</ul>
+<h2 id="3-总结" tabindex="-1">3. 总结</h2>
+<p>Java7 中 <code>ConcurrentHashMap</code> 使用的分段锁，也就是每一个 Segment 上同时只有一个线程可以操作，每一个 <code>Segment</code> 都是一个类似 <code>HashMap</code> 数组的结构，它可以扩容，它的冲突会转化为链表。但是 <code>Segment</code> 的个数一但初始化就不能改变。</p>
+<p>Java8 中的 <code>ConcurrentHashMap</code> 使用的 <code>Synchronized</code> 锁加 CAS 的机制。结构也由 Java7 中的 <strong><code>Segment</code> 数组 + <code>HashEntry</code> 数组 + 链表</strong> 进化成了 <strong>Node 数组 + 链表 / 红黑树</strong>，Node 是类似于一个 HashEntry 的结构。它的冲突再达到一定大小时 <code>TREEIFY_THRESHOLD = 8</code> 会转化成红黑树，在冲突小于一定数量时 <code>UNTREEIFY_THRESHOLD = 6</code> 又退回链表。</p>
+<p>有些同学可能对 <code>Synchronized</code> 的性能存在疑问，其实 <code>Synchronized</code> 锁自从引入锁升级策略后，性能不再是问题，有兴趣的同学可以自己了解下 <code>Synchronized</code> 的<strong>锁升级</strong>。</p>
+<!-- @include: @article-footer.snippet.md -->

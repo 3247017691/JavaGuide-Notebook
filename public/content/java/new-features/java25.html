@@ -1,0 +1,167 @@
+<p>JDK 25 于 2025 年 9 月 16 日 发布，这是一个非常重要的版本，里程碑式。</p>
+<p>JDK 25 被 Oracle 等大多数 JDK 发行方列为 LTS（长期支持版）。Oracle 当前的 LTS 版本包括 JDK 8、JDK 11、JDK 17、JDK 21 和 JDK 25。</p>
+<p>JDK 25 共有 18 个新特性，这篇文章会挑选其中较为重要的一些新特性进行详细介绍：</p>
+<ul>
+<li><a href="https://openjdk.org/jeps/506" target="_blank" rel="noopener">JEP 506: Scoped Values (作用域值)</a></li>
+<li><a href="https://openjdk.org/jeps/512" target="_blank" rel="noopener">JEP 512: Compact Source Files and Instance Main Methods (紧凑源文件与实例主方法)</a></li>
+<li><a href="https://openjdk.org/jeps/519" target="_blank" rel="noopener">JEP 519: Compact Object Headers (紧凑对象头)</a></li>
+<li><a href="https://openjdk.org/jeps/521" target="_blank" rel="noopener">JEP 521: Generational Shenandoah (分代 Shenandoah GC)</a></li>
+<li><a href="https://openjdk.org/jeps/507" target="_blank" rel="noopener">JEP 507: Primitive Types in Patterns, instanceof, and switch (模式匹配支持基本类型, 第三次预览)</a></li>
+<li><a href="https://openjdk.org/jeps/505" target="_blank" rel="noopener">JEP 505: Structured Concurrency (结构化并发, 第五次预览)</a></li>
+<li><a href="https://openjdk.org/jeps/511" target="_blank" rel="noopener">JEP 511: Module Import Declarations (模块导入声明)</a></li>
+<li><a href="https://openjdk.org/jeps/513" target="_blank" rel="noopener">JEP 513: Flexible Constructor Bodies (灵活的构造函数体)</a></li>
+<li><a href="https://openjdk.org/jeps/508" target="_blank" rel="noopener">JEP 508: Vector API (向量 API, 第十次孵化)</a></li>
+</ul>
+<p>下图是从 JDK 8 到 JDK 25 每个版本的更新带来的新特性数量和更新时间：</p>
+<p><img src="/img/jdk8-jdk24-a3e32dd5.png" alt="" loading="lazy"></p>
+<h2 id="jdk-25" tabindex="-1">JDK 25</h2>
+<h3 id="jep-506-作用域值" tabindex="-1">JEP 506: 作用域值</h3>
+<p>作用域值（Scoped Values）可以在线程内和线程间共享不可变的数据，优于线程局部变量 <code>ThreadLocal</code>，尤其是在使用大量虚拟线程时。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">final</span> <span class="hljs-keyword">static</span> ScopedValue&lt;...&gt; V = ScopedValue.newInstance();
+
+<span class="hljs-comment">// In some method</span>
+ScopedValue.where(V, &lt;value&gt;)
+           .run(() -&gt; { ... V.get() ... call methods ... });
+
+<span class="hljs-comment">// In a method called directly or indirectly from the lambda expression</span>
+... V.get() ...
+</code></pre>
+<p>作用域值提供从调用者到被调用者的单向不可变数据传递。通过结构化并发创建的子线程可以继承父线程中的绑定，而且这种继承无需复制绑定，从而减少大量线程共享上下文时的时间和空间开销。</p>
+<h3 id="jep-512-紧凑源文件与实例主方法" tabindex="-1">JEP 512: 紧凑源文件与实例主方法</h3>
+<p>该特性第一次预览是由 <a href="https://openjdk.org/jeps/445" title="JEP 445" target="_blank" rel="noopener">JEP 445</a>（JDK 21）提出，随后经过了 JDK 22、JDK 23 和 JDK 24 的改进和完善，最终在 JDK 25 顺利转正。</p>
+<p>这个改进极大地简化了编写简单 Java 程序的步骤，允许将类和主方法写在同一个没有顶级 <code>public class</code> 的文件中，并允许 <code>main</code> 方法成为一个非静态的实例方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">HelloWorld</span> {
+    <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> {
+        System.out.println(<span class="hljs-string">&quot;Hello, World!&quot;</span>);
+    }
+}
+</code></pre>
+<p>进一步简化：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> {
+    System.out.println(<span class="hljs-string">&quot;Hello, World!&quot;</span>);
+}
+</code></pre>
+<p>这是为了降低 Java 的学习门槛和提升编写小型程序、脚本的效率而迈出的一大步。初学者不再需要理解 <code>public static void main(String[] args)</code> 这一长串复杂的声明。对于快速原型验证和脚本编写，这也使得 Java 成为一个更有吸引力的选择。</p>
+<h3 id="jep-519-紧凑对象头" tabindex="-1">JEP 519: 紧凑对象头</h3>
+<p>该特性在 <a href="https://openjdk.org/jeps/450" title="JEP 450" target="_blank" rel="noopener">JEP 450</a>（JDK 24）中作为实验特性引入，JDK 25 转为正式特性。</p>
+<p>通过优化对象头的内部结构，在 64 位架构的 HotSpot 虚拟机中，将对象头大小从原本的 96-128 位（12-16 字节）缩减至 64 位（8 字节），最终实现减少堆内存占用、提升部署密度、增强数据局部性的效果。</p>
+<p>紧凑对象头并没有成为 JVM 默认的对象头布局方式，需通过显式配置启用：</p>
+<ul>
+<li>JDK 24 需通过命令行参数组合启用：
+<code>$ java -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders ...</code>；</li>
+<li>JDK 25 之后仅需 <code>-XX:+UseCompactObjectHeaders</code> 即可启用。</li>
+</ul>
+<h3 id="jep-521-分代-shenandoah-gc" tabindex="-1">JEP 521: 分代 Shenandoah GC</h3>
+<p>Shenandoah GC 在 JDK 12 中作为实验特性引入，并在 JDK 15 中转为正式产品特性。它默认关闭，可通过 <code>-XX:+UseShenandoahGC</code> 启用。</p>
+<p>Shenandoah 是由 Red Hat 主导开发的低暂停垃圾收集器，目标是在堆较大时仍尽量保持较短且与堆大小相对独立的暂停时间。</p>
+<p>传统的 Shenandoah 对整个堆进行并发标记和整理，虽然暂停时间极短，但在处理年轻代对象时效率不如分代 GC。引入分代后，Shenandoah 可以更频繁、更高效地回收年轻代中的大量“朝生夕死”的对象，使其在保持极低暂停时间的同时，拥有了更高的吞吐量和更低的 CPU 开销。</p>
+<p>Shenandoah GC 需要通过命令启用：</p>
+<ul>
+<li>JDK 24 需通过命令行参数组合启用：<code>-XX:+UseShenandoahGC -XX:+UnlockExperimentalVMOptions -XX:ShenandoahGCMode=generational</code></li>
+<li>JDK 25 之后仅需 <code>-XX:+UseShenandoahGC -XX:ShenandoahGCMode=generational</code> 即可启用。</li>
+</ul>
+<h3 id="jep-507-模式匹配支持基本类型第三次预览" tabindex="-1">JEP 507: 模式匹配支持基本类型（第三次预览）</h3>
+<p>该特性第一次预览是由 <a href="https://openjdk.org/jeps/455" title="JEP 455" target="_blank" rel="noopener">JEP 455</a>（JDK 23）提出。</p>
+<p>模式匹配可以在 <code>switch</code> 和 <code>instanceof</code> 语句中处理所有的基本数据类型（<code>int</code>, <code>double</code>, <code>boolean</code> 等）</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">test</span><span class="hljs-params">(Object obj)</span> {
+    <span class="hljs-keyword">if</span> (obj <span class="hljs-keyword">instanceof</span> <span class="hljs-type">int</span> i) {
+        System.out.println(<span class="hljs-string">&quot;这是一个int类型: &quot;</span> + i);
+    }
+}
+</code></pre>
+<p>这样就可以像处理对象类型一样，对基本类型进行更安全、更简洁的类型匹配和转换，进一步消除了 Java 中的模板代码。</p>
+<h3 id="jep-505-结构化并发第五次预览" tabindex="-1">JEP 505: 结构化并发（第五次预览）</h3>
+<p>JDK 19 以孵化器 API 的形式引入了结构化并发。JDK 25 中该 API 处于第五次预览阶段，目的是简化多线程编程，并不是为了取代 <code>java.util.concurrent</code>。</p>
+<p>结构化并发将不同线程中运行的多个任务视为单个工作单元，从而简化错误处理、提高可靠性并增强可观察性。也就是说，结构化并发保留了单线程代码的可读性、可维护性和可观察性。</p>
+<p>结构化并发的基本 API 是 <code>StructuredTaskScope</code>，它支持将任务拆分为多个并发子任务，在它们自己的线程中执行，并且子任务必须在主任务继续之前完成。</p>
+<p><code>StructuredTaskScope</code> 的基本用法如下：</p>
+<pre class="md-pre"><code class="hljs">    <span class="hljs-keyword">try</span> (<span class="hljs-type">var</span> <span class="hljs-variable">scope</span> <span class="hljs-operator">=</span> StructuredTaskScope.open()) {
+        <span class="hljs-comment">// 使用fork方法派生线程来执行子任务</span>
+        <span class="hljs-type">Subtask</span>&lt;Integer&gt; <span class="hljs-variable">subtask1</span> <span class="hljs-operator">=</span> scope.fork(task1);
+        <span class="hljs-type">Subtask</span>&lt;String&gt; <span class="hljs-variable">subtask2</span> <span class="hljs-operator">=</span> scope.fork(task2);
+        <span class="hljs-comment">// 等待线程完成</span>
+        scope.join();
+        <span class="hljs-comment">// 结果的处理可能包括处理或重新抛出异常</span>
+        ... process results/exceptions ...
+    } <span class="hljs-comment">// close</span>
+</code></pre>
+<p>结构化并发非常适合虚拟线程，虚拟线程是 JDK 实现的轻量级线程。许多虚拟线程共享同一个操作系统线程，从而允许非常多的虚拟线程。</p>
+<h3 id="jep-511-模块导入声明" tabindex="-1">JEP 511: 模块导入声明</h3>
+<p>该特性第一次预览是由 <a href="https://openjdk.org/jeps/476" title="JEP 476" target="_blank" rel="noopener">JEP 476</a>（JDK 23）提出，随后在 <a href="https://openjdk.org/jeps/494" title="JEP 494" target="_blank" rel="noopener">JEP 494</a>（JDK 24）中进行了完善，JDK 25 顺利转正。</p>
+<p>模块导入声明允许在 Java 代码中简洁地导入整个模块的所有导出包，而无需逐个声明包的导入。这一特性简化了模块化库的重用，特别是在使用多个模块时，避免了大量的包导入声明，使得开发者可以更方便地访问第三方库和 Java 基本类。</p>
+<p>此特性对初学者和原型开发尤为有用，因为它无需开发者将自己的代码模块化，同时保留了对传统导入方式的兼容性，提升了开发效率和代码可读性。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 导入整个 java.base 模块，开发者可以直接访问 List、Map、Stream 等类，而无需每次手动导入相关包</span>
+<span class="hljs-keyword">import</span> <span class="hljs-keyword">module</span> java.base;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Example</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        <span class="hljs-type">String</span>[] <span class="hljs-variable">fruits</span> <span class="hljs-operator">=</span> { <span class="hljs-string">&quot;apple&quot;</span>, <span class="hljs-string">&quot;berry&quot;</span>, <span class="hljs-string">&quot;citrus&quot;</span> };
+        <span class="hljs-type">Map</span>&lt;String, String&gt; <span class="hljs-variable">fruitMap</span> <span class="hljs-operator">=</span> Stream.of(fruits)
+            .collect(Collectors.toMap(
+                s -&gt; s.toUpperCase().substring(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>),
+                Function.identity()));
+
+        System.out.println(fruitMap);
+    }
+}
+</code></pre>
+<h3 id="jep-513-灵活的构造函数体" tabindex="-1">JEP 513: 灵活的构造函数体</h3>
+<p>该特性第一次预览是由 <a href="https://openjdk.org/jeps/447" title="JEP 447" target="_blank" rel="noopener">JEP 447</a>（JDK 22）提出，随后在 <a href="https://openjdk.org/jeps/482" title="JEP 482 " target="_blank" rel="noopener">JEP 482 </a>（JDK 23）和 <a href="https://openjdk.org/jeps/492" title="JEP 492" target="_blank" rel="noopener">JEP 492</a>（JDK 24）经历了预览，JDK 25 顺利转正。</p>
+<p>Java 要求在构造函数中，<code>super(...)</code> 或 <code>this(...)</code> 调用必须作为第一条语句出现。这意味着我们无法在调用父类构造函数之前在子类构造函数中直接初始化字段。</p>
+<p>灵活的构造函数体解决了这一问题，它允许在构造函数体内，在调用 <code>super(..)</code> 或 <code>this(..)</code> 之前编写语句，这些语句可以初始化字段，但不能引用正在构造的实例。这样可以防止在父类构造函数中调用子类方法时，子类的字段未被正确初始化，增强了类构造的可靠性。</p>
+<p>这一特性解决了之前 Java 语法限制了构造函数代码组织的问题，让开发者能够更自由、更自然地表达构造函数的行为，例如在构造函数中直接进行参数验证、准备和共享，而无需依赖辅助方法或构造函数，提高了代码的可读性和可维护性。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> String name;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> age;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">Person</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> age)</span> {
+        <span class="hljs-keyword">if</span> (age &lt; <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;Age cannot be negative.&quot;</span>);
+        }
+        <span class="hljs-built_in">this</span>.name = name; <span class="hljs-comment">// 在调用父类构造函数之前初始化字段</span>
+        <span class="hljs-built_in">this</span>.age = age;
+        <span class="hljs-comment">// ... 其他初始化代码</span>
+    }
+}
+
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">Employee</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> employeeId;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">Employee</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> age, <span class="hljs-type">int</span> employeeId)</span> {
+        <span class="hljs-built_in">this</span>.employeeId = employeeId; <span class="hljs-comment">// 在调用父类构造函数之前初始化字段</span>
+        <span class="hljs-built_in">super</span>(name, age); <span class="hljs-comment">// 调用父类构造函数</span>
+        <span class="hljs-comment">// ... 其他初始化代码</span>
+    }
+}
+</code></pre>
+<h3 id="jep-508-向量-api第十次孵化" tabindex="-1">JEP 508: 向量 API（第十次孵化）</h3>
+<p>向量计算由对向量的一系列操作组成。向量 API 用来表达向量计算，该计算可以在运行时可靠地编译为支持的 CPU 架构上的最佳向量指令，从而实现优于等效标量计算的性能。</p>
+<p>向量 API 的目标是为用户提供简洁易用且与平台无关的表达范围广泛的向量计算。</p>
+<p>这是对数组元素的简单标量计算：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">void</span> <span class="hljs-title function_">scalarComputation</span><span class="hljs-params">(<span class="hljs-type">float</span>[] a, <span class="hljs-type">float</span>[] b, <span class="hljs-type">float</span>[] c)</span> {
+   <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; a.length; i++) {
+        c[i] = (a[i] * a[i] + b[i] * b[i]) * -<span class="hljs-number">1.0f</span>;
+   }
+}
+</code></pre>
+<p>这是使用 Vector API 进行的等效向量计算：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">VectorSpecies</span>&lt;Float&gt; <span class="hljs-variable">SPECIES</span> <span class="hljs-operator">=</span> FloatVector.SPECIES_PREFERRED;
+
+<span class="hljs-type">void</span> <span class="hljs-title function_">vectorComputation</span><span class="hljs-params">(<span class="hljs-type">float</span>[] a, <span class="hljs-type">float</span>[] b, <span class="hljs-type">float</span>[] c)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">upperBound</span> <span class="hljs-operator">=</span> SPECIES.loopBound(a.length);
+    <span class="hljs-keyword">for</span> (; i &lt; upperBound; i += SPECIES.length()) {
+        <span class="hljs-comment">// FloatVector va, vb, vc;</span>
+        <span class="hljs-type">var</span> <span class="hljs-variable">va</span> <span class="hljs-operator">=</span> FloatVector.fromArray(SPECIES, a, i);
+        <span class="hljs-type">var</span> <span class="hljs-variable">vb</span> <span class="hljs-operator">=</span> FloatVector.fromArray(SPECIES, b, i);
+        <span class="hljs-type">var</span> <span class="hljs-variable">vc</span> <span class="hljs-operator">=</span> va.mul(va)
+                   .add(vb.mul(vb))
+                   .neg();
+        vc.intoArray(c, i);
+    }
+    <span class="hljs-keyword">for</span> (; i &lt; a.length; i++) {
+        c[i] = (a[i] * a[i] + b[i] * b[i]) * -<span class="hljs-number">1.0f</span>;
+    }
+}
+</code></pre>
+<p>尽管仍在孵化中，但其第十次迭代足以证明其重要性。它使得 Java 在科学计算、机器学习、大数据处理等性能敏感领域，能够编写出接近甚至媲美 C++等本地语言性能的代码。这是 Java 在高性能计算领域保持竞争力的关键。</p>

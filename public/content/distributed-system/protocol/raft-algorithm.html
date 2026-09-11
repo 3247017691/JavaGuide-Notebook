@@ -1,0 +1,233 @@
+<blockquote>
+<p>本文由 <a href="https://github.com/Snailclimb" target="_blank" rel="noopener">SnailClimb</a> 和 <a href="https://github.com/jun0315" target="_blank" rel="noopener">Xieqijun</a> 共同完成。</p>
+</blockquote>
+<h2 id="1-背景" tabindex="-1">1 背景</h2>
+<p>在如今的互联网架构中，为了扛住海量流量，系统往往需要横向堆机器。机器一多，宕机、断网这些破事就成了家常便饭。怎么让这群随时可能掉线的服务器保持步调一致，不对外提供错乱的数据？这就轮到<strong>分布式共识算法</strong>出场了。</p>
+<p>2014年，Diego Ongaro 等人发表了 Raft 算法。它的诞生有一个很明确的使命：<strong>拯救被 Paxos 算法折磨的程序员</strong>。Raft 主打一个“易于理解”，它将复杂的共识问题拆解成了几个独立的模块：</p>
+<ul>
+<li><strong>Leader 选举</strong>：使用随机化选举超时（工程上常见如 150–300ms 或更大范围，具体取决于网络与故障模型）。</li>
+<li><strong>日志复制</strong>：Leader 通过 AppendEntries RPC 广播日志。</li>
+<li><strong>安全性</strong>：包括选举限制和日志匹配。</li>
+</ul>
+<p>Raft 在实际生产中得到了广泛应用，基于 Raft 的实现如 etcd、Consul 等已成为分布式系统的重要组成部分。后续学术界和工业界也对 Raft 进行了多项扩展和优化，包括：</p>
+<ul>
+<li><strong>Pre-Vote</strong>（2014）：防止网络分区的节点干扰稳定集群的选举</li>
+<li><strong>Read Index</strong>（2014）：在 Leader 任期内通过线性一致性读优化读性能</li>
+<li><strong>Lease Read</strong>：基于租约的线性一致性读方案</li>
+<li><strong>Joint Consensus</strong>：用于集群成员变更的联合一致机制（通过引入过渡配置，典型过程为旧配置 → 联合配置 → 新配置）</li>
+</ul>
+<p>因此，系统必须在正常操作期间处理服务器的上下线。它们必须对变故做出反应并在几秒钟内自动适应；对客户来说的话，明显的中断通常是不可接受的。</p>
+<p>幸运的是，分布式共识可以帮助应对这些挑战。</p>
+<h3 id="11-非拜占庭条件下的选主类比" tabindex="-1">1.1 非拜占庭条件下的“选主”类比</h3>
+<p>Raft 有一个前提假设：<strong>非拜占庭容错（CFT）</strong>。说白了就是，兄弟们可能会死机、会断网，但绝对不会出内鬼传递假情报。</p>
+<p>我们可以用“将军选帅”来粗略理解这个过程： 假设有 A、B、C 三个将军，目前群龙无首。每个人心里都有个随机的倒计时（选举超时）。谁的倒计时先结束，谁就站出来大喊：“我要当大将军，请给我投票！” 如果其他将军还没开始竞选，也没把票投给别人，就会顺水推舟同意他。当这位将军拿到<strong>过半数</strong>的赞成票，他就成了大当家（Leader）。以后打不打仗，全听他的。如果信使半路阵亡，大家都没收到回音，那就重置倒计时，再来一轮。</p>
+<h3 id="12-到底什么是共识算法" tabindex="-1">1.2 到底什么是共识算法？</h3>
+<p>共识算法的核心目标，就是<strong>让一群机器看起来像一台机器</strong>。只要集群里超过半数的机器还活着，整个系统就能正常接客。</p>
+<p>这通常是通过<strong>复制状态机</strong>来实现的：给每个节点发一本一模一样的账本（日志）。只要大家按照同样的顺序去执行账本上的命令，最后得到的结果自然完全一样。所以，共识算法本质上干的就是一件事——<strong>保证所有节点的账本绝对一致</strong>。共识是可容错系统中的一个基本问题：即使面对故障，服务器也可以在共享状态上达成一致。</p>
+<p><img src="/img/paxos-rsm-architecture-fdf50738.png" alt="" loading="lazy"></p>
+<h2 id="2-基础概念" tabindex="-1">2 基础概念</h2>
+<p>在深入 Raft 之前，我们得先认识里面的三大核心角色、任期机制和日志结构。</p>
+<h3 id="21-节点类型" tabindex="-1">2.1 节点类型</h3>
+<p>一个 Raft 集群包括若干服务器，以典型的 5 服务器集群举例。在任意的时间，每个服务器一定会处于以下三个状态中的一个：</p>
+<ul>
+<li><strong>Leader（领导者）</strong>：大当家。全权负责接待客户端、写账本、并把账本同步给小弟。为了防止别人篡位，他必须不断地向全员发送心跳，宣告“我还活着”。</li>
+<li><strong>Follower（跟随者）</strong>：安分守己的小弟。平时绝对不主动发起请求，只被动接收老大的心跳和账本同步。</li>
+<li><strong>Candidate（候选人）</strong>：临时状态。如果小弟迟迟等不到老大的心跳，就会觉得自己行了，变身候选人开始拉票。</li>
+</ul>
+<p>在正常的情况下，只有一个服务器是 Leader，剩下的服务器是 Follower。Follower 是被动的，它们不会发送任何请求，只是响应来自 Leader 和 Candidate 的请求。</p>
+<p><img src="/img/paxos-server-state-1b632d32.png" alt="" loading="lazy"></p>
+<h3 id="22-任期" tabindex="-1">2.2 任期</h3>
+<p><img src="/img/paxos-term-a8e53feb.png" alt="" loading="lazy"></p>
+<p>Raft 算法将时间划分为任意长度的任期（term），任期用连续的数字表示，看作当前 term 号。每一个任期的开始都是一次选举，在选举开始时，一个或多个 Candidate 会尝试成为 Leader。如果一个 Candidate 赢得了选举，它就会在该任期内担任 Leader。如果没有选出 Leader（例如出现分票 split vote），该任期可能没有 Leader；随后在新的选举超时后会进入下一个任期并重新发起选举。只要多数节点可用且网络最终可达，系统通常能够在若干轮选举后选出 Leader。</p>
+<p>每个节点都会存储当前的 term 号，当服务器之间进行通信时会交换当前的 term 号；如果有服务器发现自己的 term 号比其他人小，那么他会更新到较大的 term 值。如果一个 Candidate 或者 Leader 发现自己的 term 过期了，他会立即退回成 Follower。如果一台服务器收到的请求的 term 号是过期的，那么它会拒绝此次请求。</p>
+<p>下面这张图是我手绘的，更容易理解一些，就很贴心：</p>
+<p><img src="/img/raft-term-progression-43b14d05.png" alt="" loading="lazy"></p>
+<h3 id="23-日志" tabindex="-1">2.3 日志</h3>
+<p>只有 Leader 有资格往账本里追加记录（Entry）。一条日志包含三个核心要素：<code>&lt;当前任期, 索引号, 具体操作指令&gt;</code>。</p>
+<p>这里有两个非常关键的进度指针：</p>
+<ul>
+<li><strong>commitIndex</strong>：大家公认已经安全落地的日志进度（已经被复制到过半数节点）。</li>
+<li><strong>lastApplied</strong>：这台机器本地真正执行完的日志进度。</li>
+</ul>
+<h2 id="3-领导人选举" tabindex="-1">3 领导人选举</h2>
+<p><img src="/img/raft-election-b5e23d8b.png" alt="" loading="lazy"></p>
+<p>Raft 使用心跳机制来触发 Leader 的选举。</p>
+<p>如果一台服务器持续收到来自 Leader 的 AppendEntries（心跳或日志复制）等合法 RPC，它会保持为 Follower 状态并刷新选举计时器。</p>
+<p>Leader 会向所有的 Follower 周期性发送心跳来保证自己的 Leader 地位。如果一个 Follower 在一个周期内没有收到心跳信息，就叫做选举超时，然后它就会认为此时没有可用的 Leader，并且开始进行一次选举以选出一个新的 Leader。</p>
+<p>为了开始新的选举，Follower 会自增自己的 term 号并且转换状态为 Candidate。然后他会向所有节点发起 RequestVote RPC 请求， Candidate 的状态会持续到以下情况发生：</p>
+<ul>
+<li>赢得选举</li>
+<li>其他节点赢得选举</li>
+<li>一轮选举结束，无人胜出</li>
+</ul>
+<p>赢得选举的条件是：一个 Candidate 在一个任期内收到了来自集群内的多数选票<code>（N/2+1）</code>，就可以成为 Leader。</p>
+<p>在 Candidate 等待选票的时候，它可能收到其他节点声明自己是 Leader 的心跳，此时有两种情况：</p>
+<ul>
+<li>该 Leader 的 term 号大于等于自己的 term 号，说明对方已经成为 Leader，则自己回退为 Follower。</li>
+<li>该 Leader 的 term 号小于自己的 term 号，那么会拒绝该请求并让该节点更新 term。</li>
+</ul>
+<p>由于可能同一时刻出现多个 Candidate，导致没有 Candidate 获得大多数选票，如果没有其他手段来重新分配选票的话，那么可能会无限重复下去。</p>
+<p>Raft 使用了随机的选举超时时间来避免上述情况。每一个 Candidate 在发起选举后，都会随机化一个新的选举超时时间，这种机制使得各个服务器能够分散开来，在大多数情况下只有一个服务器会率先超时；它会在其他服务器超时之前赢得选举。</p>
+<h2 id="4-日志复制" tabindex="-1">4 日志复制</h2>
+<p>一旦选出了 Leader，它就开始接受客户端的请求。每一个客户端的请求都包含一条需要被复制状态机（<code>Replicated State Machine</code>）执行的命令。</p>
+<p>Leader 收到客户端请求后，会生成一个 entry，包含<code>&lt;index,term,cmd&gt;</code>，再将这个 entry 添加到自己的日志末尾后，向所有的节点广播该 entry，要求其他服务器复制这条 entry。</p>
+<p>如果 Follower 接受该 entry，则会将 entry 添加到自己的日志后面，同时返回给 Leader 同意。</p>
+<p>如果 Leader 收到了多数 Follower 对该日志复制成功的响应，Leader 会推进自己的 commitIndex，并在随后将这些已提交（committed）的日志按顺序应用（apply）到状态机后再向客户端返回结果。</p>
+<p>需要注意一个关键限制：Leader 只能基于“当前任期（current term）内产生的日志在多数派上复制成功”来推进 commitIndex。对于之前任期遗留的日志，即使它们已经被复制到多数节点，Leader 也不应仅凭多数派直接提交；通常会通过提交当前任期的一条新日志（常见做法是当选后追加并提交一条 no-op 日志）来间接推动历史日志一并提交。</p>
+<p>Follower 不会自行决定提交点；它们从 Leader 的 AppendEntries RPC 中携带的 leaderCommit 得知当前可提交的最大索引，并将本地 commitIndex 更新为 min(leaderCommit, lastLogIndex)，再按序 apply 到状态机。</p>
+<h3 id="41-日志匹配属性log-matching-property" tabindex="-1">4.1 日志匹配属性（Log Matching Property）</h3>
+<p>Raft 通过 <strong>日志匹配属性（Log Matching Property）</strong> 保证日志绝对不会分叉，这是 Raft 安全性的基石之一。该属性包含两个核心保证：</p>
+<ul>
+<li><strong>保证一</strong>：如果两个日志在相同 index 位置的 entry 具有相同的 term，那么它们存储的 cmd 一定相同</li>
+<li><strong>保证二</strong>：如果两个日志在相同 index 位置的 entry 具有相同的 term，那么该位置之前的所有 entry 也完全相同</li>
+</ul>
+<h4 id="归纳法证明" tabindex="-1">归纳法证明</h4>
+<p>日志匹配属性通过归纳法得以保证：</p>
+<ol>
+<li><strong>基础情况</strong>：日志为空时，属性自然成立</li>
+<li><strong>归纳步骤</strong>：假设日志在 index N 之前完全一致，当 Leader 尝试追加 entry N+1 时，通过 <strong>AppendEntries RPC 的一致性检查</strong> 确保：</li>
+</ol>
+<pre class="md-pre"><code class="hljs">AppendEntries RPC 参数：
+<span class="hljs-bullet">- </span>prevLogIndex：前一条日志的索引（Leader 认为与 Follower 对齐的位置）
+<span class="hljs-bullet">- </span>prevLogTerm：前一条日志的任期
+<span class="hljs-bullet">- </span>entries[]：待追加的新日志条目
+</code></pre>
+<p><strong>一致性检查逻辑</strong>：</p>
+<ul>
+<li>Follower 收到 AppendEntries 请求后，检查本地日志中 index = prevLogIndex 的位置</li>
+<li>如果该位置的 entry.term == prevLogTerm，说明Leader和Follower在prevLogIndex之前的日志完全一致，通过检查</li>
+<li>如果不存在或 term 不匹配，拒绝追加，返回失败</li>
+</ul>
+<p><strong>关键点</strong>：通过检查 prevLogIndex 和 prevLogTerm 的配对，Leader 和 Follower 能够<strong>数学上确保</strong>它们对日志历史达成一致。只有当“最后一个已知一致点”确实一致时，才会追加新日志。这形成了归纳证明的传递链条：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">entry</span>[<span class="hljs-number">0</span>] 一致 → <span class="hljs-keyword">entry</span>[<span class="hljs-number">1</span>] 一致 → <span class="hljs-keyword">entry</span>[<span class="hljs-number">2</span>] 一致 → ... → <span class="hljs-keyword">entry</span>[N] 一致
+    ↑_____________通过 prevLogIndex/prevLogTerm 递归验证_____________↑
+</code></pre>
+<p>因此，日志绝不会出现两个不同的值在同一 index 位置被“提交”的情况——即日志不分叉。</p>
+<h4 id="工程实现优化" tabindex="-1">工程实现优化</h4>
+<p>在实际生产实现（如 etcd 3.5.x）中，除了上述基础的一致性检查外，还包含多项工程优化：</p>
+<ul>
+<li>
+<p><strong>快速回退（Fast Backup）</strong>：当 AppendEntries 一致性检查失败时，Follower 返回冲突日志对应的 term 及其边界索引（该 term 的第一条和最后一条 index），Leader 据此一次性跳过整段冲突区间，而非逐条递减 nextIndex 重试。</p>
+</li>
+<li>
+<p><strong>重试风暴防护</strong>：高负载下可能出现大量 AppendEntries 失败重试，实现中通常会加入：</p>
+<ul>
+<li><strong>Jitter 退避</strong>：重试间隔加入随机抖动，避免多个 Follower 同时重试</li>
+<li><strong>背压机制</strong>：限制单个 Follower 的重试速率，防止占用过多网络带宽</li>
+</ul>
+</li>
+</ul>
+<p>这些优化不影响日志匹配属性的理论正确性，而是提升了系统在异常场景下的恢复效率。</p>
+<h3 id="42-日志不一致的恢复" tabindex="-1">4.2 日志不一致的恢复</h3>
+<p>正常运作时，大当家（Leader）和小弟（Follower）的账本是完全同步的。然而，一旦老 Leader 突然宕机，新老交替之际往往会在集群中遗留大量未对齐的脏数据。</p>
+<p>这时，新 Leader 发起 AppendEntries 同步请求就会触发“一致性检查报错”。Raft 解决数据冲突的逻辑非常霸道：<strong>一切以现任 Leader 的账本为最高准则</strong>，Follower 本地任何不一致的记录都必须被无情抹除并强行覆盖。</p>
+<p>具体怎么做呢？Leader 会像“拉链”一样顺藤摸瓜，往前倒推寻找双方最后一次完美吻合的历史节点。找到这个“分叉点”后，Follower 会把分叉点之后的烂摊子全部咔嚓掉，老老实实地拷贝 Leader 提供的最新日志。</p>
+<p>在代码层面，Leader 会在内存里给每个 Follower 单独记一本账，核心指针叫 <code>nextIndex</code>（预估要发给该小弟的下一条日志位置）。新官上任三把火，Leader 刚接盘时，会盲目自信地把所有小弟的 <code>nextIndex</code> 都预设为自己最新日志的索引加一。如果小弟的数据其实比较落后或者有冲突，第一发 AppendEntries 必然惨遭拒绝。接下来就是找分叉点的两种流派：</p>
+<ul>
+<li><strong>传统的朴素做法（逐条试探）</strong>：撞了南墙就退一步。Leader 会把 <code>nextIndex</code> 减一，再发一次 RPC 试探。如果还不行，就继续减一，犹如乌龟漫步般逐条往前回退，直到彻底对上暗号。</li>
+<li><strong>工业级提速优化（Fast Backup 快速回退）</strong>：在真实的生产环境中，逐条回退绝对是性能灾难。因此，工业界引入了快速回退机制。小弟在拒绝同步时不再是单纯地摇摇头，而是直接亮出底牌：“我这批错乱日志属于哪个历史任期（term），以及这个任期的头尾边界在哪里”。Leader 拿到这份情报，直接大刀阔斧地一次性跨越整段错误任期，极大地削减了冗余的网络重试次数。</li>
+</ul>
+<p>经过这番拉扯，<code>nextIndex</code> 终将精准锚定双方的共识起点。此时，AppendEntries 终于收获成功回执，Follower 上的冲突数据被彻底清空，缺失的正统日志被严丝合缝地填补。一旦跨过这个坎，双方的账本就能在整个任期内保持如影随形、高度一致。</p>
+<h2 id="5-安全性" tabindex="-1">5 安全性</h2>
+<h3 id="51-选举限制" tabindex="-1">5.1 选举限制</h3>
+<p>Leader 需要保证自己存储全部已经提交的日志条目。这样才可以使日志条目只有一个流向：从 Leader 流向 Follower，Leader 永远不会覆盖已经存在的日志条目。</p>
+<p>每个 Candidate 发送 RequestVote RPC 时，都会带上最后一个 entry 的信息。所有节点收到投票信息时，会对该 entry 进行比较，如果发现自己的更新，则拒绝投票给该 Candidate。</p>
+<p>判断日志新旧的方式：如果两个日志的 term 不同，term 大的更新；如果 term 相同，更长的 index 更新。</p>
+<h3 id="52-提交规则只提交当前任期日志" tabindex="-1">5.2 提交规则（只提交当前任期日志）</h3>
+<p>Leader 推进 commitIndex 时，需要满足“当前任期产生的某条日志已复制到多数派”这一条件。对于旧任期遗留的日志，即使它们已经复制到多数派，Leader 也不应仅凭此直接提交；通常通过提交当前任期的一条新日志（常见为 no-op）来间接提交历史日志。这一限制用于避免 Leader 频繁切换时出现已提交日志被覆盖的安全性问题。</p>
+<h3 id="53-节点崩溃与网络分区" tabindex="-1">5.3 节点崩溃与网络分区</h3>
+<p>如果 Follower 和 Candidate 崩溃，处理方式会简单很多。之后发送给它的 RequestVote RPC 和 AppendEntries RPC 会失败。由于 Raft 的所有请求都是幂等的，所以失败的话会无限的重试。如果崩溃恢复后，就可以收到新的请求，然后选择追加或者拒绝 entry。</p>
+<p>如果 Leader 崩溃，节点在 electionTimeout 内收不到心跳会触发新一轮选主；在选主完成前，系统通常无法对外提供线性一致的写入（以及线性一致读），表现为一段不可用窗口。</p>
+<p><strong>量化分析</strong>：在 5 节点集群中，Leader 崩溃后的不可用窗口通常小于 1 秒（P99 &lt; 500ms 选举超时 + 一轮选举时间）。这是 <strong>PACELC 定理</strong>的体现：发生分区（P）时，系统选择牺牲可用性（A）以保证一致性（C）。幂等重试机制确保节点恢复后能安全追赶数据状态。</p>
+<h4 id="单节点隔离与-term-暴增问题" tabindex="-1">单节点隔离与 Term 暴增问题</h4>
+<p>在标准 Raft 算法中，<strong>单节点网络隔离</strong>可能导致 <strong>Term 暴增（Term Inflation）</strong> 问题，造成“劣币驱逐良币”——一个被隔离的少数派节点在恢复后破坏健康集群的稳定性。</p>
+<p><strong>场景推演</strong>：</p>
+<p>假设一个 5 节点集群，Leader 为节点 A，Follower 为 B、C、D、E。此时节点 E 发生网络分区，被彻底隔离：</p>
+<pre class="md-pre"><code class="hljs">正常区域：{<span class="hljs-selector-tag">A</span>, <span class="hljs-selector-tag">B</span>, C, D}    （Leader <span class="hljs-selector-tag">A</span> + 多数派，可正常服务）
+隔离区域：{E}             （单节点隔离，无法收到心跳）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>时间线</th>
+<th>正常区域 {A, B, C, D}</th>
+<th>隔离区域 {E}</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T0</td>
+<td>Leader A 正常服务，Term = 5</td>
+<td>E 收不到心跳，选举超时</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>集群继续正常工作</td>
+<td>E 自增 Term 发起选举（Term 6），但无响应</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>...</td>
+<td>E 继续自增（Term 7, 8, ...），假设涨到 Term 99</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>网络恢复，E 带着 Term 99 接入集群</td>
+<td>E 向 {A, B, C, D} 广播 RequestVote (Term 99)</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>节点 A 收到 Term 99 &gt; 自己的 Term 5，<strong>被迫退位</strong></td>
+<td>E 的“高 Term”破坏了健康集群</td>
+</tr>
+</tbody>
+</table>
+<p><strong>问题分析</strong>：</p>
+<ul>
+<li>{A, B, C, D} 是<strong>合法的多数派</strong>（4/5），系统本应继续正常工作</li>
+<li>节点 E 是<strong>少数派</strong>（1/5），它的隔离不应影响集群整体</li>
+<li><strong>关键问题</strong>：E 的 Term 暴涨导致健康的 Leader A 被迫下线</li>
+<li><strong>后果</strong>：整个集群需要重新选举，造成不必要的写入中断</li>
+</ul>
+<p>这是标准 Raft 的一个已知边界问题：少数派节点的“疯狂选举”会干扰多数派的正常运行。</p>
+<h4 id="pre-vote-机制" tabindex="-1">Pre-Vote 机制</h4>
+<p>为了解决上述问题，Raft 的扩展方案 <strong>Pre-Vote</strong> 被提出。Pre-Vote 要求节点在真正发起选举前，先进行一次“预投票”：</p>
+<ol>
+<li><strong>预投票阶段</strong>：Candidate 向其他节点发送 PreVoteRequest，携带自己的日志信息</li>
+<li><strong>预投票条件</strong>：
+<ul>
+<li>候选人的日志至少与接收者一样新（选举限制）</li>
+<li><strong>接收者确认自己与 Leader 的连接已断开</strong>（超过 electionTimeout 未收到心跳）</li>
+</ul>
+</li>
+<li><strong>正式选举</strong>：只有收到多数节点的 PreVote 响应后，才真正增加 term 并发起 RequestVote</li>
+</ol>
+<p><strong>Pre-Vote 如何防止 Term 暴增</strong>：</p>
+<ul>
+<li>在上述单节点隔离场景中，E 在隔离期间发起 Pre-Vote 时，<strong>其他节点仍能收到 Leader A 的心跳</strong></li>
+<li>因此其他节点会<strong>拒绝 E 的 PreVote 请求</strong>（因为与 Leader 连接正常）</li>
+<li>E 无法获得多数 PreVote 响应，<strong>不会真正增加 Term</strong></li>
+<li>网络恢复后，E 的 Term 仍然较低，不会干扰健康的 Leader A</li>
+</ul>
+<p><strong>核心思想</strong>：只有确认自己与 Leader 失去连接后，节点才开始真正增加 Term。这有效防止了少数派节点的 Term 暴涨干扰多数派。</p>
+<p>Pre-Vote 机制已广泛应用于 etcd、TiKV、Consul 等生产级 Raft 实现。</p>
+<h3 id="54-时间与可用性" tabindex="-1">5.4 时间与可用性</h3>
+<p>Raft 的要求之一就是安全性不依赖于时间：系统不能仅仅因为一些事件发生的比预想的快一些或者慢一些就产生错误。为了保证上述要求，最好能满足以下的时间条件：</p>
+<p><code>broadcastTime &lt;&lt; electionTimeout &lt;&lt; MTBF</code></p>
+<ul>
+<li><code>broadcastTime</code>：向其他节点并发发送消息的平均响应时间；</li>
+<li><code>electionTimeout</code>：选举超时时间；</li>
+<li><code>MTBF(mean time between failures)</code>：单台机器的平均健康时间；</li>
+</ul>
+<p><code>broadcastTime</code>应该比<code>electionTimeout</code>小一个数量级，为的是使<code>Leader</code>能够持续发送心跳信息（heartbeat）来阻止<code>Follower</code>开始选举；</p>
+<p><code>electionTimeout</code>也要比<code>MTBF</code>小几个数量级，为的是使得系统稳定运行。当<code>Leader</code>崩溃时，大约会在整个<code>electionTimeout</code>的时间内不可用；我们希望这种情况仅占全部时间的很小一部分。</p>
+<p>由于<code>broadcastTime</code>和<code>MTBF</code>是由系统决定的属性，因此需要决定<code>electionTimeout</code>的时间。</p>
+<p>一般来说，broadcastTime 一般为 <code>0.5～20ms</code>，electionTimeout 可以设置为 <code>10～500ms</code>（工程上常见如 150–300ms），MTBF 一般为一两个月。</p>
+<h2 id="6-参考" tabindex="-1">6 参考</h2>
+<ul>
+<li><a href="https://tanxinyu.work/raft/" target="_blank" rel="noopener">https://tanxinyu.work/raft/</a></li>
+<li><a href="https://github.com/OneSizeFitsQuorum/raft-thesis-zh_cn/blob/master/raft-thesis-zh_cn.md" target="_blank" rel="noopener">https://github.com/OneSizeFitsQuorum/raft-thesis-zh_cn/blob/master/raft-thesis-zh_cn.md</a></li>
+<li><a href="https://github.com/ongardie/dissertation/blob/master/stanford.pdf" target="_blank" rel="noopener">https://github.com/ongardie/dissertation/blob/master/stanford.pdf</a></li>
+<li><a href="https://knowledge-sharing.gitbooks.io/raft/content/chapter5.html" target="_blank" rel="noopener">https://knowledge-sharing.gitbooks.io/raft/content/chapter5.html</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

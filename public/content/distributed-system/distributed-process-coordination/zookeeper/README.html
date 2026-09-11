@@ -1,0 +1,52 @@
+<p>ZooKeeper 是经典的分布式协调组件，常用于注册中心、配置管理、分布式锁、Leader 选举和集群元数据管理。学习 ZooKeeper 时，可以先掌握数据模型和 Watcher，再理解 ZAB 协议、Leader 选举和工程实践。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统学习 ZooKeeper 的后端开发者。</li>
+<li>准备 ZooKeeper、注册中心、分布式锁、分布式协调相关面试题的同学。</li>
+<li>用过 ZooKeeper 或 Curator，但对 ZNode、Watcher、ZAB、Leader 选举不够熟的读者。</li>
+<li>需要对比 ZooKeeper、Eureka、Nacos 等注册中心和协调组件的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>ZooKeeper 的数据模型为什么是树形 ZNode？</li>
+<li>临时节点、有序节点、Watcher 机制分别适合解决哪些问题？</li>
+<li>ZooKeeper 如何通过 ZAB 协议处理消息广播、主从同步和崩溃恢复？</li>
+<li>为什么 ZooKeeper 集群通常建议部署奇数个节点？</li>
+<li>Curator 如何简化原生 ZooKeeper 客户端开发和分布式锁实现？</li>
+</ul>
+<h2 id="和其他文章的关系" tabindex="-1">和其他文章的关系</h2>
+<p><a href="/read/distributed-system/protocol/centralized-and-decentralized.html">分布式协调详解</a> 先讲 Leader、Quorum、脑裂和租约这些通用问题；ZooKeeper 专题把这些问题落到 ZNode、Watcher、Session 和 ZAB 上。</p>
+<p><a href="/read/distributed-system/protocol/zab.html">ZAB 协议详解</a> 只讲 ZooKeeper 的原子广播和崩溃恢复，不展开 ZNode、Curator 命令和应用场景。想看实际命令和客户端代码，可以继续读 <a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-in-action.html">ZooKeeper 实战教程</a>。</p>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/distributed-system/protocol/centralized-and-decentralized.html">分布式协调详解</a>：先理解分布式协调、Leader、Quorum、脑裂和租约这些共性问题。</li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-intro.html">ZooKeeper 入门指南</a>：再理解 ZNode、Watcher、ACL 和典型应用场景。</li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-plus.html">ZooKeeper 进阶详解</a>：继续补齐 ZAB、Leader 选举、集群部署和会话机制。</li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-in-action.html">ZooKeeper 实战教程</a>：最后通过 Docker、zkCli、四字命令和 Curator 做实践。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-intro.html">ZooKeeper 入门指南</a>：讲解 ZooKeeper 核心概念、ZNode 数据模型、节点类型、Watcher 监听机制、ACL 权限控制和典型应用场景。</li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-plus.html">ZooKeeper 进阶详解</a>：深入讲解 ZAB 协议、Leader 选举、集群部署策略、奇数节点原则、会话管理以及与 Eureka、Nacos 等注册中心的对比。</li>
+<li><a href="/read/distributed-system/distributed-process-coordination/zookeeper/zookeeper-in-action.html">ZooKeeper 实战教程</a>：覆盖 Docker 安装部署、zkCli 常用命令、四字命令、Curator Java 客户端 CRUD 操作和分布式锁示例。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>ZooKeeper 适合解决哪些分布式协调问题？</li>
+<li>ZNode 有哪些类型？临时顺序节点为什么常用于分布式锁？</li>
+<li>Watcher 为什么是一次性触发？使用时有什么注意事项？</li>
+<li>ZAB 协议和 Raft、Paxos 有什么关系？</li>
+<li>ZooKeeper 集群为什么通常部署奇数个节点？</li>
+<li>ZooKeeper 和 Eureka、Nacos 作为注册中心有什么区别？</li>
+<li>Curator 相比原生 ZooKeeper 客户端解决了哪些开发痛点？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/distributed-system/README.html">分布式系统知识体系</a></li>
+<li><a href="/read/distributed-system/protocol/README.html">分布式理论、算法与协议专题</a></li>
+<li><a href="/read/distributed-system/protocol/centralized-and-decentralized.html">分布式协调详解</a></li>
+<li><a href="/read/distributed-system/protocol/zab.html">ZAB 协议详解</a></li>
+<li><a href="/read/distributed-system/distributed-lock-implementations.html">分布式锁实现方案详解</a></li>
+<li><a href="/read/distributed-system/distributed-configuration-center.html">分布式配置中心详解</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

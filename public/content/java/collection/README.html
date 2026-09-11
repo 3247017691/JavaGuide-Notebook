@@ -1,0 +1,70 @@
+<p>Java 集合是业务开发中使用频率最高的基础库之一，也是 Java 面试最常考的模块。学习集合时，既要知道每个容器适合什么场景，也要理解扩容、哈希冲突、迭代器、线程安全和并发容器背后的设计取舍。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统掌握 Java 集合框架的后端开发者。</li>
+<li>准备 List、Map、Queue、并发集合和源码分析相关面试题的同学。</li>
+<li>平时经常使用集合，但对扩容、哈希冲突、fail-fast、线程安全等细节不熟的读者。</li>
+<li>想阅读 JDK 源码，从常用集合类开始建立源码分析能力的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>List、Set、Map、Queue 的接口体系和常见实现类定位。</li>
+<li><code>ArrayList</code>、<code>LinkedList</code>、<code>HashMap</code>、<code>LinkedHashMap</code> 的底层数据结构和扩容机制。</li>
+<li><code>ConcurrentHashMap</code>、<code>CopyOnWriteArrayList</code>、<code>ArrayBlockingQueue</code> 等并发容器的线程安全思路。</li>
+<li>哈希冲突、红黑树化、fail-fast、迭代器删除、集合判空和容量预估等常见细节。</li>
+<li>源码分析时如何从数据结构、关键字段、核心方法和并发控制四个角度入手。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/java/collection/java-collection-questions-01.html">Java集合常见面试题总结(上)</a>：先建立集合框架和常见容器的问题清单。</li>
+<li><a href="/read/java/collection/java-collection-questions-02.html">Java集合常见面试题总结(下)</a>：继续补齐 Map、Queue、并发集合和源码细节。</li>
+<li><a href="/read/java/collection/java-collection-precautions-for-use.html">Java集合使用注意事项总结</a>：掌握项目里真正容易踩坑的使用方式。</li>
+<li><a href="/read/java/collection/arraylist-source-code.html">ArrayList 源码分析</a>、<a href="/read/java/collection/linkedlist-source-code.html">LinkedList 源码分析</a>、<a href="/read/java/collection/hashmap-source-code.html">HashMap 源码分析</a>：从最常用容器开始读源码。</li>
+<li><a href="/read/java/collection/concurrent-hash-map-source-code.html">ConcurrentHashMap 源码分析</a>、<a href="/read/java/collection/copyonwritearraylist-source-code.html">CopyOnWriteArrayList 源码分析</a>、<a href="/read/java/collection/arrayblockingqueue-source-code.html">ArrayBlockingQueue 源码分析</a>：再进入并发集合和阻塞队列。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="集合面试与使用规范" tabindex="-1">集合面试与使用规范</h3>
+<ul>
+<li><a href="/read/java/collection/java-collection-questions-01.html">Java集合常见面试题总结(上)</a>：覆盖集合框架、List、Set、Map、Queue 的基础问题。</li>
+<li><a href="/read/java/collection/java-collection-questions-02.html">Java集合常见面试题总结(下)</a>：继续梳理哈希表、并发集合、集合源码和常见易错点。</li>
+<li><a href="/read/java/collection/java-collection-precautions-for-use.html">Java集合使用注意事项总结</a>：总结集合初始化、判空、遍历删除、线程安全和性能相关注意事项。</li>
+</ul>
+<h3 id="list-与-map-源码" tabindex="-1">List 与 Map 源码</h3>
+<ul>
+<li><a href="/read/java/collection/arraylist-source-code.html">ArrayList 源码分析</a>：理解动态数组、扩容、随机访问和迭代器。</li>
+<li><a href="/read/java/collection/linkedlist-source-code.html">LinkedList 源码分析</a>：理解双向链表、头尾操作和适用场景。</li>
+<li><a href="/read/java/collection/hashmap-source-code.html">HashMap 源码分析</a>：理解数组、链表、红黑树、扰动函数、扩容和树化。</li>
+<li><a href="/read/java/collection/linkedhashmap-source-code.html">LinkedHashMap 源码分析</a>：理解访问顺序、插入顺序和 LRU 场景。</li>
+</ul>
+<p>如果对底层结构还不熟，可以先看 <a href="/read/cs-basics/data-structure/linear-data-structure.html">线性数据结构详解</a>、<a href="/read/cs-basics/data-structure/hash-table.html">哈希表面试题总结</a>、<a href="/read/cs-basics/data-structure/red-black-tree.html">红黑树详解</a> 和 <a href="/read/cs-basics/data-structure/lru-cache.html">LRU 缓存面试题总结</a>，再回来看集合源码会顺很多。</p>
+<h3 id="并发集合与队列" tabindex="-1">并发集合与队列</h3>
+<ul>
+<li><a href="/read/java/collection/concurrent-hash-map-source-code.html">ConcurrentHashMap 源码分析</a>：理解分段锁到 CAS + synchronized 的演进。</li>
+<li><a href="/read/java/collection/copyonwritearraylist-source-code.html">CopyOnWriteArrayList 源码分析</a>：理解写时复制和读多写少场景。</li>
+<li><a href="/read/java/collection/arrayblockingqueue-source-code.html">ArrayBlockingQueue 源码分析</a>：理解有界阻塞队列、锁和条件队列。</li>
+<li><a href="/read/java/collection/priorityqueue-source-code.html">PriorityQueue 源码分析（付费）</a>：理解堆结构和优先级队列。</li>
+<li><a href="/read/java/collection/delayqueue-source-code.html">DelayQueue 源码分析</a>：理解延迟队列、优先级队列和定时任务场景。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li><code>ArrayList</code> 和 <code>LinkedList</code> 有什么区别？为什么很多场景更推荐 <code>ArrayList</code>？</li>
+<li><code>HashMap</code> 的底层数据结构是什么？什么时候会树化？</li>
+<li><code>HashMap</code> 为什么线程不安全？扩容时可能出现什么问题？</li>
+<li><code>HashMap</code> 和 <code>ConcurrentHashMap</code> 有什么区别？</li>
+<li><code>ConcurrentHashMap</code> 在 JDK 7 和 JDK 8 中的实现有什么变化？</li>
+<li><code>CopyOnWriteArrayList</code> 为什么适合读多写少？</li>
+<li>fail-fast 和 fail-safe 有什么区别？</li>
+<li>遍历集合时如何安全删除元素？</li>
+<li><code>ArrayBlockingQueue</code>、<code>PriorityQueue</code>、<code>DelayQueue</code> 分别适合什么场景？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/java/README.html">Java 知识体系</a></li>
+<li><a href="/read/java/basis/README.html">Java 基础专题</a></li>
+<li><a href="/read/java/concurrent/README.html">Java 并发编程专题</a></li>
+<li><a href="/read/java/jvm/README.html">JVM 专题</a></li>
+<li><a href="/read/cs-basics/data-structure/README.html">数据结构</a></li>
+<li><a href="/read/cs-basics/data-structure/hash-table.html">哈希表面试题总结</a></li>
+<li><a href="/read/cs-basics/data-structure/lru-cache.html">LRU 缓存面试题总结</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

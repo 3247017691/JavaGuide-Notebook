@@ -1,0 +1,545 @@
+<p>实际项目中，一个接口可能需要同时获取多种不同的数据，然后再汇总返回，这种场景还是挺常见的。举个例子：用户请求获取订单信息，可能需要同时获取用户信息、商品详情、物流信息、商品推荐等数据。</p>
+<p>如果是串行（按顺序依次执行每个任务）执行的话，接口的响应速度会非常慢。考虑到这些任务之间有大部分都是 <strong>无前后顺序关联</strong> 的，可以 <strong>并行执行</strong>，就比如说调用获取商品详情的时候，可以同时调用获取物流信息。通过并行执行多个任务的方式，接口的响应速度会得到大幅优化。</p>
+<p><img src="/img/serial-to-parallel-198beea8.png" alt="" loading="lazy"></p>
+<p>对于存在前后调用顺序关系的任务，可以进行任务编排。</p>
+<p><img src="/img/serial-to-parallel2-3a41b928.png" alt="" loading="lazy"></p>
+<ol>
+<li>获取用户信息之后，才能调用商品详情和物流信息接口。</li>
+<li>成功获取商品详情和物流信息之后，才能调用商品推荐接口。</li>
+</ol>
+<p>可能会用到多线程异步任务编排的场景（这里只是举例，数据不一定是一次返回，可能会对接口进行拆分）：</p>
+<ol>
+<li>首页：例如技术社区的首页可能需要同时获取文章推荐列表、广告栏、文章排行榜、热门话题等信息。</li>
+<li>详情页：例如技术社区的文章详情页可能需要同时获取作者信息、文章详情、文章评论等信息。</li>
+<li>统计模块：例如技术社区的后台统计模块可能需要同时获取粉丝数汇总、文章数据（阅读量、评论量、收藏量）汇总等信息。</li>
+</ol>
+<p>对于 Java 程序来说，Java 8 才被引入的 <code>CompletableFuture</code> 可以帮助我们来做多个任务的编排，功能非常强大。</p>
+<p>这篇文章是 <code>CompletableFuture</code> 的简单入门，带大家看看 <code>CompletableFuture</code> 常用的 API。</p>
+<h2 id="future-介绍" tabindex="-1">Future 介绍</h2>
+<p><code>Future</code> 接口是异步思想的典型运用，主要用在一些需要执行耗时任务的场景，避免程序一直原地等待耗时任务执行完成，执行效率太低。具体来说是这样的：当我们执行某一耗时的任务时，可以将这个耗时任务交给一个子线程去异步执行，同时我们可以干点其他事情，不用傻傻等待耗时任务执行完成。等我们的事情干完后，我们再通过 <code>Future</code> 获取到耗时任务的执行结果。这样一来，程序的执行效率就明显提高了。</p>
+<p>这其实就是多线程中经典的 <strong>Future 模式</strong>，你可以将其看作是一种设计模式，核心思想是异步调用，主要用在多线程领域，并非 Java 语言独有。</p>
+<p>在 Java 中，<code>Future</code> 是一个泛型接口，位于 <code>java.util.concurrent</code> 包下。它有 5 个经典抽象方法，主要包括下面 4 类功能；JDK 19 起又增加了 <code>resultNow()</code>、<code>exceptionNow()</code> 和 <code>state()</code> 三个默认查询方法。</p>
+<ul>
+<li>取消任务；</li>
+<li>判断任务是否被取消;</li>
+<li>判断任务是否已经执行完成;</li>
+<li>获取任务执行结果。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// V 代表了Future执行的任务返回值的类型</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Future</span>&lt;V&gt; {
+    <span class="hljs-comment">// 取消任务执行</span>
+    <span class="hljs-comment">// 成功取消返回 true，否则返回 false</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-title function_">cancel</span><span class="hljs-params">(<span class="hljs-type">boolean</span> mayInterruptIfRunning)</span>;
+    <span class="hljs-comment">// 判断任务是否被取消</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-title function_">isCancelled</span><span class="hljs-params">()</span>;
+    <span class="hljs-comment">// 判断任务是否已经执行完成</span>
+    <span class="hljs-type">boolean</span> <span class="hljs-title function_">isDone</span><span class="hljs-params">()</span>;
+    <span class="hljs-comment">// 获取任务执行结果</span>
+    <span class="hljs-type">V</span> <span class="hljs-title function_">get</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> InterruptedException, ExecutionException;
+    <span class="hljs-comment">// 指定时间内没有返回计算结果就抛出 TimeoutException 异常</span>
+    <span class="hljs-type">V</span> <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-type">long</span> timeout, TimeUnit unit)</span>
+        <span class="hljs-keyword">throws</span> InterruptedException, ExecutionException, TimeoutException;
+}
+</code></pre>
+<p>简单理解就是：我有一个任务，提交给了 <code>Future</code> 来处理。任务执行期间我自己可以去做任何想做的事情。并且，在这期间我还可以取消任务以及获取任务的执行状态。一段时间之后，我就可以 <code>Future</code> 那里直接取出任务执行结果。</p>
+<h2 id="completablefuture-介绍" tabindex="-1">CompletableFuture 介绍</h2>
+<p><code>Future</code> 在实际使用过程中存在一些局限性，比如不支持异步任务的编排组合、获取计算结果的 <code>get()</code> 方法为阻塞调用。</p>
+<p>Java 8 才被引入 <code>CompletableFuture</code> 类可以解决 <code>Future</code> 的这些缺陷。<code>CompletableFuture</code> 除了提供了更为好用和强大的 <code>Future</code> 特性之外，还提供了函数式编程、异步任务编排组合（可以将多个异步任务串联起来，组成一个完整的链式调用）等能力。</p>
+<p>下面我们来简单看看 <code>CompletableFuture</code> 类的定义。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CompletableFuture</span>&lt;T&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Future</span>&lt;T&gt;, CompletionStage&lt;T&gt; {
+}
+</code></pre>
+<p>可以看到，<code>CompletableFuture</code> 同时实现了 <code>Future</code> 和 <code>CompletionStage</code> 接口。</p>
+<p><img src="/img/completablefuture-class-diagram-f01a3bb2.jpg" alt="" loading="lazy"></p>
+<p><code>CompletableFuture</code> 除了提供了更为好用和强大的 <code>Future</code> 特性之外，还提供了函数式编程的能力。</p>
+<p><img src="/img/image-20210902092441434-8e6e65c9.png" alt="" loading="lazy"></p>
+<p><code>Future</code> 接口有 5 个方法：</p>
+<ul>
+<li><code>boolean cancel(boolean mayInterruptIfRunning)</code>：尝试取消执行任务。</li>
+<li><code>boolean isCancelled()</code>：判断任务是否被取消。</li>
+<li><code>boolean isDone()</code>：判断任务是否已经被执行完成。</li>
+<li><code>get()</code>：等待任务执行完成并获取运算结果。</li>
+<li><code>get(long timeout, TimeUnit unit)</code>：多了一个超时时间。</li>
+</ul>
+<p><code>CompletionStage</code> 接口描述了一个异步计算的阶段。很多计算可以分成多个阶段或步骤，此时可以通过它将所有步骤组合起来，形成异步计算的流水线。</p>
+<p><code>CompletionStage</code> 接口中的方法比较多，<code>CompletableFuture</code> 的函数式能力就是这个接口赋予的。从这个接口的方法参数你就可以发现其大量使用了 Java8 引入的函数式编程。</p>
+<p><img src="/img/image-20210902093026059-f1354d4c.png" alt="" loading="lazy"></p>
+<p>由于方法众多，所以这里不能一一讲解，下文中我会介绍大部分常见方法的使用。</p>
+<h2 id="completablefuture-常见操作" tabindex="-1">CompletableFuture 常见操作</h2>
+<h3 id="创建-completablefuture" tabindex="-1">创建 CompletableFuture</h3>
+<p>常见的创建 <code>CompletableFuture</code> 对象的方法如下：</p>
+<ol>
+<li>通过 new 关键字。</li>
+<li>基于 <code>CompletableFuture</code> 自带的静态工厂方法：<code>runAsync()</code>、<code>supplyAsync()</code>。</li>
+</ol>
+<h4 id="new-关键字" tabindex="-1">new 关键字</h4>
+<p>通过 new 关键字创建 <code>CompletableFuture</code> 对象这种使用方式可以看作是将 <code>CompletableFuture</code> 当做 <code>Future</code> 来使用。</p>
+<p>我在我的开源项目 <a href="https://github.com/Snailclimb/guide-rpc-framework" target="_blank" rel="noopener">guide-rpc-framework</a> 中就是这种方式创建的 <code>CompletableFuture</code> 对象。</p>
+<p>下面咱们来看一个简单的案例。</p>
+<p>我们通过创建了一个结果值类型为 <code>RpcResponse&lt;Object&gt;</code> 的 <code>CompletableFuture</code>，你可以把 <code>resultFuture</code> 看作是异步运算结果的载体。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;RpcResponse&lt;Object&gt;&gt; <span class="hljs-variable">resultFuture</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CompletableFuture</span>&lt;&gt;();
+</code></pre>
+<p>假设在未来的某个时刻，我们得到了最终的结果。这时，我们可以调用 <code>complete()</code> 方法为其传入结果，这表示 <code>resultFuture</code> 已经被完成了。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// complete() 方法只能调用一次，后续调用将被忽略。</span>
+resultFuture.complete(rpcResponse);
+</code></pre>
+<p>你可以通过 <code>isDone()</code> 方法来检查是否已经完成。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isDone</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> result != <span class="hljs-literal">null</span>;
+}
+</code></pre>
+<p>获取异步计算的结果也非常简单，直接调用 <code>get()</code> 方法即可。调用 <code>get()</code> 方法的线程会阻塞直到 <code>CompletableFuture</code> 完成运算。</p>
+<pre class="md-pre"><code class="hljs">rpcResponse = completableFuture.get();
+</code></pre>
+<p>如果你已经知道计算的结果的话，可以使用静态方法 <code>completedFuture()</code> 来创建 <code>CompletableFuture</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.completedFuture(<span class="hljs-string">&quot;hello!&quot;</span>);
+assertEquals(<span class="hljs-string">&quot;hello!&quot;</span>, future.get());
+</code></pre>
+<p><code>completedFuture()</code> 方法底层调用的是带参数的 new 方法，只不过，这个方法不对外暴露。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">completedFuture</span><span class="hljs-params">(U value)</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CompletableFuture</span>&lt;U&gt;((value == <span class="hljs-literal">null</span>) ? NIL : value);
+}
+</code></pre>
+<h4 id="静态工厂方法" tabindex="-1">静态工厂方法</h4>
+<p>这两个方法可以帮助我们封装计算逻辑。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">supplyAsync</span><span class="hljs-params">(Supplier&lt;U&gt; supplier)</span>;
+<span class="hljs-comment">// 使用自定义线程池(推荐)</span>
+<span class="hljs-keyword">static</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">supplyAsync</span><span class="hljs-params">(Supplier&lt;U&gt; supplier, Executor executor)</span>;
+<span class="hljs-keyword">static</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">runAsync</span><span class="hljs-params">(Runnable runnable)</span>;
+<span class="hljs-comment">// 使用自定义线程池(推荐)</span>
+<span class="hljs-keyword">static</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">runAsync</span><span class="hljs-params">(Runnable runnable, Executor executor)</span>;
+</code></pre>
+<p><code>runAsync()</code> 方法接受的参数是 <code>Runnable</code>，这是一个函数式接口，不允许返回值。当你需要异步操作且不关心返回结果的时候可以使用 <code>runAsync()</code> 方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@FunctionalInterface</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Runnable</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-type">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p><code>supplyAsync()</code> 方法接受的参数是 <code>Supplier&lt;U&gt;</code>，这也是一个函数式接口，<code>U</code> 是返回结果值的类型。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@FunctionalInterface</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Supplier</span>&lt;T&gt; {
+
+    <span class="hljs-comment">/**
+     * Gets a result.
+     *
+     * <span class="hljs-doctag">@return</span> a result
+     */</span>
+    <span class="hljs-type">T</span> <span class="hljs-title function_">get</span><span class="hljs-params">()</span>;
+}
+</code></pre>
+<p>当你需要异步操作且关心返回结果的时候，可以使用 <code>supplyAsync()</code> 方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.runAsync(() -&gt; System.out.println(<span class="hljs-string">&quot;hello!&quot;</span>));
+future.get();<span class="hljs-comment">// 输出 &quot;hello!&quot;</span>
+<span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future2</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; <span class="hljs-string">&quot;hello!&quot;</span>);
+assertEquals(<span class="hljs-string">&quot;hello!&quot;</span>, future2.get());
+</code></pre>
+<h3 id="处理异步结算的结果" tabindex="-1">处理异步结算的结果</h3>
+<p>当我们获取到异步计算的结果之后，还可以对其进行进一步的处理，比较常用的方法有下面几个：</p>
+<ul>
+<li><code>thenApply()</code></li>
+<li><code>thenAccept()</code></li>
+<li><code>thenRun()</code></li>
+<li><code>whenComplete()</code></li>
+</ul>
+<p><code>thenApply()</code> 方法接受一个 <code>Function</code> 实例，用它来处理结果。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 非异步回调：可能由完成上一个阶段的线程执行；如果阶段已经完成，也可能由当前调用线程执行</span>
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenApply</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T,? extends U&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniApplyStage(<span class="hljs-literal">null</span>, fn);
+}
+
+<span class="hljs-comment">//使用默认的 ForkJoinPool 线程池（不推荐）</span>
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenApplyAsync</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T,? extends U&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniApplyStage(defaultExecutor(), fn);
+}
+<span class="hljs-comment">// 使用自定义线程池(推荐)</span>
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenApplyAsync</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T,? extends U&gt; fn, Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniApplyStage(screenExecutor(executor), fn);
+}
+</code></pre>
+<p><code>thenApply()</code> 方法使用示例如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.completedFuture(<span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenApply(s -&gt; s + <span class="hljs-string">&quot;world!&quot;</span>);
+assertEquals(<span class="hljs-string">&quot;hello!world!&quot;</span>, future.get());
+<span class="hljs-comment">// 这次调用将被忽略。</span>
+future.thenApply(s -&gt; s + <span class="hljs-string">&quot;nice!&quot;</span>);
+assertEquals(<span class="hljs-string">&quot;hello!world!&quot;</span>, future.get());
+</code></pre>
+<p>你还可以进行 <strong>流式调用</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.completedFuture(<span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenApply(s -&gt; s + <span class="hljs-string">&quot;world!&quot;</span>).thenApply(s -&gt; s + <span class="hljs-string">&quot;nice!&quot;</span>);
+assertEquals(<span class="hljs-string">&quot;hello!world!nice!&quot;</span>, future.get());
+</code></pre>
+<p><strong>如果你不需要从回调函数中获取返回结果，可以使用 <code>thenAccept()</code> 或者 <code>thenRun()</code>。这两个方法的区别在于 <code>thenRun()</code> 不能访问异步计算的结果。</strong></p>
+<p><code>thenAccept()</code> 方法的参数是 <code>Consumer&lt;? super T&gt;</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenAccept</span><span class="hljs-params">(Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; action)</span> {
+    <span class="hljs-keyword">return</span> uniAcceptStage(<span class="hljs-literal">null</span>, action);
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenAcceptAsync</span><span class="hljs-params">(Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; action)</span> {
+    <span class="hljs-keyword">return</span> uniAcceptStage(defaultExecutor(), action);
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenAcceptAsync</span><span class="hljs-params">(Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; action,
+                                               Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniAcceptStage(screenExecutor(executor), action);
+}
+</code></pre>
+<p>顾名思义，<code>Consumer</code> 属于消费型接口，它可以接收 1 个输入对象然后进行“消费”。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@FunctionalInterface</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Consumer</span>&lt;T&gt; {
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">accept</span><span class="hljs-params">(T t)</span>;
+
+    <span class="hljs-keyword">default</span> <span class="hljs-type">Consumer</span>&lt;T&gt; <span class="hljs-title function_">andThen</span><span class="hljs-params">(Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; after)</span> {
+        Objects.requireNonNull(after);
+        <span class="hljs-keyword">return</span> (T t) -&gt; { accept(t); after.accept(t); };
+    }
+}
+</code></pre>
+<p><code>thenRun()</code> 的方法是的参数是 <code>Runnable</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenRun</span><span class="hljs-params">(Runnable action)</span> {
+    <span class="hljs-keyword">return</span> uniRunStage(<span class="hljs-literal">null</span>, action);
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenRunAsync</span><span class="hljs-params">(Runnable action)</span> {
+    <span class="hljs-keyword">return</span> uniRunStage(defaultExecutor(), action);
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">thenRunAsync</span><span class="hljs-params">(Runnable action,
+                                            Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniRunStage(screenExecutor(executor), action);
+}
+</code></pre>
+<p><code>thenAccept()</code> 和 <code>thenRun()</code> 使用示例如下：</p>
+<pre class="md-pre"><code class="hljs">CompletableFuture.completedFuture(<span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenApply(s -&gt; s + <span class="hljs-string">&quot;world!&quot;</span>).thenApply(s -&gt; s + <span class="hljs-string">&quot;nice!&quot;</span>).thenAccept(System.out::println);<span class="hljs-comment">//hello!world!nice!</span>
+
+CompletableFuture.completedFuture(<span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenApply(s -&gt; s + <span class="hljs-string">&quot;world!&quot;</span>).thenApply(s -&gt; s + <span class="hljs-string">&quot;nice!&quot;</span>).thenRun(() -&gt; System.out.println(<span class="hljs-string">&quot;hello!&quot;</span>));<span class="hljs-comment">//hello!</span>
+</code></pre>
+<p><code>whenComplete()</code> 的方法的参数是 <code>BiConsumer&lt;? super T, ? super Throwable&gt;</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;T&gt; <span class="hljs-title function_">whenComplete</span><span class="hljs-params">(
+    BiConsumer&lt;? <span class="hljs-built_in">super</span> T, ? <span class="hljs-built_in">super</span> Throwable&gt; action)</span> {
+    <span class="hljs-keyword">return</span> uniWhenCompleteStage(<span class="hljs-literal">null</span>, action);
+}
+
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;T&gt; <span class="hljs-title function_">whenCompleteAsync</span><span class="hljs-params">(
+    BiConsumer&lt;? <span class="hljs-built_in">super</span> T, ? <span class="hljs-built_in">super</span> Throwable&gt; action)</span> {
+    <span class="hljs-keyword">return</span> uniWhenCompleteStage(defaultExecutor(), action);
+}
+<span class="hljs-comment">// 使用自定义线程池(推荐)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;T&gt; <span class="hljs-title function_">whenCompleteAsync</span><span class="hljs-params">(
+    BiConsumer&lt;? <span class="hljs-built_in">super</span> T, ? <span class="hljs-built_in">super</span> Throwable&gt; action, Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniWhenCompleteStage(screenExecutor(executor), action);
+}
+</code></pre>
+<p>相对于 <code>Consumer</code>， <code>BiConsumer</code> 可以接收 2 个输入对象然后进行“消费”。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@FunctionalInterface</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">BiConsumer</span>&lt;T, U&gt; {
+    <span class="hljs-type">void</span> <span class="hljs-title function_">accept</span><span class="hljs-params">(T t, U u)</span>;
+
+    <span class="hljs-keyword">default</span> <span class="hljs-type">BiConsumer</span>&lt;T, U&gt; <span class="hljs-title function_">andThen</span><span class="hljs-params">(BiConsumer&lt;? <span class="hljs-built_in">super</span> T, ? <span class="hljs-built_in">super</span> U&gt; after)</span> {
+        Objects.requireNonNull(after);
+
+        <span class="hljs-keyword">return</span> (l, r) -&gt; {
+            accept(l, r);
+            after.accept(l, r);
+        };
+    }
+}
+</code></pre>
+<p><code>whenComplete()</code> 使用示例如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; <span class="hljs-string">&quot;hello!&quot;</span>)
+        .whenComplete((res, ex) -&gt; {
+            <span class="hljs-comment">// res 代表返回的结果</span>
+            <span class="hljs-comment">// ex 的类型为 Throwable ，代表抛出的异常</span>
+            System.out.println(res);
+            <span class="hljs-comment">// 这里没有抛出异常所有为 null</span>
+            assertNull(ex);
+        });
+assertEquals(<span class="hljs-string">&quot;hello!&quot;</span>, future.get());
+</code></pre>
+<h3 id="异常处理" tabindex="-1">异常处理</h3>
+<p>你可以通过 <code>handle()</code> 方法来处理任务执行过程中可能出现的抛出异常的情况。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">handle</span><span class="hljs-params">(
+    BiFunction&lt;? <span class="hljs-built_in">super</span> T, Throwable, ? extends U&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniHandleStage(<span class="hljs-literal">null</span>, fn);
+}
+
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">handleAsync</span><span class="hljs-params">(
+    BiFunction&lt;? <span class="hljs-built_in">super</span> T, Throwable, ? extends U&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniHandleStage(defaultExecutor(), fn);
+}
+
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">handleAsync</span><span class="hljs-params">(
+    BiFunction&lt;? <span class="hljs-built_in">super</span> T, Throwable, ? extends U&gt; fn, Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniHandleStage(screenExecutor(executor), fn);
+}
+</code></pre>
+<p>示例代码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span>
+        <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    <span class="hljs-keyword">if</span> (<span class="hljs-literal">true</span>) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Computation error!&quot;</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;hello!&quot;</span>;
+}).handle((res, ex) -&gt; {
+    <span class="hljs-comment">// res 代表返回的结果</span>
+    <span class="hljs-comment">// ex 的类型为 Throwable ，代表抛出的异常</span>
+    <span class="hljs-keyword">return</span> res != <span class="hljs-literal">null</span> ? res : <span class="hljs-string">&quot;world!&quot;</span>;
+});
+assertEquals(<span class="hljs-string">&quot;world!&quot;</span>, future.get());
+</code></pre>
+<p>你还可以通过 <code>exceptionally()</code> 方法来处理异常情况。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span>
+        <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    <span class="hljs-keyword">if</span> (<span class="hljs-literal">true</span>) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Computation error!&quot;</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;hello!&quot;</span>;
+}).exceptionally(ex -&gt; {
+    System.out.println(ex.toString());<span class="hljs-comment">// CompletionException</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;world!&quot;</span>;
+});
+assertEquals(<span class="hljs-string">&quot;world!&quot;</span>, future.get());
+</code></pre>
+<p>如果你想让 <code>CompletableFuture</code> 的结果就是异常的话，可以使用 <code>completeExceptionally()</code> 方法为其赋值。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">completableFuture</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CompletableFuture</span>&lt;&gt;();
+<span class="hljs-comment">// ...</span>
+completableFuture.completeExceptionally(
+  <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(<span class="hljs-string">&quot;Calculation failed!&quot;</span>));
+<span class="hljs-comment">// ...</span>
+completableFuture.get(); <span class="hljs-comment">// ExecutionException</span>
+</code></pre>
+<h3 id="组合-completablefuture" tabindex="-1">组合 CompletableFuture</h3>
+<p>你可以使用 <code>thenCompose()</code> 按顺序链接两个 <code>CompletableFuture</code> 对象，实现异步的任务链。它的作用是将前一个任务的返回结果作为下一个任务的输入参数，从而形成一个依赖关系。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenCompose</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T, ? extends CompletionStage&lt;U&gt;&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniComposeStage(<span class="hljs-literal">null</span>, fn);
+}
+
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenComposeAsync</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T, ? extends CompletionStage&lt;U&gt;&gt; fn)</span> {
+    <span class="hljs-keyword">return</span> uniComposeStage(defaultExecutor(), fn);
+}
+
+<span class="hljs-keyword">public</span> &lt;U&gt; <span class="hljs-type">CompletableFuture</span>&lt;U&gt; <span class="hljs-title function_">thenComposeAsync</span><span class="hljs-params">(
+    Function&lt;? <span class="hljs-built_in">super</span> T, ? extends CompletionStage&lt;U&gt;&gt; fn,
+    Executor executor)</span> {
+    <span class="hljs-keyword">return</span> uniComposeStage(screenExecutor(executor), fn);
+}
+</code></pre>
+<p><code>thenCompose()</code> 方法会使用示例如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span>
+        <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; <span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenCompose(s -&gt; CompletableFuture.supplyAsync(() -&gt; s + <span class="hljs-string">&quot;world!&quot;</span>));
+assertEquals(<span class="hljs-string">&quot;hello!world!&quot;</span>, future.get());
+</code></pre>
+<p>在实际开发中，这个方法还是非常有用的。比如说，task1 和 task2 都是异步执行的，但 task1 必须执行完成后才能开始执行 task2（task2 依赖 task1 的执行结果）。</p>
+<p>和 <code>thenCompose()</code> 方法类似的还有 <code>thenCombine()</code> 方法， 它同样可以组合两个 <code>CompletableFuture</code> 对象。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">completableFuture</span>
+        <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; <span class="hljs-string">&quot;hello!&quot;</span>)
+        .thenCombine(CompletableFuture.supplyAsync(
+                () -&gt; <span class="hljs-string">&quot;world!&quot;</span>), (s1, s2) -&gt; s1 + s2)
+        .thenCompose(s -&gt; CompletableFuture.supplyAsync(() -&gt; s + <span class="hljs-string">&quot;nice!&quot;</span>));
+assertEquals(<span class="hljs-string">&quot;hello!world!nice!&quot;</span>, completableFuture.get());
+</code></pre>
+<p><strong>那 <code>thenCompose()</code> 和 <code>thenCombine()</code> 有什么区别呢？</strong></p>
+<ul>
+<li><code>thenCompose()</code> 可以链接两个 <code>CompletableFuture</code> 对象，并将前一个任务的返回结果作为下一个任务的参数，它们之间存在着先后顺序。</li>
+<li><code>thenCombine()</code> 会在两个阶段都正常完成后，把它们的结果合并。这两个阶段可以彼此独立，但是否并行执行取决于它们的创建方式和所用执行器，<code>thenCombine()</code> 本身不负责启动任务。</li>
+</ul>
+<p>除了 <code>thenCompose()</code> 和 <code>thenCombine()</code> 之外， 还有一些其他的组合 <code>CompletableFuture</code> 的方法用于实现不同的效果，满足不同的业务需求。</p>
+<p>例如，在 task1 和 task2 都正常完成的场景中，可以使用 <code>acceptEither()</code>，让 task3 接收其中一个先完成任务的结果。需要注意，它不能作为可靠的“第一个成功结果”选择器：只要其中一个阶段异常完成，返回阶段的结果就要遵循 <code>CompletionStage</code> 对 either 组合的异常规则。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">acceptEither</span><span class="hljs-params">(
+    CompletionStage&lt;? extends T&gt; other, Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; action)</span> {
+    <span class="hljs-keyword">return</span> orAcceptStage(<span class="hljs-literal">null</span>, other, action);
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-title function_">acceptEitherAsync</span><span class="hljs-params">(
+    CompletionStage&lt;? extends T&gt; other, Consumer&lt;? <span class="hljs-built_in">super</span> T&gt; action)</span> {
+    <span class="hljs-keyword">return</span> orAcceptStage(asyncPool, other, action);
+}
+</code></pre>
+<p>简单举一个例子：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">task</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    System.out.println(<span class="hljs-string">&quot;任务1开始执行，当前时间：&quot;</span> + System.currentTimeMillis());
+    <span class="hljs-keyword">try</span> {
+        Thread.sleep(<span class="hljs-number">500</span>);
+    } <span class="hljs-keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    }
+    System.out.println(<span class="hljs-string">&quot;任务1执行完毕，当前时间：&quot;</span> + System.currentTimeMillis());
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;task1&quot;</span>;
+});
+
+<span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">task2</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    System.out.println(<span class="hljs-string">&quot;任务2开始执行，当前时间：&quot;</span> + System.currentTimeMillis());
+    <span class="hljs-keyword">try</span> {
+        Thread.sleep(<span class="hljs-number">1000</span>);
+    } <span class="hljs-keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    }
+    System.out.println(<span class="hljs-string">&quot;任务2执行完毕，当前时间：&quot;</span> + System.currentTimeMillis());
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;task2&quot;</span>;
+});
+
+task.acceptEitherAsync(task2, (res) -&gt; {
+    System.out.println(<span class="hljs-string">&quot;任务3开始执行，当前时间：&quot;</span> + System.currentTimeMillis());
+    System.out.println(<span class="hljs-string">&quot;上一个任务的结果为：&quot;</span> + res);
+});
+
+<span class="hljs-comment">// 增加一些延迟时间，确保异步任务有足够的时间完成</span>
+<span class="hljs-keyword">try</span> {
+    Thread.sleep(<span class="hljs-number">2000</span>);
+} <span class="hljs-keyword">catch</span> (InterruptedException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">任务1开始执行，当前时间：1695088058520
+任务2开始执行，当前时间：1695088058521
+任务1执行完毕，当前时间：1695088059023
+任务3开始执行，当前时间：1695088059023
+上一个任务的结果为：task1
+任务2执行完毕，当前时间：1695088059523
+</code></pre>
+<p>当两个阶段都正常完成时，<code>acceptEitherAsync()</code> 会使用其中一个已完成阶段的结果异步执行任务 3，通常是先完成者的结果。不过，如果其中一个阶段异常完成，而另一个尚未完成或正常完成，规范并不保证返回阶段最终一定正常完成还是异常完成。因此，不能依赖该方法忽略先发生的异常并继续等待另一个成功结果。</p>
+<h3 id="等待多个-completablefuture-完成" tabindex="-1">等待多个 CompletableFuture 完成</h3>
+<p>你可以通过 <code>CompletableFuture</code> 的 <code>allOf()</code> 静态方法等待多个 <code>CompletableFuture</code> 全部完成。<code>allOf()</code> 只组合已有阶段的完成状态，不负责启动这些任务；任务是否并行取决于它们的创建方式和执行器。</p>
+<p>实际项目中，我们经常需要并行运行多个互不相关的任务，这些任务之间没有依赖关系，可以互相独立地运行。</p>
+<p>比说我们要读取处理 6 个文件，这 6 个任务都是没有执行顺序依赖的任务，但是我们需要返回给用户的时候将这几个文件的处理的结果进行统计整理。像这种情况我们就可以使用并行运行多个 <code>CompletableFuture</code> 来处理。</p>
+<p>示例代码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-variable">task1</span> <span class="hljs-operator">=</span>
+  CompletableFuture.supplyAsync(()-&gt;{
+    <span class="hljs-comment">//自定义业务操作</span>
+  });
+......
+<span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-variable">task6</span> <span class="hljs-operator">=</span>
+  CompletableFuture.supplyAsync(()-&gt;{
+    <span class="hljs-comment">//自定义业务操作</span>
+  });
+......
+ <span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-variable">headerFuture</span><span class="hljs-operator">=</span>CompletableFuture.allOf(task1,.....,task6);
+
+  <span class="hljs-keyword">try</span> {
+    headerFuture.join();
+  } <span class="hljs-keyword">catch</span> (Exception ex) {
+    ......
+  }
+System.out.println(<span class="hljs-string">&quot;all done. &quot;</span>);
+</code></pre>
+<p>经常和 <code>allOf()</code> 方法拿来对比的是 <code>anyOf()</code> 方法。</p>
+<p><strong><code>allOf()</code> 方法会等到所有的 <code>CompletableFuture</code> 都运行完成之后再返回</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Random</span> <span class="hljs-variable">rand</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Random</span>();
+<span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future1</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    <span class="hljs-keyword">try</span> {
+        Thread.sleep(<span class="hljs-number">1000</span> + rand.nextInt(<span class="hljs-number">1000</span>));
+    } <span class="hljs-keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    } <span class="hljs-keyword">finally</span> {
+        System.out.println(<span class="hljs-string">&quot;future1 done...&quot;</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;abc&quot;</span>;
+});
+<span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future2</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+    <span class="hljs-keyword">try</span> {
+        Thread.sleep(<span class="hljs-number">1000</span> + rand.nextInt(<span class="hljs-number">1000</span>));
+    } <span class="hljs-keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    } <span class="hljs-keyword">finally</span> {
+        System.out.println(<span class="hljs-string">&quot;future2 done...&quot;</span>);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;efg&quot;</span>;
+});
+</code></pre>
+<p>调用 <code>join()</code> 可以让程序等 <code>future1</code> 和 <code>future2</code> 都运行完了之后再继续执行。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;Void&gt; <span class="hljs-variable">completableFuture</span> <span class="hljs-operator">=</span> CompletableFuture.allOf(future1, future2);
+completableFuture.join();
+assertTrue(completableFuture.isDone());
+System.out.println(<span class="hljs-string">&quot;all futures done...&quot;</span>);
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-function"><span class="hljs-title">future1</span></span> done...
+<span class="hljs-function"><span class="hljs-title">future2</span></span> done...
+<span class="hljs-function"><span class="hljs-title">all</span></span> futures done...
+</code></pre>
+<p><strong><code>anyOf()</code> 方法不会等待所有的 <code>CompletableFuture</code> 都运行完成之后再返回，只要有一个执行完成即可！</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">CompletableFuture</span>&lt;Object&gt; <span class="hljs-variable">f</span> <span class="hljs-operator">=</span> CompletableFuture.anyOf(future1, future2);
+System.out.println(f.get());
+</code></pre>
+<p>输出结果可能是：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-function"><span class="hljs-title">future2</span></span> done...
+efg
+</code></pre>
+<p>也可能是：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-function"><span class="hljs-title">future1</span></span> done...
+abc
+</code></pre>
+<h2 id="completablefuture-使用建议" tabindex="-1">CompletableFuture 使用建议</h2>
+<h3 id="使用自定义线程池" tabindex="-1">使用自定义线程池</h3>
+<p>我们上面的代码示例中，为了方便，都没有选择自定义线程池。实际项目中，这是不可取的。</p>
+<p>在 <code>CompletableFuture</code> 的默认实现中，没有显式传入 <code>Executor</code> 的异步方法通常使用全局共享的 <code>ForkJoinPool.commonPool()</code>；子类可以通过重写 <code>defaultExecutor()</code> 改变非静态异步方法的默认执行器。这意味着应用程序、多个库或框架若都使用默认实现，相关异步任务通常会共享同一个线程池。</p>
+<p>虽然 <code>ForkJoinPool</code> 效率很高，但当同时提交大量任务时，可能会导致资源竞争和线程饥饿，进而影响系统性能。</p>
+<p>为避免这些问题，建议为 <code>CompletableFuture</code> 提供自定义线程池，带来以下优势：</p>
+<ul>
+<li><strong>隔离性</strong>：为不同任务分配独立的线程池，避免全局线程池资源争夺。</li>
+<li><strong>资源控制</strong>：根据任务特性调整线程池大小和队列类型，优化性能表现。</li>
+<li><strong>异常处理</strong>：通过自定义 <code>ThreadFactory</code> 更好地处理线程中的异常情况。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-type">ThreadPoolExecutor</span> <span class="hljs-variable">executor</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ThreadPoolExecutor</span>(<span class="hljs-number">10</span>, <span class="hljs-number">10</span>,
+        <span class="hljs-number">0L</span>, TimeUnit.MILLISECONDS,
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedBlockingQueue</span>&lt;Runnable&gt;());
+
+CompletableFuture.runAsync(() -&gt; {
+     <span class="hljs-comment">//...</span>
+}, executor);
+</code></pre>
+<h3 id="尽量避免使用-get" tabindex="-1">尽量避免使用 get()</h3>
+<p><code>CompletableFuture</code> 的 <code>get()</code> 方法是阻塞的，尽量避免使用。如果必须要使用的话，需要添加超时时间，否则可能会导致主线程一直等待，无法执行其他任务。</p>
+<pre class="md-pre"><code class="hljs">    <span class="hljs-type">CompletableFuture</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> CompletableFuture.supplyAsync(() -&gt; {
+        <span class="hljs-keyword">try</span> {
+            Thread.sleep(<span class="hljs-number">10_000</span>);
+        } <span class="hljs-keyword">catch</span> (InterruptedException e) {
+            e.printStackTrace();
+        }
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;Hello, world!&quot;</span>;
+    });
+
+    <span class="hljs-comment">// 获取异步任务的返回值，设置超时时间为 5 秒</span>
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-type">String</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> future.get(<span class="hljs-number">5</span>, TimeUnit.SECONDS);
+        System.out.println(result);
+    } <span class="hljs-keyword">catch</span> (InterruptedException | ExecutionException | TimeoutException e) {
+        <span class="hljs-comment">// 处理异常</span>
+        e.printStackTrace();
+    }
+}
+</code></pre>
+<p>上面这段代码在调用 <code>get()</code> 时抛出了 <code>TimeoutException</code> 异常。这样我们就可以在异常处理中进行相应的操作，比如取消任务、重试任务、记录日志等。</p>
+<h3 id="正确进行异常处理" tabindex="-1">正确进行异常处理</h3>
+<p>使用 <code>CompletableFuture</code> 的时候一定要以正确的方式进行异常处理，避免异常丢失或者出现不可控问题。</p>
+<p>下面是一些建议：</p>
+<ul>
+<li><code>whenComplete</code> 会在阶段正常或异常完成时执行回调，适合观察结果和记录异常；它默认保留原阶段的结果或异常，不用于把异常转换为正常结果。</li>
+<li><code>exceptionally</code> 只在阶段异常完成时执行，并用回调的返回值恢复为正常结果；如果需要继续传播异常，可以在回调中显式抛出异常。</li>
+<li><code>handle</code> 无论阶段正常还是异常完成都会执行，并根据结果和异常生成一个新的结果。</li>
+<li><code>CompletableFuture.allOf</code> 可以等待多个阶段全部完成；只要其中一个阶段异常完成，返回的 <code>CompletableFuture</code> 也会异常完成，但仍需分别检查各阶段才能获得每个任务的结果或异常。</li>
+<li>……</li>
+</ul>
+<h3 id="合理组合多个异步任务" tabindex="-1">合理组合多个异步任务</h3>
+<p>正确使用 <code>thenCompose()</code>、 <code>thenCombine()</code>、<code>acceptEither()</code>、<code>allOf()</code>、<code>anyOf()</code> 等方法来组合多个异步任务，以满足实际业务的需求，提高程序执行效率。</p>
+<p>实际使用中，我们还可以利用或者参考现成的异步任务编排框架，比如京东的 <a href="https://gitee.com/jd-platform-opensource/asyncTool" target="_blank" rel="noopener">asyncTool</a>。</p>
+<p><img src="/img/asyncTool-readme-b14669c5.png" alt="" loading="lazy"></p>
+<h2 id="后记" tabindex="-1">后记</h2>
+<p>这篇文章只是简单介绍了 <code>CompletableFuture</code> 的核心概念和比较常用的一些 API。如果想要深入学习的话，还可以多找一些书籍和博客看，比如下面几篇文章就挺不错：</p>
+<ul>
+<li><a href="https://tech.meituan.com/2022/05/12/principles-and-practices-of-completablefuture.html" target="_blank" rel="noopener">CompletableFuture 原理与实践-外卖商家端 API 的异步化 - 美团技术团队</a>：这篇文章详细介绍了 <code>CompletableFuture</code> 在实际项目中的运用。参考这篇文章，可以对项目中类似的场景进行优化，也算是一个小亮点了。这种性能优化方式比较简单且效果还不错！</li>
+<li><a href="https://mp.weixin.qq.com/s/32Ak-WFLynQfpn0Cg0N-0A" target="_blank" rel="noopener">读 RocketMQ 源码，学习并发编程三大神器 - 勇哥 java 实战分享</a>：这篇文章介绍了 RocketMQ 对 <code>CompletableFuture</code> 的应用。具体来说，从 RocketMQ 4.7 开始，RocketMQ 引入了 <code>CompletableFuture</code> 来实现异步消息处理。</li>
+</ul>
+<p>另外，建议 G 友们可以看看京东的 <a href="https://gitee.com/jd-platform-opensource/asyncTool" target="_blank" rel="noopener">asyncTool</a> 这个并发框架，里面大量使用到了 <code>CompletableFuture</code>。</p>
+<!-- @include: @article-footer.snippet.md -->

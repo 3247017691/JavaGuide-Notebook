@@ -1,0 +1,231 @@
+<p>这篇文章我们简单来看看我们从 IO 中能够学习到哪些设计模式的应用。</p>
+<h2 id="装饰器模式" tabindex="-1">装饰器模式</h2>
+<p><strong>装饰器（Decorator）模式</strong> 可以在不改变原有对象的情况下拓展其功能。</p>
+<p>装饰器模式通过组合替代继承来扩展原始类的功能，在一些继承关系比较复杂的场景（IO 这一场景各种类的继承关系就比较复杂）更加实用。</p>
+<p>对于字节流来说， <code>FilterInputStream</code>（对应输入流）和 <code>FilterOutputStream</code>（对应输出流）是装饰器模式的核心，分别用于增强 <code>InputStream</code> 和 <code>OutputStream</code> 子类对象的功能。</p>
+<p>我们常见的 <code>BufferedInputStream</code>（字节缓冲输入流）、<code>DataInputStream</code> 等等都是 <code>FilterInputStream</code> 的子类，<code>BufferedOutputStream</code>（字节缓冲输出流）、<code>DataOutputStream</code> 等等都是 <code>FilterOutputStream</code> 的子类。</p>
+<p>举个例子，我们可以通过 <code>BufferedInputStream</code>（字节缓冲输入流）来增强 <code>FileInputStream</code> 的功能。</p>
+<p><code>BufferedInputStream</code> 构造函数如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">public</span> <span class="hljs-title function_">BufferedInputStream</span><span class="hljs-params">(InputStream in)</span> {
+    <span class="hljs-built_in">this</span>(in, DEFAULT_BUFFER_SIZE);
+}
+
+<span class="hljs-type">public</span> <span class="hljs-title function_">BufferedInputStream</span><span class="hljs-params">(InputStream in, <span class="hljs-type">int</span> size)</span> {
+    <span class="hljs-built_in">super</span>(in);
+    <span class="hljs-keyword">if</span> (size &lt;= <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;Buffer size &lt;= 0&quot;</span>);
+    }
+    buf = <span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[size];
+}
+</code></pre>
+<p>可以看出，<code>BufferedInputStream</code> 的构造函数其中的一个参数就是 <code>InputStream</code>。</p>
+<p><code>BufferedInputStream</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>))) {
+    <span class="hljs-type">int</span> content;
+    <span class="hljs-type">long</span> <span class="hljs-variable">skip</span> <span class="hljs-operator">=</span> bis.skip(<span class="hljs-number">2</span>);
+    <span class="hljs-keyword">while</span> ((content = bis.read()) != -<span class="hljs-number">1</span>) {
+        System.out.print((<span class="hljs-type">char</span>) content);
+    }
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p>这个时候，你可能会想了：<strong>为啥我们不直接弄一个 <code>BufferedFileInputStream</code>（字符缓冲文件输入流）呢？</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">BufferedFileInputStream</span> <span class="hljs-variable">bfis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedFileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>);
+</code></pre>
+<p>如果 <code>InputStream</code> 的子类比较少的话，这样做是没问题的。不过， <code>InputStream</code> 的子类实在太多，继承关系也太复杂了。如果我们为每一个子类都定制一个对应的缓冲输入流，那岂不是太麻烦了。</p>
+<p>如果你对 IO 流比较熟悉的话，你会发现 <code>ZipInputStream</code> 和 <code>ZipOutputStream</code> 还可以分别增强 <code>BufferedInputStream</code> 和 <code>BufferedOutputStream</code> 的能力。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(fileName));
+<span class="hljs-type">ZipInputStream</span> <span class="hljs-variable">zis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZipInputStream</span>(bis);
+
+<span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(fileName));
+<span class="hljs-type">ZipOutputStream</span> <span class="hljs-variable">zipOut</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ZipOutputStream</span>(bos);
+</code></pre>
+<p><code>ZipInputStream</code> 和 <code>ZipOutputStream</code> 分别继承自 <code>InflaterInputStream</code> 和 <code>DeflaterOutputStream</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">InflaterInputStream</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FilterInputStream</span> {
+}
+
+<span class="hljs-keyword">public</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">DeflaterOutputStream</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FilterOutputStream</span> {
+}
+
+</code></pre>
+<p>这也是装饰器模式很重要的一个特征，那就是可以对原始类嵌套使用多个装饰器。</p>
+<p>为了实现这一效果，装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口。上面介绍到的这些 IO 相关的装饰类和原始类共同的父类是 <code>InputStream</code> 和 <code>OutputStream</code>。</p>
+<p>对于字符流来说，<code>BufferedReader</code> 可以用来增加 <code>Reader</code>（字符输入流）子类的功能，<code>BufferedWriter</code> 可以用来增加 <code>Writer</code>（字符输出流）子类的功能。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">BufferedWriter</span> <span class="hljs-variable">bw</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedWriter</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">OutputStreamWriter</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(fileName), <span class="hljs-string">&quot;UTF-8&quot;</span>));
+</code></pre>
+<p>IO 流中的装饰器模式应用的例子实在是太多了，不需要特意记忆，完全没必要哈！搞清了装饰器模式的核心之后，你在使用的时候自然就会知道哪些地方运用到了装饰器模式。</p>
+<h2 id="适配器模式" tabindex="-1">适配器模式</h2>
+<p><strong>适配器（Adapter Pattern）模式</strong> 主要用于接口互不兼容的类的协调工作，你可以将其联想到我们日常经常使用的电源适配器。</p>
+<p>适配器模式中存在被适配的对象或者类称为 <strong>适配者(Adaptee)</strong>，作用于适配者的对象或者类称为<strong>适配器(Adapter)</strong>。适配器分为对象适配器和类适配器。类适配器使用继承关系来实现，对象适配器使用组合关系来实现。</p>
+<p>IO 流中的字符流和字节流的接口不同，它们之间可以协调工作就是基于适配器模式来做的，更准确点来说是对象适配器。通过适配器，我们可以将字节流对象适配成一个字符流对象，这样我们可以直接通过字节流对象来读取或者写入字符数据。</p>
+<p><code>InputStreamReader</code> 和 <code>OutputStreamWriter</code> 就是两个适配器(Adapter)， 同时，它们两个也是字节流和字符流之间的桥梁。<code>InputStreamReader</code> 使用 <code>StreamDecoder</code>（流解码器）对字节进行解码，<strong>实现字节流到字符流的转换，</strong> <code>OutputStreamWriter</code> 使用 <code>StreamEncoder</code>（流编码器）对字符进行编码，实现字符流到字节流的转换。</p>
+<p><code>InputStream</code> 和 <code>OutputStream</code> 的子类是被适配者， <code>InputStreamReader</code> 和 <code>OutputStreamWriter</code> 是适配器。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// InputStreamReader 是适配器，FileInputStream 是被适配的类</span>
+<span class="hljs-type">InputStreamReader</span> <span class="hljs-variable">isr</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">InputStreamReader</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(fileName), <span class="hljs-string">&quot;UTF-8&quot;</span>);
+<span class="hljs-comment">// BufferedReader 增强 InputStreamReader 的功能（装饰器模式）</span>
+<span class="hljs-type">BufferedReader</span> <span class="hljs-variable">bufferedReader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedReader</span>(isr);
+</code></pre>
+<p><code>java.io.InputStreamReader</code> 部分源码：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">InputStreamReader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Reader</span> {
+    <span class="hljs-comment">//用于解码的对象</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> StreamDecoder sd;
+    <span class="hljs-type">public</span> <span class="hljs-title function_">InputStreamReader</span><span class="hljs-params">(InputStream in)</span> {
+        <span class="hljs-built_in">super</span>(in);
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-comment">// 获取 StreamDecoder 对象</span>
+            sd = StreamDecoder.forInputStreamReader(in, <span class="hljs-built_in">this</span>, (String)<span class="hljs-literal">null</span>);
+        } <span class="hljs-keyword">catch</span> (UnsupportedEncodingException e) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(e);
+        }
+    }
+    <span class="hljs-comment">// 使用 StreamDecoder 对象做具体的读取工作</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">read</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> IOException {
+        <span class="hljs-keyword">return</span> sd.read();
+    }
+}
+</code></pre>
+<p><code>java.io.OutputStreamWriter</code> 部分源码：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">OutputStreamWriter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Writer</span> {
+    <span class="hljs-comment">// 用于编码的对象</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> StreamEncoder se;
+    <span class="hljs-type">public</span> <span class="hljs-title function_">OutputStreamWriter</span><span class="hljs-params">(OutputStream out)</span> {
+        <span class="hljs-built_in">super</span>(out);
+        <span class="hljs-keyword">try</span> {
+           <span class="hljs-comment">// 获取 StreamEncoder 对象</span>
+            se = StreamEncoder.forOutputStreamWriter(out, <span class="hljs-built_in">this</span>, (String)<span class="hljs-literal">null</span>);
+        } <span class="hljs-keyword">catch</span> (UnsupportedEncodingException e) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(e);
+        }
+    }
+    <span class="hljs-comment">// 使用 StreamEncoder 对象做具体的写入工作</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">write</span><span class="hljs-params">(<span class="hljs-type">int</span> c)</span> <span class="hljs-keyword">throws</span> IOException {
+        se.write(c);
+    }
+}
+</code></pre>
+<p><strong>适配器模式和装饰器模式有什么区别呢？</strong></p>
+<p><strong>装饰器模式</strong> 更侧重于动态地增强原始类的功能，装饰器类需要跟原始类继承相同的抽象类或者实现相同的接口。并且，装饰器模式支持对原始类嵌套使用多个装饰器。</p>
+<p><strong>适配器模式</strong> 更侧重于让接口不兼容而不能交互的类可以一起工作，当我们调用适配器对应的方法时，适配器内部会调用适配者类或者和适配类相关的类的方法，这个过程是透明的。例如，<code>InputStreamReader</code> 和 <code>OutputStreamWriter</code> 分别将字节输入流、字节输出流适配成字符输入流、字符输出流，并在内部完成字节与字符之间的编解码。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Reader</span> <span class="hljs-variable">reader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">InputStreamReader</span>(inputStream, StandardCharsets.UTF_8);
+<span class="hljs-type">Writer</span> <span class="hljs-variable">writer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">OutputStreamWriter</span>(outputStream, StandardCharsets.UTF_8);
+</code></pre>
+<p>适配器和适配者两者不需要继承相同的抽象类或者实现相同的接口。</p>
+<p>另外，<code>FutureTask</code> 类使用了适配器模式，<code>Executors</code> 的内部类 <code>RunnableAdapter</code> 实现属于适配器，用于将 <code>Runnable</code> 适配成 <code>Callable</code>。</p>
+<p><code>FutureTask</code> 参数包含 <code>Runnable</code> 的一个构造方法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">public</span> <span class="hljs-title function_">FutureTask</span><span class="hljs-params">(Runnable runnable, V result)</span> {
+    <span class="hljs-comment">// 调用 Executors 类的 callable 方法</span>
+    <span class="hljs-built_in">this</span>.callable = Executors.callable(runnable, result);
+    <span class="hljs-built_in">this</span>.state = NEW;
+}
+</code></pre>
+<p><code>Executors</code> 中对应的方法和适配器：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 实际调用的是 Executors 的内部类 RunnableAdapter 的构造方法</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">Callable</span>&lt;T&gt; <span class="hljs-title function_">callable</span><span class="hljs-params">(Runnable task, T result)</span> {
+    <span class="hljs-keyword">if</span> (task == <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RunnableAdapter</span>&lt;T&gt;(task, result);
+}
+<span class="hljs-comment">// 适配器</span>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">RunnableAdapter</span>&lt;T&gt; <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Callable</span>&lt;T&gt; {
+    <span class="hljs-keyword">final</span> Runnable task;
+    <span class="hljs-keyword">final</span> T result;
+    RunnableAdapter(Runnable task, T result) {
+        <span class="hljs-built_in">this</span>.task = task;
+        <span class="hljs-built_in">this</span>.result = result;
+    }
+    <span class="hljs-keyword">public</span> <span class="hljs-type">T</span> <span class="hljs-title function_">call</span><span class="hljs-params">()</span> {
+        task.run();
+        <span class="hljs-keyword">return</span> result;
+    }
+}
+</code></pre>
+<h2 id="工厂模式" tabindex="-1">工厂模式</h2>
+<p>工厂模式用于创建对象，NIO 中大量用到了工厂模式，比如 <code>Files</code> 类的 <code>newInputStream</code> 方法用于创建 <code>InputStream</code> 对象（静态工厂）、 <code>Paths</code> 类的 <code>get</code> 方法创建 <code>Path</code> 对象（静态工厂）、<code>ZipFileSystem</code> 类（<code>sun.nio</code> 包下的类，属于 <code>java.nio</code> 相关的一些内部实现）的 <code>getPath</code> 的方法创建 <code>Path</code> 对象（简单工厂）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">InputStream</span> <span class="hljs-variable">is</span> <span class="hljs-operator">=</span> Files.newInputStream(Paths.get(generatorLogoPath))
+</code></pre>
+<h2 id="观察者模式" tabindex="-1">观察者模式</h2>
+<p>NIO 中的文件目录监听服务使用到了观察者模式。</p>
+<p>NIO 中的文件目录监听服务基于 <code>WatchService</code> 接口和 <code>Watchable</code> 接口。<code>WatchService</code> 属于观察者，<code>Watchable</code> 属于被观察者。</p>
+<p><code>Watchable</code> 接口定义了一个用于将对象注册到 <code>WatchService</code>（监控服务） 并绑定监听事件的方法 <code>register</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Path</span>
+    <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Comparable</span>&lt;Path&gt;, Iterable&lt;Path&gt;, Watchable{
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">Watchable</span> {
+    <span class="hljs-type">WatchKey</span> <span class="hljs-title function_">register</span><span class="hljs-params">(WatchService watcher,
+                      WatchEvent.Kind&lt;?&gt;[] events,
+                      WatchEvent.Modifier... modifiers)</span>
+        <span class="hljs-keyword">throws</span> IOException;
+}
+</code></pre>
+<p><code>WatchService</code> 用于监听文件目录的变化，同一个 <code>WatchService</code> 对象能够监听多个文件目录。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 创建 WatchService 对象</span>
+<span class="hljs-type">WatchService</span> <span class="hljs-variable">watchService</span> <span class="hljs-operator">=</span> FileSystems.getDefault().newWatchService();
+
+<span class="hljs-comment">// 初始化一个被监控文件夹的 Path 类:</span>
+<span class="hljs-type">Path</span> <span class="hljs-variable">path</span> <span class="hljs-operator">=</span> Paths.get(<span class="hljs-string">&quot;workingDirectory&quot;</span>);
+<span class="hljs-comment">// 将这个 path 对象注册到 WatchService（监控服务） 中去</span>
+<span class="hljs-type">WatchKey</span> <span class="hljs-variable">watchKey</span> <span class="hljs-operator">=</span> path.register(
+watchService, StandardWatchEventKinds...);
+</code></pre>
+<p><code>Path</code> 类 <code>register</code> 方法的第二个参数 <code>events</code>（需要监听的事件）为可变长参数，也就是说我们可以同时监听多种事件。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">WatchKey</span> <span class="hljs-title function_">register</span><span class="hljs-params">(WatchService watcher,
+                  WatchEvent.Kind&lt;?&gt;... events)</span>
+    <span class="hljs-keyword">throws</span> IOException;
+</code></pre>
+<p>常用的监听事件有 3 种：</p>
+<ul>
+<li><code>StandardWatchEventKinds.ENTRY_CREATE</code>：文件创建。</li>
+<li><code>StandardWatchEventKinds.ENTRY_DELETE</code> : 文件删除。</li>
+<li><code>StandardWatchEventKinds.ENTRY_MODIFY</code> : 文件修改。</li>
+</ul>
+<p><code>register</code> 方法返回 <code>WatchKey</code> 对象，通过 <code>WatchKey</code> 对象可以获取事件的具体信息比如文件目录下是创建、删除还是修改了文件、创建、删除或者修改的文件的具体名称是什么。</p>
+<pre class="md-pre"><code class="hljs">WatchKey key;
+<span class="hljs-keyword">while</span> ((key = watchService.take()) != <span class="hljs-literal">null</span>) {
+    <span class="hljs-keyword">for</span> (WatchEvent&lt;?&gt; event : key.pollEvents()) {
+      <span class="hljs-comment">// 可以调用 WatchEvent 对象的方法做一些事情比如输出事件的具体上下文信息</span>
+    }
+    key.reset();
+}
+</code></pre>
+<p><code>WatchService</code> 的具体实现取决于文件系统和底层 Provider：实现可以直接使用原生文件事件机制，也可以退化为定期轮询。下面是轮询实现的简化源码。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PollingWatchService</span>
+    <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractWatchService</span>
+{
+    <span class="hljs-comment">// 定义一个 daemon thread（守护线程）轮询检测文件变化</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> ScheduledExecutorService scheduledExecutor;
+
+    PollingWatchService() {
+        scheduledExecutor = Executors
+            .newSingleThreadScheduledExecutor(<span class="hljs-keyword">new</span> <span class="hljs-title class_">ThreadFactory</span>() {
+                 <span class="hljs-meta">@Override</span>
+                 <span class="hljs-keyword">public</span> <span class="hljs-type">Thread</span> <span class="hljs-title function_">newThread</span><span class="hljs-params">(Runnable r)</span> {
+                     <span class="hljs-type">Thread</span> <span class="hljs-variable">t</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Thread</span>(r);
+                     t.setDaemon(<span class="hljs-literal">true</span>);
+                     <span class="hljs-keyword">return</span> t;
+                 }});
+    }
+
+  <span class="hljs-type">void</span> <span class="hljs-title function_">enable</span><span class="hljs-params">(Set&lt;? extends WatchEvent.Kind&lt;?&gt;&gt; events, <span class="hljs-type">long</span> period)</span> {
+    <span class="hljs-keyword">synchronized</span> (<span class="hljs-built_in">this</span>) {
+      <span class="hljs-comment">// 更新监听事件</span>
+      <span class="hljs-built_in">this</span>.events = events;
+
+        <span class="hljs-comment">// 开启定期轮询</span>
+      <span class="hljs-type">Runnable</span> <span class="hljs-variable">thunk</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() { <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> { poll(); }};
+      <span class="hljs-built_in">this</span>.poller = scheduledExecutor
+        .scheduleAtFixedRate(thunk, period, period, TimeUnit.SECONDS);
+    }
+  }
+}
+</code></pre>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>Patterns in Java APIs：<a href="http://cecs.wright.edu/~tkprasad/courses/ceg860/paper/node26.html" target="_blank" rel="noopener">http://cecs.wright.edu/~tkprasad/courses/ceg860/paper/node26.html</a></li>
+<li>装饰器模式：通过剖析 Java IO 类库源码学习装饰器模式：<a href="https://time.geekbang.org/column/article/204845" target="_blank" rel="noopener">https://time.geekbang.org/column/article/204845</a></li>
+<li>sun.nio 包是什么，是 java 代码么？ - RednaxelaFX <a href="https://www.zhihu.com/question/29237781/answer/43653953" target="_blank" rel="noopener">https://www.zhihu.com/question/29237781/answer/43653953</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

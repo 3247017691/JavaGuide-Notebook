@@ -1,0 +1,310 @@
+<p>动态规划难，不是因为代码一定长，而是因为状态定义一旦错了，后面的转移方程、初始化和遍历顺序都会跟着错。</p>
+<p>面试里不要一上来就背模板。先问自己两个问题：这个问题能不能拆成子问题？当前答案是否依赖前面已经算过的答案？如果这两个问题都成立，再考虑 DP。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能说清 <code>dp[i]</code> 或 <code>dp[i][j]</code> 的含义。</li>
+<li>能写出状态转移方程。</li>
+<li>能处理初始化和遍历顺序。</li>
+<li>能判断是否可以压缩空间。</li>
+<li>能区分背包、子序列、区间等常见类型。</li>
+</ul>
+<h2 id="什么时候考虑动态规划" tabindex="-1">什么时候考虑动态规划？</h2>
+<p>DP 不是看到“最值”就套。更靠谱的判断是看两个条件：</p>
+<ol>
+<li>问题能不能拆成规模更小的同类问题。</li>
+<li>子问题会不会被反复计算。</li>
+</ol>
+<p>比如斐波那契数列，<code>f(n)</code> 依赖 <code>f(n - 1)</code> 和 <code>f(n - 2)</code>，而 <code>f(n - 2)</code> 会在递归里被反复计算。把这些中间结果存下来，就是 DP。</p>
+<p>面试里可以先从暴力递归说起，再说明哪里重复计算，最后把递归改成记忆化搜索或表格递推。这个过程比直接背 <code>dp</code> 数组更容易让面试官相信你真的理解。</p>
+<h2 id="dp-五步法" tabindex="-1">DP 五步法</h2>
+<ol>
+<li>定义状态：<code>dp[i]</code> 到底表示什么。</li>
+<li>写转移：当前状态从哪些状态推出来。</li>
+<li>做初始化：没有前置状态时答案是什么。</li>
+<li>定遍历顺序：先算哪些状态，后算哪些状态。</li>
+<li>检查样例：用一个小输入手推数组。</li>
+</ol>
+<p>其中最重要的是第 1 步。<code>dp[i]</code> 的含义一旦含糊，后面的代码就会变成试出来的。</p>
+<p>一个好的状态定义通常满足：</p>
+<ul>
+<li>能覆盖题目要问的答案。</li>
+<li>能从更小状态推出来。</li>
+<li>维度尽量少，但不要为了省空间把含义写乱。</li>
+</ul>
+<h2 id="一维-dp-示例" tabindex="-1">一维 DP 示例</h2>
+<p>爬楼梯问题：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">climbStairs</span><span class="hljs-params">(<span class="hljs-type">int</span> n)</span> {
+    <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">2</span>) {
+        <span class="hljs-keyword">return</span> n;
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">prev2</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">prev1</span> <span class="hljs-operator">=</span> <span class="hljs-number">2</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">3</span>; i &lt;= n; i++) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">cur</span> <span class="hljs-operator">=</span> prev1 + prev2;
+        prev2 = prev1;
+        prev1 = cur;
+    }
+    <span class="hljs-keyword">return</span> prev1;
+}
+</code></pre>
+<p>状态含义：到第 <code>i</code> 阶有多少种走法。转移方程：<code>dp[i] = dp[i - 1] + dp[i - 2]</code>。</p>
+<p>这题还可以从递归推出来：</p>
+<pre class="md-pre"><code class="hljs">到第 i 阶的最后一步，要么从 i-1 走 1 步上来，要么从 i-2 走 2 步上来。
+</code></pre>
+<p>所以 <code>dp[i]</code> 只依赖前两个状态，可以把数组压缩成两个变量。空间压缩的前提是你确认旧状态以后不会再用。</p>
+<h2 id="0-1-背包模板" tabindex="-1">0-1 背包模板</h2>
+<p>每个物品只能选一次：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">knapsack01</span><span class="hljs-params">(<span class="hljs-type">int</span>[] weights, <span class="hljs-type">int</span>[] values, <span class="hljs-type">int</span> capacity)</span> {
+    <span class="hljs-type">int</span>[] <span class="hljs-variable">dp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[capacity + <span class="hljs-number">1</span>];
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; weights.length; i++) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> capacity; j &gt;= weights[i]; j--) {
+            dp[j] = Math.max(dp[j], dp[j - weights[i]] + values[i]);
+        }
+    }
+    <span class="hljs-keyword">return</span> dp[capacity];
+}
+</code></pre>
+<p>容量要倒序遍历，避免同一个物品在一轮里被重复使用。</p>
+<p>倒序遍历是 0-1 背包最容易被问的点。假设容量正序遍历，计算 <code>dp[j]</code> 时可能用到本轮刚更新过的 <code>dp[j - weight]</code>，等于同一个物品被选了多次。这就变成完全背包了。</p>
+<p>0-1 背包的典型问法不一定直接叫背包，像“能否分成两个和相等的子集”，可以转成：能否从数组里选一些数，使它们的和等于总和的一半。</p>
+<h2 id="完全背包模板" tabindex="-1">完全背包模板</h2>
+<p>每个物品可以选多次：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">unboundedKnapsack</span><span class="hljs-params">(<span class="hljs-type">int</span>[] weights, <span class="hljs-type">int</span>[] values, <span class="hljs-type">int</span> capacity)</span> {
+    <span class="hljs-type">int</span>[] <span class="hljs-variable">dp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[capacity + <span class="hljs-number">1</span>];
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; weights.length; i++) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> weights[i]; j &lt;= capacity; j++) {
+            dp[j] = Math.max(dp[j], dp[j - weights[i]] + values[i]);
+        }
+    }
+    <span class="hljs-keyword">return</span> dp[capacity];
+}
+</code></pre>
+<p>容量正序遍历，允许当前物品被重复使用。</p>
+<p>完全背包里，正序遍历容量正是为了允许当前物品重复使用。比如零钱兑换，每种硬币可以用多次，计算更大金额时可以基于当前硬币已经参与过的状态继续转移。</p>
+<p>如果题目问的是“组合数”还是“排列数”，遍历顺序也会变：</p>
+<ul>
+<li>组合数：通常先遍历物品，再遍历容量。</li>
+<li>排列数：通常先遍历容量，再遍历物品。</li>
+</ul>
+<p>这块面试不一定问很深，但遇到零钱兑换 II 这类题时很关键。</p>
+<h2 id="常见题型" tabindex="-1">常见题型</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>状态设计</th>
+<th>代表题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>爬楼梯/打家劫舍</td>
+<td><code>dp[i]</code> 表示前 <code>i</code> 个位置的最优值</td>
+<td>70、198</td>
+</tr>
+<tr>
+<td>背包</td>
+<td><code>dp[j]</code> 表示容量为 <code>j</code> 时的最优值或方案数</td>
+<td>416、518、322</td>
+</tr>
+<tr>
+<td>子序列</td>
+<td><code>dp[i]</code> 或 <code>dp[i][j]</code> 表示以某位置结尾或两个前缀的答案</td>
+<td>300、1143</td>
+</tr>
+<tr>
+<td>回文</td>
+<td><code>dp[i][j]</code> 表示区间 <code>[i, j]</code> 是否满足条件或最优值</td>
+<td>647、516</td>
+</tr>
+<tr>
+<td>路径</td>
+<td><code>dp[i][j]</code> 表示走到格子 <code>(i, j)</code> 的答案</td>
+<td>62、64</td>
+</tr>
+</tbody>
+</table>
+<h2 id="记忆化搜索和递推怎么选" tabindex="-1">记忆化搜索和递推怎么选？</h2>
+<p>两种写法都在存子问题答案。</p>
+<table>
+<thead>
+<tr>
+<th>写法</th>
+<th>特点</th>
+<th>适合场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>记忆化搜索</td>
+<td>从目标状态往下递归，按需计算</td>
+<td>状态转移复杂、递归更自然</td>
+</tr>
+<tr>
+<td>递推</td>
+<td>从小状态往大状态填表</td>
+<td>遍历顺序清楚、方便压缩空间</td>
+</tr>
+</tbody>
+</table>
+<p>如果一开始想不清遍历顺序，可以先写记忆化搜索。等状态关系清楚后，再改成递推。很多树形 DP、区间 DP，用记忆化搜索更容易写对。</p>
+<h2 id="面试手写路径" tabindex="-1">面试手写路径</h2>
+<p>DP 题不建议直接从代码开始。面试手写时，可以先把下面 4 句话讲清楚：</p>
+<ol>
+<li><code>dp</code> 数组的含义是什么，答案最终落在哪个位置。</li>
+<li>当前状态依赖哪些旧状态，为什么这些旧状态已经算过。</li>
+<li>初始化为什么这样写，尤其是 <code>0</code>、<code>1</code>、无穷大分别代表什么。</li>
+<li>遍历顺序为什么不会提前使用未计算或不该重复使用的状态。</li>
+</ol>
+<p>如果这 4 句话说不清，代码大概率是靠记忆写出来的，遇到变体就容易散。</p>
+<h2 id="代表题精讲零钱兑换" tabindex="-1">代表题精讲：零钱兑换</h2>
+<p><a href="https://leetcode.cn/problems/coin-change/" target="_blank" rel="noopener">322. 零钱兑换</a> 是完全背包里很适合面试的一题。题目给定硬币面额和目标金额，问凑成目标金额最少需要多少枚硬币，每种硬币可以使用无限次。</p>
+<p>状态定义可以这样说：</p>
+<pre class="md-pre"><code class="hljs">dp[j] 表示凑成金额 j 所需的最少硬币数。
+</code></pre>
+<p>初始化是这题的关键。<code>dp[0] = 0</code>，表示凑成金额 0 不需要硬币；其他金额先设成一个不可能的较大值，表示暂时不可达。</p>
+<p>代码里用到 <code>Arrays.fill</code>，需要导入 <code>java.util.Arrays</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">coinChange</span><span class="hljs-params">(<span class="hljs-type">int</span>[] coins, <span class="hljs-type">int</span> amount)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">max</span> <span class="hljs-operator">=</span> amount + <span class="hljs-number">1</span>;
+    <span class="hljs-type">int</span>[] <span class="hljs-variable">dp</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[amount + <span class="hljs-number">1</span>];
+    Arrays.fill(dp, max);
+    dp[<span class="hljs-number">0</span>] = <span class="hljs-number">0</span>;
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> coin : coins) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> coin; j &lt;= amount; j++) {
+            dp[j] = Math.min(dp[j], dp[j - coin] + <span class="hljs-number">1</span>);
+        }
+    }
+
+    <span class="hljs-keyword">return</span> dp[amount] == max ? -<span class="hljs-number">1</span> : dp[amount];
+}
+</code></pre>
+<p>为什么容量正序遍历？因为一枚硬币可以用多次。计算 <code>dp[j]</code> 时使用 <code>dp[j - coin]</code>，如果 <code>dp[j - coin]</code> 已经在本轮被当前硬币更新过，就代表当前硬币可以继续被使用，这正好符合完全背包。</p>
+<p>如果题目变成“每种硬币只能用一次”，容量就要倒序遍历。遍历方向不是格式问题，而是在控制同一件物品能不能重复参与转移。</p>
+<h2 id="状态定义对比" tabindex="-1">状态定义对比</h2>
+<p>DP 题经常不是不会写转移，而是状态含义选错。下面几组状态看起来接近，但写法完全不同：</p>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>状态含义</th>
+<th>常见转移关注点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最长递增子序列</td>
+<td><code>dp[i]</code> 表示以 <code>nums[i]</code> 结尾的 LIS 长度</td>
+<td>必须选 <code>nums[i]</code>，向前找更小值</td>
+</tr>
+<tr>
+<td>打家劫舍</td>
+<td><code>dp[i]</code> 表示前 <code>i</code> 间房子的最大金额</td>
+<td>第 <code>i</code> 间偷或不偷</td>
+</tr>
+<tr>
+<td>最长公共子序列</td>
+<td><code>dp[i][j]</code> 表示两个前缀的 LCS 长度</td>
+<td>比较两个前缀最后一个字符</td>
+</tr>
+<tr>
+<td>回文子串</td>
+<td><code>dp[i][j]</code> 表示区间 <code>[i, j]</code> 是否回文</td>
+<td>依赖内部区间 <code>[i + 1, j - 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p>面试里可以主动说一句：这里的 <code>dp[i]</code> 是“以 i 结尾”，不是“前 i 个元素里的最优值”。这句话能避免很多子序列题写错。</p>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>以爬楼梯为例，<code>n = 5</code> 时的状态变化如下：</p>
+<table>
+<thead>
+<tr>
+<th><code>i</code></th>
+<th><code>dp[i - 2]</code></th>
+<th><code>dp[i - 1]</code></th>
+<th><code>dp[i]</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2</td>
+<td>3</td>
+<td>5</td>
+</tr>
+<tr>
+<td>5</td>
+<td>3</td>
+<td>5</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p>这张表要看的不是数字本身，而是状态只依赖前两个位置，所以可以压缩成两个变量。</p>
+<p>DP 题建议检查这些边界：</p>
+<table>
+<thead>
+<tr>
+<th>输入</th>
+<th>重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n = 0</code> 或空数组</td>
+<td>初始化是否覆盖</td>
+</tr>
+<tr>
+<td>只有 1 个元素</td>
+<td>是否越界访问 <code>dp[1]</code></td>
+</tr>
+<tr>
+<td>无法组成目标</td>
+<td>初始值是否能表达“不可达”</td>
+</tr>
+<tr>
+<td>求方案数</td>
+<td>初始化和遍历顺序是否正确</td>
+</tr>
+</tbody>
+</table>
+<p>常见错误写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> weights[i]; j &lt;= capacity; j++) {
+    dp[j] = Math.max(dp[j], dp[j - weights[i]] + values[i]); <span class="hljs-comment">// 0-1 背包中是错的</span>
+}
+</code></pre>
+<p>0-1 背包中容量要倒序遍历，否则本轮刚更新的状态会被再次使用，相当于同一个物品被选了多次。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li><code>dp</code> 含义不要频繁变化。</li>
+<li>初始化不是随便填 0，要看状态含义。</li>
+<li>0-1 背包容量倒序，完全背包容量正序。</li>
+<li>求方案数和求最值的初始化不同。</li>
+<li>子序列题经常需要区分“以 i 结尾”和“前 i 个元素内”。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>为什么 DP 的第一步一定是定义状态？</li>
+<li>记忆化搜索和递推的区别是什么？什么时候先写记忆化更稳？</li>
+<li>0-1 背包为什么容量要倒序遍历？</li>
+<li>完全背包为什么容量可以正序遍历？</li>
+<li><code>dp[i]</code> 表示“以 i 结尾”和表示“前 i 个元素”时，转移有什么区别？</li>
+<li>求最少次数、最大价值、方案数时，初始化分别要注意什么？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/climbing-stairs/" target="_blank" rel="noopener">70. 爬楼梯</a></li>
+<li><a href="https://leetcode.cn/problems/house-robber/" target="_blank" rel="noopener">198. 打家劫舍</a></li>
+<li><a href="https://leetcode.cn/problems/coin-change/" target="_blank" rel="noopener">322. 零钱兑换</a></li>
+<li><a href="https://leetcode.cn/problems/partition-equal-subset-sum/" target="_blank" rel="noopener">416. 分割等和子集</a></li>
+<li><a href="https://leetcode.cn/problems/longest-increasing-subsequence/" target="_blank" rel="noopener">300. 最长递增子序列</a></li>
+<li><a href="https://leetcode.cn/problems/longest-common-subsequence/" target="_blank" rel="noopener">1143. 最长公共子序列</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

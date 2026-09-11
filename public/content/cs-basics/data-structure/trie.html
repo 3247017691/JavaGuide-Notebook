@@ -1,0 +1,196 @@
+<p>Trie，也叫前缀树或字典树，适合处理大量字符串的前缀匹配问题。搜索提示、词典查询、敏感词过滤、路由前缀匹配，都能看到它的影子。</p>
+<p>它的核心思路很直接：把字符串按字符拆开，共享相同前缀。比如 <code>app</code>、<code>apple</code>、<code>apply</code> 会共用 <code>a -&gt; p -&gt; p</code> 这条路径。</p>
+<p>文章内容概览：</p>
+<ol>
+<li>什么是 Trie？</li>
+<li>Trie 为什么适合前缀匹配？</li>
+<li>Trie 节点怎么设计？</li>
+<li>Trie 的插入、查询和前缀查询怎么写？</li>
+<li>Trie 和哈希表应该怎么选？</li>
+</ol>
+<p><img src="/img/trie-4a6afdfb.png" alt="" loading="lazy"></p>
+<h2 id="什么是-trie" tabindex="-1">什么是 Trie？</h2>
+<p>Trie 是一种专门面向字符串集合的数据结构。和二叉搜索树不同，Trie 的节点通常不靠“大小关系”组织，而是靠“字符路径”组织。</p>
+<p>可以这样理解：</p>
+<ul>
+<li>根节点不代表任何字符，只是所有字符串的入口。</li>
+<li>从根节点出发，每向下一层走一步，就匹配字符串中的一个字符。</li>
+<li>从根节点到某个节点经过的字符连起来，就是一个前缀。</li>
+<li>如果某个节点被标记为单词结尾，说明从根到这个节点形成的字符串是一个完整单词。</li>
+</ul>
+<p>举个例子，插入 <code>app</code>、<code>apple</code>、<code>apply</code> 之后，它们会共享 <code>a -&gt; p -&gt; p</code> 这段路径。<code>app</code> 对应的最后一个 <code>p</code> 节点需要标记为单词结尾，否则 Trie 只能知道 <code>app</code> 是某些单词的前缀，不能知道它本身也是一个完整单词。</p>
+<p>这就是 <code>isWord</code> 变量存在的意义。没有它，就无法区分“这个路径只是前缀”还是“这个路径已经构成一个词”。</p>
+<h2 id="trie-为什么适合前缀匹配" tabindex="-1">Trie 为什么适合前缀匹配？</h2>
+<p>哈希表很适合判断一个完整字符串是否存在，比如查询 <code>apple</code> 在不在集合里。但如果问题变成“找出所有以 <code>app</code> 开头的词”，哈希表就不那么顺手了：除非额外维护前缀索引，否则需要扫描大量 key。</p>
+<p>Trie 的优势在于，前缀天然对应树上的一条路径。查询 <code>app</code> 前缀时，只需要从根节点依次走 <code>a</code>、<code>p</code>、<code>p</code>：</p>
+<ul>
+<li>如果中途某个字符路径不存在，说明没有任何单词以 <code>app</code> 为前缀。</li>
+<li>如果能走到最后一个 <code>p</code>，说明这个节点下面的所有单词都以 <code>app</code> 开头。</li>
+</ul>
+<p>所以，Trie 的前缀查询复杂度主要和前缀长度有关，而不是和词典中有多少个单词直接相关。这个特点在搜索提示、路由最长前缀匹配、词典过滤这类场景里很有用。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能说清 Trie 为什么适合前缀查询。</li>
+<li>能写插入、完整单词查询、前缀查询。</li>
+<li>能分析时间复杂度和字符串长度有关。</li>
+<li>能说明 Trie 的空间开销可能比较大。</li>
+<li>能和哈希表做对比。</li>
+</ul>
+<h2 id="节点结构" tabindex="-1">节点结构</h2>
+<p>Trie 节点通常包含两类信息：</p>
+<ol>
+<li>指向子节点的引用，用来继续匹配下一个字符。</li>
+<li>是否为完整单词结尾的标记。</li>
+</ol>
+<p>如果只处理小写英文字母，可以用长度为 26 的数组：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">TrieNode</span> {
+    <span class="hljs-type">TrieNode</span>[] <span class="hljs-variable">children</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TrieNode</span>[<span class="hljs-number">26</span>];
+    <span class="hljs-type">boolean</span> isWord;
+}
+</code></pre>
+<p>如果字符集不固定，可以用 <code>Map&lt;Character, TrieNode&gt;</code>，空间更灵活，但每次访问有哈希表成本。</p>
+<p>这两种写法没有绝对好坏：</p>
+<table>
+<thead>
+<tr>
+<th>节点实现方式</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TrieNode[] children = new TrieNode[26]</code></td>
+<td>访问快，适合固定小字符集</td>
+<td>空节点多时比较浪费空间</td>
+</tr>
+<tr>
+<td><code>Map&lt;Character, TrieNode&gt;</code></td>
+<td>只存实际出现的字符，更灵活</td>
+<td>有额外对象和哈希访问成本</td>
+</tr>
+</tbody>
+</table>
+<p>面试手写代码时，如果题目明确只有小写英文字母，用数组最清楚；如果字符集包含大小写、中文、路径片段或任意字符，用 <code>Map</code> 更稳妥。</p>
+<h2 id="基础实现" tabindex="-1">基础实现</h2>
+<p>下面这个模板假设字符串只包含小写英文字母：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Trie</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">TrieNode</span> <span class="hljs-variable">root</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">TrieNode</span>();
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">insert</span><span class="hljs-params">(String word)</span> {
+        <span class="hljs-type">TrieNode</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">char</span> c : word.toCharArray()) {
+            <span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> c - <span class="hljs-string">&#x27;a&#x27;</span>;
+            <span class="hljs-keyword">if</span> (node.children[index] == <span class="hljs-literal">null</span>) {
+                node.children[index] = <span class="hljs-keyword">new</span> <span class="hljs-title class_">TrieNode</span>();
+            }
+            node = node.children[index];
+        }
+        node.isWord = <span class="hljs-literal">true</span>;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">search</span><span class="hljs-params">(String word)</span> {
+        <span class="hljs-type">TrieNode</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> find(word);
+        <span class="hljs-keyword">return</span> node != <span class="hljs-literal">null</span> &amp;&amp; node.isWord;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">startsWith</span><span class="hljs-params">(String prefix)</span> {
+        <span class="hljs-keyword">return</span> find(prefix) != <span class="hljs-literal">null</span>;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">TrieNode</span> <span class="hljs-title function_">find</span><span class="hljs-params">(String text)</span> {
+        <span class="hljs-type">TrieNode</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">char</span> c : text.toCharArray()) {
+            <span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> c - <span class="hljs-string">&#x27;a&#x27;</span>;
+            <span class="hljs-keyword">if</span> (node.children[index] == <span class="hljs-literal">null</span>) {
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+            }
+            node = node.children[index];
+        }
+        <span class="hljs-keyword">return</span> node;
+    }
+}
+</code></pre>
+<p>插入和查询的逻辑其实是同一条主线：从根节点开始，按字符一层一层往下走。插入时如果路径不存在就创建节点；查询时如果路径不存在就返回 <code>false</code>。区别只在最后一步：<code>search()</code> 要检查 <code>isWord</code>，<code>startsWith()</code> 只要能走完整个前缀即可。</p>
+<h2 id="删除操作怎么理解" tabindex="-1">删除操作怎么理解？</h2>
+<p>Trie 的删除比插入和查询更容易写错，因为删除一个单词时不能简单地把整条路径都删掉。</p>
+<p>比如 Trie 里同时有 <code>app</code> 和 <code>apple</code>，删除 <code>app</code> 时，只能取消 <code>app</code> 最后一个 <code>p</code> 节点上的 <code>isWord</code> 标记，不能把 <code>a -&gt; p -&gt; p</code> 这条路径删掉，否则 <code>apple</code> 也会被破坏。</p>
+<p>真正删除节点时，需要从单词末尾往回看：如果某个节点没有子节点，并且也不是其他单词的结尾，才可以被删除。面试中如果没有明确要求删除，一般先把插入、完整查询、前缀查询写稳。</p>
+<h2 id="复杂度" tabindex="-1">复杂度</h2>
+<p>设字符串长度为 <code>L</code>：</p>
+<ul>
+<li>插入：<code>O(L)</code></li>
+<li>查询完整单词：<code>O(L)</code></li>
+<li>查询前缀：<code>O(L)</code></li>
+</ul>
+<p>空间复杂度取决于节点数量。最坏情况下，如果字符串几乎没有公共前缀，空间开销会接近所有字符数量之和。</p>
+<p>如果还要枚举某个前缀下的所有单词，复杂度就不只是 <code>O(L)</code> 了。定位前缀节点需要 <code>O(L)</code>，后面还要遍历这个节点下面的子树，额外成本和返回结果数量、子树规模有关。</p>
+<h2 id="trie-和哈希表怎么选" tabindex="-1">Trie 和哈希表怎么选？</h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>Trie</th>
+<th>哈希表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>完整字符串查询</td>
+<td>可以做，但空间更大</td>
+<td>更直接</td>
+</tr>
+<tr>
+<td>前缀查询</td>
+<td>很适合</td>
+<td>需要额外处理</td>
+</tr>
+<tr>
+<td>按前缀枚举所有词</td>
+<td>很适合</td>
+<td>不方便</td>
+</tr>
+<tr>
+<td>字符集很大</td>
+<td>需要优化节点结构</td>
+<td>更省心</td>
+</tr>
+</tbody>
+</table>
+<p>如果只是判断一个词是否存在，哈希表通常更简单。如果要频繁查前缀，Trie 更合适。</p>
+<p>还有一个容易忽略的差异：哈希表的完整匹配通常更省空间、更通用；Trie 则把公共前缀显式存成路径，因此能自然支持前缀查询、按前缀枚举、最长前缀匹配。二者解决的问题重心不同，不是谁完全替代谁。</p>
+<h2 id="工程场景" tabindex="-1">工程场景</h2>
+<ul>
+<li>搜索框自动补全：根据用户输入前缀找到候选词。</li>
+<li>敏感词匹配：Trie 可以配合 AC 自动机做多模式匹配。</li>
+<li>IP 路由匹配：最长前缀匹配可以借鉴 Trie 思路。</li>
+<li>词典校验：快速判断单词或前缀是否存在。</li>
+</ul>
+<p>实际工程中还会看到一些 Trie 的变体：</p>
+<ul>
+<li><strong>压缩 Trie / Radix Tree</strong>：把只有一个子节点的连续路径压缩成一段字符串，减少节点数量。</li>
+<li><strong>Ternary Search Trie（三向单词查找树）</strong>：每个节点通过小于、等于、大于三个方向组织字符，在空间和查询灵活性之间做折中。</li>
+<li><strong>AC 自动机</strong>：在 Trie 的基础上增加失败指针，用来做多模式字符串匹配。</li>
+</ul>
+<p>这些变体不需要一开始就全背下来，但要知道 Trie 的基础思想是它们的共同起点：用路径表示字符串，用共享路径复用公共前缀。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li><code>isWord</code> 不能省，否则无法区分 <code>app</code> 和 <code>apple</code>。</li>
+<li>字符集不一定只有小写字母，面试时要根据题目调整。</li>
+<li>删除单词比插入查询复杂，需要判断节点是否还能被其他单词复用。</li>
+<li>Trie 查询复杂度和字符串长度有关，不直接和词典大小成正比。</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/implement-trie-prefix-tree/" target="_blank" rel="noopener">208. 实现 Trie</a></li>
+<li><a href="https://leetcode.cn/problems/design-add-and-search-words-data-structure/" target="_blank" rel="noopener">211. 添加与搜索单词</a></li>
+<li><a href="https://leetcode.cn/problems/word-search-ii/" target="_blank" rel="noopener">212. 单词搜索 II</a></li>
+<li><a href="https://leetcode.cn/problems/replace-words/" target="_blank" rel="noopener">648. 单词替换</a></li>
+</ul>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://algs4.cs.princeton.edu/52trie/" target="_blank" rel="noopener">Algorithms, 4th Edition：Tries</a></li>
+<li><a href="https://algs4.cs.princeton.edu/code/javadoc/edu/princeton/cs/algs4/TrieST.html" target="_blank" rel="noopener">Algorithms, 4th Edition：TrieST API</a></li>
+<li><a href="https://web.stanford.edu/class/archive/cs/cs166/cs166.1216/lectures/16/Slides16.pdf" target="_blank" rel="noopener">Stanford CS166：Tries and Suffix Trees</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

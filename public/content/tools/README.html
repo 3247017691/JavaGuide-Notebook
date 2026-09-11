@@ -1,0 +1,71 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>这份 <strong>开发工具知识体系</strong> 面向后端学习和日常开发，围绕“项目构建 -&gt; 依赖管理 -&gt; 版本控制 -&gt; 协作提效 -&gt; 容器化交付”的顺序整理本站开发工具相关文章。</p>
+<p>开发工具不只是会敲几个命令，更重要的是理解它们在团队协作、工程规范、环境一致性和交付效率中的作用。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在学习后端开发，需要补齐常用工程工具的同学。</li>
+<li>准备校招、社招，想把 Maven、Git、Docker 等工具问题答得更扎实的读者。</li>
+<li>已经能写业务代码，但对依赖冲突、Git 分支协作、Docker 镜像和容器管理不够熟的开发者。</li>
+<li>想提升项目构建、代码协作、环境交付和日常开发效率的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Maven 和 Gradle 解决的是项目构建、依赖管理、生命周期、Wrapper 和插件扩展问题。</li>
+<li>Git 是团队协作的基础能力，重点不是背命令，而是理解工作区、暂存区、提交、分支、合并和冲突处理。</li>
+<li>GitHub 不只是代码托管平台，也承载开源协作、个人展示、代码阅读、Actions 自动化和项目管理。</li>
+<li>Docker 主要解决环境一致性、部署隔离、镜像分发、本地快速搭建依赖服务和多容器应用编排的问题。</li>
+<li>工具类知识最好结合真实项目练习，单独看概念容易会看不会用。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/tools/git/git-intro.html">Git 核心概念总结</a>：先掌握版本控制、提交、分支、合并和协作流程。</li>
+<li><a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a>：理解 Java 项目构建、POM、坐标、仓库、依赖和生命周期。</li>
+<li><a href="/read/tools/maven/maven-best-practices.html">Maven 最佳实践</a>：补齐依赖版本管理、BOM、Maven Wrapper、CI 和日常使用规范。</li>
+<li><a href="/read/tools/docker/docker-intro.html">Docker 核心概念总结</a>：建立镜像、容器、仓库和 Docker 引擎的基本认知。</li>
+<li><a href="/read/tools/docker/docker-in-action.html">Docker 实战</a>：通过命令和场景练习容器管理、镜像构建、数据卷和常见排查。</li>
+<li><a href="/read/tools/gradle/gradle-core-concepts.html">Gradle 核心概念总结</a> 和 <a href="/read/tools/git/github-tips.html">GitHub 实用小技巧总结</a>：按项目需要补充 Gradle Wrapper、GitHub Actions 与代码阅读技巧。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="项目构建与依赖管理" tabindex="-1">项目构建与依赖管理</h3>
+<ul>
+<li><a href="/read/tools/maven/README.html">Maven 专题</a>：讲清 Maven 核心概念和最佳实践，是 Java 后端项目构建最常用的工具专题。</li>
+<li><a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a>：理解 POM、坐标、仓库、依赖范围、生命周期、插件和多模块项目。</li>
+<li><a href="/read/tools/maven/maven-best-practices.html">Maven 最佳实践</a>：整理标准目录结构、编译版本、依赖管理、Maven Wrapper、CI 和常用实践建议。</li>
+<li><a href="/read/tools/gradle/gradle-core-concepts.html">Gradle 核心概念总结</a>：了解 Gradle、Groovy/Kotlin DSL、Gradle Wrapper、插件和 Task 等核心概念。</li>
+</ul>
+<h3 id="版本控制与代码协作" tabindex="-1">版本控制与代码协作</h3>
+<ul>
+<li><a href="/read/tools/git/README.html">Git 专题</a>：围绕 Git 核心概念、工作流和 GitHub 提效技巧展开。</li>
+<li><a href="/read/tools/git/git-intro.html">Git 核心概念总结</a>：理解版本控制、工作区、暂存区、提交、分支、合并、冲突和远程仓库。</li>
+<li><a href="/read/tools/git/github-tips.html">GitHub 实用小技巧总结</a>：整理个人主页、项目徽章、代码阅读、Actions、Explore/Trending 和开源协作相关技巧。</li>
+</ul>
+<h3 id="容器化与本地环境" tabindex="-1">容器化与本地环境</h3>
+<ul>
+<li><a href="/read/tools/docker/README.html">Docker 专题</a>：从核心概念到实战操作，帮助理解容器化交付和环境一致性。</li>
+<li><a href="/read/tools/docker/docker-intro.html">Docker 核心概念总结</a>：理解容器、镜像、仓库、Docker 引擎以及容器和虚拟机的区别。</li>
+<li><a href="/read/tools/docker/docker-in-action.html">Docker 实战</a>：通过镜像、容器、网络、数据卷、日志和排查命令完成 Docker 入门实践。</li>
+</ul>
+<h3 id="ide-与效率工具" tabindex="-1">IDE 与效率工具</h3>
+<ul>
+<li><a href="https://gitee.com/SnailClimb/awesome-idea-tutorial" target="_blank" rel="noopener">IDEA 教程</a>：整理 IntelliJ IDEA 常用配置、插件、快捷键和提效技巧。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Maven 的 POM、坐标、仓库、依赖范围分别是什么？</li>
+<li>Maven 生命周期和插件是什么关系？</li>
+<li>Maven 多模块项目如何通过 BOM、<code>dependencyManagement</code> 和 Maven Wrapper 管理公共依赖与构建版本？</li>
+<li>Gradle 和 Maven 有什么区别？什么时候需要了解 Gradle？</li>
+<li>Git 工作区、暂存区、本地仓库和远程仓库分别是什么？</li>
+<li>Git merge 和 rebase 有什么区别？冲突应该如何处理？</li>
+<li>GitHub 除了托管代码，还能通过 Profile README、Actions、Codespaces、Explore/Trending 帮开发者做哪些事？</li>
+<li>Docker 镜像和容器是什么关系？容器和虚拟机有什么区别？</li>
+<li>Docker 为什么能解决开发、测试、部署环境不一致的问题？Compose 适合解决什么问题？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/interview-preparation/README.html">面试准备</a></li>
+<li><a href="/read/java/basis/java-basic-questions-01.html">Java 基础</a></li>
+<li><a href="/read/system-design/framework/spring/README.html">Spring&amp;Spring Boot</a></li>
+<li><a href="/read/open-source-project/README.html">开源项目</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

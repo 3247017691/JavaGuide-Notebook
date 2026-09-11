@@ -1,0 +1,167 @@
+<h2 id="什么是序列化和反序列化" tabindex="-1">什么是序列化和反序列化？</h2>
+<p>如果我们需要持久化 Java 对象比如将 Java 对象保存在文件中，或者在网络传输 Java 对象，这些场景都需要用到序列化。</p>
+<p>简单来说：</p>
+<ul>
+<li><strong>序列化</strong>：将数据结构或对象转换成可以存储或传输的形式，通常是二进制字节流，也可以是 JSON, XML 等文本格式</li>
+<li><strong>反序列化</strong>：将在序列化过程中所生成的数据转换为原始数据结构或者对象的过程</li>
+</ul>
+<p>对于 Java 这种面向对象编程语言来说，我们序列化的都是对象（Object）也就是实例化后的类(Class)，但是在 C++这种半面向对象的语言中，struct（结构体）定义的是数据结构类型，而 class 对应的是对象类型。</p>
+<p>下面是序列化和反序列化常见应用场景：</p>
+<ul>
+<li>对象在进行网络传输（比如远程方法调用 RPC 的时候）之前需要先被序列化，接收到序列化的对象之后需要再进行反序列化；</li>
+<li>将对象存储到文件之前需要进行序列化，将对象从文件中读取出来需要进行反序列化；</li>
+<li>将对象存储到数据库（如 Redis）之前需要用到序列化，将对象从缓存数据库中读取出来需要反序列化；</li>
+<li>将对象转换为需要长期保存或跨组件传递的字节表示时，通常需要序列化；普通 Java 对象在 JVM 内存中使用并不需要序列化。</li>
+</ul>
+<p>维基百科是如是介绍序列化的：</p>
+<blockquote>
+<p><strong>序列化</strong>（serialization）在计算机科学的数据处理中，是指将数据结构或对象状态转换成可取用格式（例如存成文件，存于缓冲，或经由网络中发送），以留待后续在相同或另一台计算机环境中，能恢复原先状态的过程。依照序列化格式重新获取字节的结果时，可以利用它来产生与原始对象相同语义的副本。对于许多对象，像是使用大量引用的复杂对象，这种序列化重建的过程并不容易。面向对象中的对象序列化，并不概括之前原始对象所关系的函数。这种过程也称为对象编组（marshalling）。从一系列字节提取数据结构的反向操作，是反序列化（也称为解编组、deserialization、unmarshalling）。</p>
+</blockquote>
+<p>综上：<strong>序列化的主要目的是把对象转换为适合网络传输或持久化到文件系统、数据库、缓存等介质的表示。</strong></p>
+<p><img src="/img/a478c74d-2c48-40ae-9374-87aacf05188c-92692fb2.png" alt="" loading="lazy"></p>
+<p style="text-align:right;font-size:13px;color:gray">https://www.corejavaguru.com/java/serialization/interview-questions-1</p>
+<p><strong>序列化协议对应于 TCP/IP 4 层模型的哪一层？</strong></p>
+<p>我们知道网络通信的双方必须要采用和遵守相同的协议。TCP/IP 四层模型是下面这样的，序列化协议属于哪一层呢？</p>
+<ol>
+<li>应用层</li>
+<li>传输层</li>
+<li>网络层</li>
+<li>网络接口层</li>
+</ol>
+<p><img src="/img/tcp-ip-4-model-6284e045.png" alt="" loading="lazy"></p>
+<p>如上图所示，OSI 七层协议模型中，表示层做的事情主要就是对应用层的用户数据进行处理转换为二进制流。反过来的话，就是将二进制流转换成应用层的用户数据。这不就对应的是序列化和反序列化么？</p>
+<p>因为，OSI 七层协议模型中的应用层、表示层和会话层对应的都是 TCP/IP 四层模型中的应用层，所以序列化协议属于 TCP/IP 协议应用层的一部分。</p>
+<h2 id="常见序列化协议有哪些" tabindex="-1">常见序列化协议有哪些？</h2>
+<p>JDK 自带的序列化方式一般不会用，因为序列化效率低并且存在安全问题。比较常用的序列化协议有 Hessian、Kryo、Protobuf、ProtoStuff，这些都是基于二进制的序列化协议。</p>
+<p>像 JSON 和 XML 这种属于文本类序列化方式。虽然可读性比较好，但是性能较差，一般不会选择。</p>
+<h3 id="jdk-自带的序列化方式" tabindex="-1">JDK 自带的序列化方式</h3>
+<p>JDK 自带的序列化，只需实现 <code>java.io.Serializable</code> 接口即可。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@AllArgsConstructor</span>
+<span class="hljs-meta">@NoArgsConstructor</span>
+<span class="hljs-meta">@Getter</span>
+<span class="hljs-meta">@Builder</span>
+<span class="hljs-meta">@ToString</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">RpcRequest</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Serializable</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-variable">serialVersionUID</span> <span class="hljs-operator">=</span> <span class="hljs-number">1905122041950251207L</span>;
+    <span class="hljs-keyword">private</span> String requestId;
+    <span class="hljs-keyword">private</span> String interfaceName;
+    <span class="hljs-keyword">private</span> String methodName;
+    <span class="hljs-keyword">private</span> Object[] parameters;
+    <span class="hljs-keyword">private</span> Class&lt;?&gt;[] paramTypes;
+    <span class="hljs-keyword">private</span> RpcMessageTypeEnum rpcMessageTypeEnum;
+}
+</code></pre>
+<p><strong>serialVersionUID 有什么作用？</strong></p>
+<p>序列化号 <code>serialVersionUID</code> 起版本控制作用。反序列化时，会检查流中的 <code>serialVersionUID</code> 是否和当前类的 <code>serialVersionUID</code> 一致；如果不一致则会抛出 <code>InvalidClassException</code>。强烈推荐每个序列化类都手动指定其 <code>serialVersionUID</code>。如果未显式声明，序列化运行时会根据类的结构计算默认值，而不是由编译器生成字段。</p>
+<p><strong>serialVersionUID 不是被 static 变量修饰了吗？为什么还会被“序列化”？</strong></p>
+<p><s><code>static</code> 修饰的变量是静态变量，位于方法区，本身是不会被序列化的。 <code>static</code> 变量是属于类的而不是对象。你反序列之后，<code>static</code> 变量的值就像是默认赋予给了对象一样，看着就像是 <code>static</code> 变量被序列化，实际只是假象罢了。</s></p>
+<p><strong>🐛 修正（参见：<a href="https://github.com/Snailclimb/JavaGuide/issues/2174" target="_blank" rel="noopener">issue#2174</a>）</strong>：</p>
+<p>通常情况下，<code>static</code> 变量是属于类的，不属于任何单个对象实例，所以它们本身不会被包含在对象序列化的数据流里。序列化保存的是对象的状态（也就是实例变量的值）。然而，<code>serialVersionUID</code> 是一个特例，<code>serialVersionUID</code> 的序列化做了特殊处理。关键在于，<code>serialVersionUID</code> 不是作为对象状态的一部分被序列化的，而是被序列化机制本身用作一个特殊的“指纹”或“版本号”。</p>
+<p>当一个对象被序列化时，<code>serialVersionUID</code> 会被写入到序列化的二进制流中（像是在保存一个版本号，而不是保存 <code>static</code> 变量本身的状态）；在反序列化时，也会解析它并做一致性判断，以此来验证序列化对象的版本一致性。如果两者不匹配，反序列化过程将抛出 <code>InvalidClassException</code>，因为这通常意味着序列化的类的定义已经发生了更改，可能不再兼容。</p>
+<p>官方说明如下：</p>
+<blockquote>
+<p>A serializable class can declare its own serialVersionUID explicitly by declaring a field named <code>&quot;serialVersionUID&quot;</code> that must be <code>static</code>, <code>final</code>, and of type <code>long</code>;</p>
+<p>如果想显式指定 <code>serialVersionUID</code>，则需要在类中使用 <code>static</code> 和 <code>final</code> 关键字来修饰一个 <code>long</code> 类型的变量，变量名字必须为 <code>&quot;serialVersionUID&quot;</code>。</p>
+</blockquote>
+<p>也就是说，<code>serialVersionUID</code> 本身（作为 static 变量）确实不作为对象状态被序列化。但是，它的值被 Java 序列化机制特殊处理了——作为一个版本标识符被读取并写入序列化流中，用于在反序列化时进行版本兼容性检查。</p>
+<p><strong>如果有些字段不想进行序列化怎么办？</strong></p>
+<p>对于不想进行序列化的变量，可以使用 <code>transient</code> 关键字修饰。</p>
+<p><code>transient</code> 关键字的作用是：阻止实例中那些用此关键字修饰的变量序列化；当对象被反序列化时，被 <code>transient</code> 修饰的变量值不会被持久化和恢复。</p>
+<p>关于 <code>transient</code> 还有几点注意：</p>
+<ul>
+<li><code>transient</code> 只能修饰变量，不能修饰类和方法。</li>
+<li><code>transient</code> 修饰的变量，在反序列化后变量值将会被置成类型的默认值。例如，如果是修饰 <code>int</code> 类型，那么反序列后结果就是 <code>0</code>。</li>
+<li><code>static</code> 变量因为不属于任何对象(Object)，所以无论有没有 <code>transient</code> 关键字修饰，均不会被序列化。</li>
+</ul>
+<p><strong>为什么不推荐使用 JDK 自带的序列化？</strong></p>
+<p>我们很少或者说几乎不会直接使用 JDK 自带的序列化方式，主要原因有下面这些原因：</p>
+<ul>
+<li><strong>不支持跨语言调用</strong> : 如果调用的是其他语言开发的服务的时候就不支持了。</li>
+<li><strong>性能差</strong>：相比于其他序列化框架性能更低，主要原因是序列化之后的字节数组体积较大，导致传输成本加大。</li>
+<li><strong>存在安全问题</strong>：序列化和反序列化本身并不存在问题。但当输入的反序列化的数据可被用户控制，那么攻击者即可通过构造恶意输入，让反序列化产生非预期的对象，在此过程中执行构造的任意代码。相关阅读：<a href="https://cryin.github.io/blog/secure-development-java-deserialization-vulnerability/" target="_blank" rel="noopener">应用安全:JAVA 反序列化漏洞之殇 - Cryin</a>、<a href="https://www.zhihu.com/question/37562657/answer/1916596031" target="_blank" rel="noopener">Java 反序列化安全漏洞怎么回事? - Monica</a>。</li>
+</ul>
+<h3 id="kryo" tabindex="-1">Kryo</h3>
+<p>Kryo 是一个高性能的序列化/反序列化工具，由于其变长存储特性并使用了字节码生成机制，拥有较高的运行速度和较小的字节码体积。</p>
+<p>另外，Kryo 已经是一种非常成熟的序列化实现了，已经在 Twitter、Groupon、Yahoo 以及多个著名开源项目（如 Hive、Storm）中广泛的使用。</p>
+<p><a href="https://github.com/Snailclimb/guide-rpc-framework" target="_blank" rel="noopener">guide-rpc-framework</a> 就是使用的 kryo 进行序列化，序列化和反序列化相关的代码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * Kryo serialization class, Kryo serialization efficiency is very high, but only compatible with Java language
+ *
+ * <span class="hljs-doctag">@author</span> shuang.kou
+ * <span class="hljs-doctag">@createTime</span> 2020年05月13日 19:29:00
+ */</span>
+<span class="hljs-meta">@Slf4j</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">KryoSerializer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Serializer</span> {
+
+    <span class="hljs-comment">/**
+     * Because Kryo is not thread safe. So, use ThreadLocal to store Kryo objects
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ThreadLocal</span>&lt;Kryo&gt; <span class="hljs-variable">kryoThreadLocal</span> <span class="hljs-operator">=</span> ThreadLocal.withInitial(() -&gt; {
+        <span class="hljs-type">Kryo</span> <span class="hljs-variable">kryo</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Kryo</span>();
+        kryo.register(RpcResponse.class);
+        kryo.register(RpcRequest.class);
+        <span class="hljs-keyword">return</span> kryo;
+    });
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">byte</span>[] <span class="hljs-title function_">serialize</span><span class="hljs-params">(Object obj)</span> {
+        <span class="hljs-keyword">try</span> (<span class="hljs-type">ByteArrayOutputStream</span> <span class="hljs-variable">byteArrayOutputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ByteArrayOutputStream</span>();
+             <span class="hljs-type">Output</span> <span class="hljs-variable">output</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Output</span>(byteArrayOutputStream)) {
+            <span class="hljs-type">Kryo</span> <span class="hljs-variable">kryo</span> <span class="hljs-operator">=</span> kryoThreadLocal.get();
+            <span class="hljs-comment">// Object-&gt;byte:将对象序列化为byte数组</span>
+            kryo.writeObject(output, obj);
+            kryoThreadLocal.remove();
+            <span class="hljs-keyword">return</span> output.toBytes();
+        } <span class="hljs-keyword">catch</span> (Exception e) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SerializeException</span>(<span class="hljs-string">&quot;Serialization failed&quot;</span>);
+        }
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> &lt;T&gt; <span class="hljs-type">T</span> <span class="hljs-title function_">deserialize</span><span class="hljs-params">(<span class="hljs-type">byte</span>[] bytes, Class&lt;T&gt; clazz)</span> {
+        <span class="hljs-keyword">try</span> (<span class="hljs-type">ByteArrayInputStream</span> <span class="hljs-variable">byteArrayInputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ByteArrayInputStream</span>(bytes);
+             <span class="hljs-type">Input</span> <span class="hljs-variable">input</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Input</span>(byteArrayInputStream)) {
+            <span class="hljs-type">Kryo</span> <span class="hljs-variable">kryo</span> <span class="hljs-operator">=</span> kryoThreadLocal.get();
+            <span class="hljs-comment">// byte-&gt;Object:从byte数组中反序列化出对象</span>
+            <span class="hljs-type">Object</span> <span class="hljs-variable">o</span> <span class="hljs-operator">=</span> kryo.readObject(input, clazz);
+            kryoThreadLocal.remove();
+            <span class="hljs-keyword">return</span> clazz.cast(o);
+        } <span class="hljs-keyword">catch</span> (Exception e) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SerializeException</span>(<span class="hljs-string">&quot;Deserialization failed&quot;</span>);
+        }
+    }
+
+}
+</code></pre>
+<p>GitHub 地址：<a href="https://github.com/EsotericSoftware/kryo" target="_blank" rel="noopener">https://github.com/EsotericSoftware/kryo</a>。</p>
+<h3 id="protobuf" tabindex="-1">Protobuf</h3>
+<p>Protobuf 出自于 Google，性能还比较优秀，也支持多种语言，同时还是跨平台的。就是在使用中过于繁琐，因为你需要自己定义 IDL 文件和生成对应的序列化代码。这样虽然不灵活，但另一方面也避免了 protobuf 出现序列化漏洞的风险。</p>
+<blockquote>
+<p>Protobuf 包含序列化格式的定义、各种语言的库以及一个 IDL 编译器。正常情况下你需要定义 proto 文件，然后使用 IDL 编译器编译成你需要的语言</p>
+</blockquote>
+<p>一个简单的 proto 文件如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// protobuf的版本</span>
+syntax = <span class="hljs-string">&quot;proto3&quot;</span>;
+<span class="hljs-comment">// SearchRequest会被编译成不同的编程语言的相应对象，比如Java中的class、Go中的struct</span>
+<span class="hljs-keyword">message </span><span class="hljs-title class_">Person</span> {
+  <span class="hljs-comment">//string类型字段</span>
+  <span class="hljs-type">string</span> name = <span class="hljs-number">1</span>;
+  <span class="hljs-comment">// int 类型字段</span>
+  <span class="hljs-type">int32</span> age = <span class="hljs-number">2</span>;
+}
+</code></pre>
+<p>GitHub 地址：<a href="https://github.com/protocolbuffers/protobuf" target="_blank" rel="noopener">https://github.com/protocolbuffers/protobuf</a>。</p>
+<h3 id="protostuff" tabindex="-1">ProtoStuff</h3>
+<p>由于 Protobuf 的易用性较差，它的哥哥 Protostuff 诞生了。</p>
+<p>protostuff 基于 Google protobuf，但是提供了更多的功能和更简易的用法。虽然更加易用，但是不代表 ProtoStuff 性能更差。</p>
+<p>GitHub 地址：<a href="https://github.com/protostuff/protostuff" target="_blank" rel="noopener">https://github.com/protostuff/protostuff</a>。</p>
+<h3 id="hessian" tabindex="-1">Hessian</h3>
+<p>Hessian 是一个轻量级的，自定义描述的二进制 RPC 协议。Hessian 是一个比较老的序列化实现了，并且同样也是跨语言的。</p>
+<p><img src="/img/8613ec4c-bde5-47bf-897e-99e0f90b9fa3-b63315b5.png" alt="" loading="lazy"></p>
+<p>Dubbo2.x 默认启用的序列化方式是 Hessian2 ,但是，Dubbo 对 Hessian2 进行了修改，不过大体结构还是差不多。</p>
+<h3 id="总结" tabindex="-1">总结</h3>
+<p>Kryo 是专门针对 Java 语言序列化方式并且性能非常好，如果你的应用是专门针对 Java 语言的话可以考虑使用，并且 Dubbo 官网的一篇文章中提到说推荐使用 Kryo 作为生产环境的序列化方式。(文章地址：<a href="https://cn.dubbo.apache.org/zh-cn/docsv2.7/user/serialization/" target="_blank" rel="noopener">https://cn.dubbo.apache.org/zh-cn/docsv2.7/user/serialization/</a>）。</p>
+<p><img src="/img/569e541a-22b2-4846-aa07-0ad479f07440-20230814090-66ad225f.png" alt="" loading="lazy"></p>
+<p>像 Protobuf、 ProtoStuff、hessian 这类都是跨语言的序列化方式，如果有跨语言需求的话可以考虑使用。</p>
+<p>除了我上面介绍到的序列化方式的话，还有像 Thrift，Avro 这些。</p>
+<!-- @include: @article-footer.snippet.md -->

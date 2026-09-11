@@ -1,0 +1,192 @@
+<p>复杂度分析是算法面试的第一道门。面试官不一定要求你把证明写得很严，但会希望你能说清：这段代码跑了多少轮、额外用了多少空间、输入规模变大后会发生什么。</p>
+<p>先把一个边界讲清楚：复杂度分析通常看输入规模趋近很大时的增长趋势，不是精确运行时间。<code>O(n)</code> 不代表一定比 <code>O(nlogn)</code> 快，常数、数据规模、缓存命中和实现细节都会影响真实耗时。不过面试里先按 Big O 说清增长量级，再补一句实际场景的限制，就够用了。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能根据循环、递归、数据结构操作判断时间复杂度。</li>
+<li>能区分额外空间和输入本身占用的空间。</li>
+<li>能说清最好、最坏、平均复杂度分别适合哪些算法。</li>
+<li>遇到递归代码时，能用递归树或子问题规模分析。</li>
+<li>不把 <code>HashMap</code>、排序、堆操作都默认当成 <code>O(1)</code>。</li>
+</ul>
+<h2 id="面试里怎么讲复杂度" tabindex="-1">面试里怎么讲复杂度？</h2>
+<p>回答复杂度时，不要只报一个结论。更好的说法是“代码做了什么，因此复杂度是多少”。</p>
+<p>比如两数之和：</p>
+<pre class="md-pre"><code class="hljs">数组遍历一遍，每个元素在 HashMap 中做一次查询和一次插入，哈希表操作平均 O(1)，所以时间复杂度是 O(n)。额外使用了一个 HashMap 存元素到下标的映射，最坏会存 n 个元素，所以空间复杂度是 O(n)。
+</code></pre>
+<p>这个回答比单说 <code>O(n)</code> 更稳，因为它把推导过程讲出来了。面试官如果继续追问哈希表最坏情况，也有接话空间。</p>
+<h2 id="常见复杂度量级" tabindex="-1">常见复杂度量级</h2>
+<table>
+<thead>
+<tr>
+<th>复杂度</th>
+<th>常见场景</th>
+<th>面试备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>O(1)</code></td>
+<td>数组按下标访问、栈顶操作、哈希表平均查询</td>
+<td>哈希表最坏可能退化</td>
+</tr>
+<tr>
+<td><code>O(logn)</code></td>
+<td>二分查找、堆上浮/下沉、平衡树查询</td>
+<td>每轮把规模缩小一部分</td>
+</tr>
+<tr>
+<td><code>O(n)</code></td>
+<td>单次遍历数组、链表、字符串</td>
+<td>看是否真的只扫一遍</td>
+</tr>
+<tr>
+<td><code>O(nlogn)</code></td>
+<td>快排平均、归并排序、堆排序</td>
+<td>排序题最常见量级</td>
+</tr>
+<tr>
+<td><code>O(n^2)</code></td>
+<td>双重循环、枚举两两组合</td>
+<td>面试中要警惕是否能优化</td>
+</tr>
+<tr>
+<td><code>O(2^n)</code></td>
+<td>子集枚举、部分回溯</td>
+<td>子集枚举的搜索空间是指数级</td>
+</tr>
+<tr>
+<td><code>O(n!)</code></td>
+<td>全排列、旅行商暴力解</td>
+<td>只适合小规模输入</td>
+</tr>
+</tbody>
+</table>
+<p>一般来说，算法题输入规模会暗示可接受复杂度：</p>
+<table>
+<thead>
+<tr>
+<th>输入规模</th>
+<th>通常可接受的复杂度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n &lt;= 20</code></td>
+<td>指数级、回溯、状态压缩</td>
+</tr>
+<tr>
+<td><code>n &lt;= 100</code></td>
+<td><code>O(n^3)</code> 有时可以</td>
+</tr>
+<tr>
+<td><code>n &lt;= 1000</code></td>
+<td><code>O(n^2)</code> 常见</td>
+</tr>
+<tr>
+<td><code>n &lt;= 10^5</code></td>
+<td><code>O(nlogn)</code> 或 <code>O(n)</code></td>
+</tr>
+<tr>
+<td><code>n &gt;= 10^6</code></td>
+<td>通常要接近 <code>O(n)</code></td>
+</tr>
+</tbody>
+</table>
+<p>这不是硬规则，但能帮你在面试里判断暴力解是否可能超时。</p>
+<h2 id="循环复杂度怎么判断" tabindex="-1">循环复杂度怎么判断？</h2>
+<p>普通循环看执行次数：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; n; i++) {
+    <span class="hljs-comment">// O(1)</span>
+}
+</code></pre>
+<p>这段是 <code>O(n)</code>。</p>
+<p>嵌套循环不能只看有几层，要看每层真实次数：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; n; i++) {
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> i; j &lt; n; j++) {
+        <span class="hljs-comment">// O(1)</span>
+    }
+}
+</code></pre>
+<p>内层次数是 <code>n + (n - 1) + ... + 1</code>，也就是 <code>n(n + 1) / 2</code>，复杂度记作 <code>O(n^2)</code>。</p>
+<p>如果循环变量每次翻倍，通常是 <code>O(logn)</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; i &lt; n; i *= <span class="hljs-number">2</span>) {
+    <span class="hljs-comment">// O(1)</span>
+}
+</code></pre>
+<p>还有一种容易误判的情况是双指针：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">while</span> (left &lt; n &amp;&amp; right &lt; n) {
+    <span class="hljs-keyword">if</span> (needMoveRight()) {
+        right++;
+    } <span class="hljs-keyword">else</span> {
+        left++;
+    }
+}
+</code></pre>
+<p>虽然是 <code>while</code> 里嵌了条件，但 <code>left</code> 和 <code>right</code> 都只单调递增，最多各移动 <code>n</code> 次，所以整体是 <code>O(n)</code>，不是 <code>O(n^2)</code>。</p>
+<h2 id="递归复杂度怎么判断" tabindex="-1">递归复杂度怎么判断？</h2>
+<p>递归复杂度可以先看两个问题：</p>
+<ol>
+<li>每层递归有多少个子问题？</li>
+<li>每层除了递归调用，还做了多少额外工作？</li>
+</ol>
+<p>二分查找每次只进入一个子问题，规模减半：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">binarySearch</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target, <span class="hljs-type">int</span> left, <span class="hljs-type">int</span> right)</span> {
+    <span class="hljs-keyword">if</span> (left &gt; right) {
+        <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+    <span class="hljs-keyword">if</span> (nums[mid] == target) {
+        <span class="hljs-keyword">return</span> mid;
+    }
+    <span class="hljs-keyword">if</span> (nums[mid] &lt; target) {
+        <span class="hljs-keyword">return</span> binarySearch(nums, target, mid + <span class="hljs-number">1</span>, right);
+    }
+    <span class="hljs-keyword">return</span> binarySearch(nums, target, left, mid - <span class="hljs-number">1</span>);
+}
+</code></pre>
+<p>递归深度是 <code>logn</code>，每层只做 <code>O(1)</code> 工作，所以时间复杂度是 <code>O(logn)</code>，递归栈空间是 <code>O(logn)</code>。</p>
+<p>归并排序每层拆成两个子问题，每层合并总工作量是 <code>O(n)</code>，层数是 <code>logn</code>，所以时间复杂度是 <code>O(nlogn)</code>，额外数组空间是 <code>O(n)</code>。</p>
+<p>再看一个反例：普通递归斐波那契。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">fib</span><span class="hljs-params">(<span class="hljs-type">int</span> n)</span> {
+    <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">return</span> n;
+    }
+    <span class="hljs-keyword">return</span> fib(n - <span class="hljs-number">1</span>) + fib(n - <span class="hljs-number">2</span>);
+}
+</code></pre>
+<p>它不是 <code>O(n)</code>，因为每次会继续拆成两个递归调用，很多子问题被重复计算，时间复杂度接近 <code>O(2^n)</code>。如果加记忆化数组，每个状态只算一次，时间复杂度就变成 <code>O(n)</code>，空间复杂度也是 <code>O(n)</code>。</p>
+<h2 id="空间复杂度看什么" tabindex="-1">空间复杂度看什么？</h2>
+<p>空间复杂度看算法运行过程中额外使用的空间，常见来源有：</p>
+<ul>
+<li>新建数组、哈希表、队列、栈。</li>
+<li>递归调用栈。</li>
+<li>排序或合并时的辅助空间。</li>
+<li>结果集是否算额外空间，要看题目要求。面试时可以主动说明。</li>
+</ul>
+<p>比如反转链表的迭代写法只用了几个指针，空间复杂度是 <code>O(1)</code>。如果用递归反转，虽然没有显式创建数组，但递归栈深度是 <code>n</code>，空间复杂度是 <code>O(n)</code>。</p>
+<h2 id="常见易错点" tabindex="-1">常见易错点</h2>
+<ul>
+<li>排序不是免费的。先排序再双指针，时间复杂度通常至少是 <code>O(nlogn)</code>。</li>
+<li><code>HashMap</code> 查询平均是 <code>O(1)</code>，但最坏情况不是。</li>
+<li>递归没有显式创建集合，也可能有递归栈空间。</li>
+<li>二维矩阵遍历通常是 <code>O(mn)</code>，不要顺手写成 <code>O(n)</code>。</li>
+<li>BFS 的队列空间不是常数，最坏可能存下一层大量节点。</li>
+<li>回溯题的复杂度经常和结果数量有关，不能只看递归深度。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>为什么复杂度分析通常忽略常数？</li>
+<li><code>O(n)</code> 一定比 <code>O(nlogn)</code> 快吗？</li>
+<li>快排的平均和最坏时间复杂度分别是多少？</li>
+<li>递归算法的空间复杂度怎么算？</li>
+<li>DFS 和 BFS 的时间复杂度为什么通常是 <code>O(V + E)</code>？</li>
+<li>哈希表查询为什么平均是 <code>O(1)</code>？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/binary-search/" target="_blank" rel="noopener">704. 二分查找</a></li>
+<li><a href="https://leetcode.cn/problems/sort-an-array/" target="_blank" rel="noopener">912. 排序数组</a></li>
+<li><a href="https://leetcode.cn/problems/reverse-linked-list/" target="_blank" rel="noopener">206. 反转链表</a></li>
+<li><a href="https://leetcode.cn/problems/number-of-islands/" target="_blank" rel="noopener">200. 岛屿数量</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

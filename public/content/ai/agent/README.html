@@ -1,0 +1,59 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>Agent 不是“会调用工具的聊天机器人”。一旦任务变长，它就要处理状态、记忆、权限、失败重试、上下文裁剪和执行边界。</p>
+<p>这份 <strong>AI Agent 专题</strong> 面向想理解和落地 Agent 应用的开发者，把 Agent Loop、Memory、Prompt、Context、Tools、MCP、Skills、Harness Engineering 和 Workflow 放到同一条工程主线里看。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想理解 AI Agent 原理和工程落地方式的开发者。</li>
+<li>正在做工具调用、自动化任务、多轮推理、长任务执行相关 AI 应用的工程师。</li>
+<li>准备 Agent、MCP、Prompt、Context、Skills、工作流相关面试题的同学。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Agent 和 Workflow 的区别不在于有没有调用大模型，而在于是否具备观察、规划、行动和反馈闭环。</li>
+<li>Memory 解决跨轮、跨任务的信息保留问题，但必须设计生命周期、存储边界和隐私治理。</li>
+<li>Prompt Engineering 更关注指令表达，Context Engineering 更关注把正确的信息在正确时机放进上下文。</li>
+<li>MCP、Skills、Harness Engineering 决定 Agent 能不能稳定、安全、可扩展地接入真实工具和环境。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/ai/agent/agent-basis.html">AI Agent 核心概念</a>：先建立 Agent 的整体认知。</li>
+<li><a href="/read/ai/agent/prompt-engineering.html">大模型提示词工程</a>、<a href="/read/ai/agent/context-engineering.html">上下文工程</a>：理解指令和上下文如何共同影响输出。</li>
+<li><a href="/read/ai/agent/agent-memory.html">AI Agent 记忆系统</a>：补齐短期记忆、长期记忆和记忆生命周期。</li>
+<li><a href="/read/ai/agent/mcp.html">万字拆解 MCP 协议</a>、<a href="/read/ai/agent/skills.html">万字详解 Agent Skills</a>：理解工具接入和能力扩展。</li>
+<li><a href="/read/ai/agent/multi-agent.html">多 Agent 协作系统设计</a>：理解任务拆分、状态共享、并发冲突和失败恢复。</li>
+<li><a href="/read/ai/agent/harness-engineering.html">Harness Engineering：六层检查框架、上下文管理与工程实践</a>、<a href="/read/ai/agent/workflow-graph-loop.html">AI 工作流中的 Workflow、Graph 与 Loop</a>、<a href="/read/ai/agent/loop-engineering.html">Loop Engineering 是什么</a>：进入生产级 Agent 工程化。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/ai/agent/agent-basis.html">AI Agent 核心概念</a>：梳理 AI Agent 的演进脉络，讲清 Agent Loop、Context Engineering、Tools 注册等基础概念。</li>
+<li><a href="/read/ai/agent/agent-memory.html">AI Agent 记忆系统</a>：深入理解短期记忆与长期记忆设计，掌握记忆存储形式、生命周期操作与生产级工程优化策略。</li>
+<li><a href="/read/ai/agent/multi-agent.html">多 Agent 协作系统设计</a>：从任务契约、共享状态和冲突处理讲到检查点、接管、补偿与人工介入。</li>
+<li><a href="/read/ai/agent/prompt-engineering.html">大模型提示词工程</a>：从 Prompt 四要素、常见技巧讲到企业级安全实践。</li>
+<li><a href="/read/ai/agent/context-engineering.html">上下文工程</a>：掌握静态规则编排、动态信息挂载、Token 预算降级等关键技术。</li>
+<li><a href="/read/ai/agent/skills.html">万字详解 Agent Skills</a>：理解 Skills 的设计理念，以及 Skills 与 Prompt、MCP、Function Calling 的本质区别。</li>
+<li><a href="/read/ai/agent/mcp.html">万字拆解 MCP 协议</a>：理解 MCP 协议的核心概念、架构设计和生产级最佳实践。</li>
+<li><a href="/read/ai/agent/harness-engineering.html">Harness Engineering：六层检查框架、上下文管理与工程实践</a>：拆解 OpenAI、Anthropic、Stripe 等团队在 Agent 工程化上的实践思路。</li>
+<li><a href="/read/ai/agent/workflow-graph-loop.html">AI 工作流中的 Workflow、Graph 与 Loop</a>：对比传统工作流与 AI 工作流的差异，覆盖 Spring AI Alibaba 和 LangGraph 实现。</li>
+<li><a href="/read/ai/agent/loop-engineering.html">Loop Engineering 是什么？为什么说它是新瓶装旧酒？</a>：把 Loop Engineering 放回 Agent Loop、Context、Harness、Skills、MCP 和验证闭环里，理解它到底新在哪里。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Agent 和 Workflow、Chatbot、普通工具调用有什么区别？</li>
+<li>Agent Loop 中观察、规划、行动、反思分别负责什么？</li>
+<li>Memory 应该存什么、不存什么？如何避免污染和隐私风险？</li>
+<li>Prompt Engineering 和 Context Engineering 为什么不能混为一谈？</li>
+<li>MCP、Skills、Function Calling 的边界分别在哪里？</li>
+<li>长任务 Agent 如何控制上下文、权限、失败重试和可观测性？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/ai/README.html">AI 应用开发知识体系</a></li>
+<li><a href="/read/ai/llm-basis/README.html">大模型基础专题</a></li>
+<li><a href="/read/ai/rag/README.html">RAG 专题</a></li>
+<li><a href="/read/ai/interview-questions/README.html">AI 应用开发面试题专题</a></li>
+<li><a href="/read/ai/interview-questions/agent-project-interview-guide.html">Agent 项目面试怎么讲？</a></li>
+</ul>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>Agent 的工程问题会随着任务变长逐步显现：模型要在循环中根据状态做决策，历史信息需要存储和检索，外部工具需要明确的接入、权限与审计规则，失败还要能够回放和处理。</p>
+<p>阅读时可以先分清 Agent、Workflow 与普通工具调用的职责，再沿着 Prompt、Context、Memory、MCP、Skills 和 Harness 这条链路补齐实现细节。做具体项目时，从可验证的最小闭环开始，根据实际出现的上下文、成本、权限或稳定性问题增加机制即可。</p>
+<!-- @include: @article-footer.snippet.md -->

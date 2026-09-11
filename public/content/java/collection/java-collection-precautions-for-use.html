@@ -1,0 +1,361 @@
+<p>这篇文章我根据《阿里巴巴 Java 开发手册》总结了关于集合使用常见的注意事项以及其具体原理。</p>
+<p>强烈建议小伙伴们多多阅读几遍，避免自己写代码的时候出现这些低级的问题。</p>
+<h2 id="集合判空" tabindex="-1">集合判空</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>判断所有集合内部的元素是否为空，使用 <code>isEmpty()</code> 方法，而不是 <code>size()==0</code> 的方式。</strong></p>
+</blockquote>
+<p>这是因为 <code>isEmpty()</code> 方法的可读性更好，并且时间复杂度为 <code>O(1)</code>。</p>
+<p>绝大部分我们使用的集合的 <code>size()</code> 方法的时间复杂度也是 <code>O(1)</code>，不过，也有很多复杂度不是 <code>O(1)</code> 的，比如 <code>java.util.concurrent</code> 包下的 <code>ConcurrentLinkedQueue</code>。<code>ConcurrentLinkedQueue</code> 的 <code>isEmpty()</code> 方法通过 <code>first()</code> 方法进行判断，其中 <code>first()</code> 方法返回的是队列中第一个值不为 <code>null</code> 的节点（节点值为 <code>null</code> 的原因是在迭代器中使用的逻辑删除）</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isEmpty</span><span class="hljs-params">()</span> { <span class="hljs-keyword">return</span> first() == <span class="hljs-literal">null</span>; }
+
+<span class="hljs-type">Node</span>&lt;E&gt; <span class="hljs-title function_">first</span><span class="hljs-params">()</span> {
+    restartFromHead:
+    <span class="hljs-keyword">for</span> (;;) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">Node</span>&lt;E&gt; <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> head, p = h, q;;) {
+            <span class="hljs-type">boolean</span> <span class="hljs-variable">hasItem</span> <span class="hljs-operator">=</span> (p.item != <span class="hljs-literal">null</span>);
+            <span class="hljs-keyword">if</span> (hasItem || (q = p.next) == <span class="hljs-literal">null</span>) {  <span class="hljs-comment">// 当前节点值不为空 或 到达队尾</span>
+                updateHead(h, p);  <span class="hljs-comment">// 将head设置为p</span>
+                <span class="hljs-keyword">return</span> hasItem ? p : <span class="hljs-literal">null</span>;
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (p == q) <span class="hljs-keyword">continue</span> restartFromHead;
+            <span class="hljs-keyword">else</span> p = q;  <span class="hljs-comment">// p = p.next</span>
+        }
+    }
+}
+</code></pre>
+<p>由于在插入与删除元素时，都会执行 <code>updateHead(h, p)</code> 方法，所以该方法的执行的时间复杂度可以近似为 <code>O(1)</code>。而 <code>size()</code> 方法需要遍历整个链表，时间复杂度为 <code>O(n)</code></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">size</span><span class="hljs-params">()</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">Node</span>&lt;E&gt; <span class="hljs-variable">p</span> <span class="hljs-operator">=</span> first(); p != <span class="hljs-literal">null</span>; p = succ(p))
+        <span class="hljs-keyword">if</span> (p.item != <span class="hljs-literal">null</span>)
+            <span class="hljs-keyword">if</span> (++count == Integer.MAX_VALUE)
+                <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">return</span> count;
+}
+</code></pre>
+<p>此外，在 <code>ConcurrentHashMap</code> 1.7 中 <code>size()</code> 方法和 <code>isEmpty()</code> 方法的时间复杂度也不太一样。<code>ConcurrentHashMap</code> 1.7 将元素数量存储在每个 <code>Segment</code> 中，<code>size()</code> 方法需要统计每个 <code>Segment</code> 的数量，而 <code>isEmpty()</code> 只需要找到第一个不为空的 <code>Segment</code> 即可。但是在 <code>ConcurrentHashMap</code> 1.8 中的 <code>size()</code> 方法和 <code>isEmpty()</code> 都需要调用 <code>sumCount()</code> 方法，汇总 <code>baseCount</code> 和 <code>CounterCell[]</code> 中的计数。下面是 <code>sumCount()</code> 方法的源码：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">final</span> <span class="hljs-type">long</span> <span class="hljs-title function_">sumCount</span><span class="hljs-params">()</span> {
+    <span class="hljs-type">CounterCell</span>[] <span class="hljs-variable">as</span> <span class="hljs-operator">=</span> counterCells; CounterCell a;
+    <span class="hljs-type">long</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> baseCount;
+    <span class="hljs-keyword">if</span> (as != <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; as.length; ++i)
+            <span class="hljs-keyword">if</span> ((a = as[i]) != <span class="hljs-literal">null</span>)
+                sum += a.value;
+    <span class="hljs-keyword">return</span> sum;
+}
+</code></pre>
+<p>在并发环境下，<code>ConcurrentHashMap</code> 1.8 使用 <code>baseCount</code> 和 <code>CounterCell[]</code> 分散计数更新时的竞争，而不是在每个 <code>Node</code> 中保存节点数量。在 <code>ConcurrentHashMap</code> 1.7 中，元素数量存储在每个 <code>Segment</code> 中，<code>size()</code> 方法需要统计每个 <code>Segment</code> 的数量，而 <code>isEmpty()</code> 只需要找到第一个不为空的 <code>Segment</code> 即可。</p>
+<h2 id="集合转-map" tabindex="-1">集合转 Map</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>在使用 <code>java.util.stream.Collectors</code> 类的 <code>toMap()</code> 方法转为 <code>Map</code> 集合时，一定要注意当 value 为 null 时会抛 NPE 异常。</strong></p>
+</blockquote>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">private</span> String name;
+    <span class="hljs-keyword">private</span> String phoneNumber;
+     <span class="hljs-comment">// getters and setters</span>
+}
+
+<span class="hljs-type">List</span>&lt;Person&gt; <span class="hljs-variable">bookList</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+bookList.add(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;jack&quot;</span>,<span class="hljs-string">&quot;18163138123&quot;</span>));
+bookList.add(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;martin&quot;</span>,<span class="hljs-literal">null</span>));
+<span class="hljs-comment">// 空指针异常</span>
+bookList.stream().collect(Collectors.toMap(Person::getName, Person::getPhoneNumber));
+</code></pre>
+<p>下面我们来解释一下原因。</p>
+<p>首先，我们来看 <code>java.util.stream.Collectors</code> 类的 <code>toMap()</code> 方法，可以看到其内部调用了 <code>Map</code> 接口的 <code>merge()</code> 方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T, K, U, M <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Map</span>&lt;K, U&gt;&gt;
+<span class="hljs-type">Collector</span>&lt;T, ?, M&gt; <span class="hljs-title function_">toMap</span><span class="hljs-params">(Function&lt;? <span class="hljs-built_in">super</span> T, ? extends K&gt; keyMapper,
+                            Function&lt;? <span class="hljs-built_in">super</span> T, ? extends U&gt; valueMapper,
+                            BinaryOperator&lt;U&gt; mergeFunction,
+                            Supplier&lt;M&gt; mapSupplier)</span> {
+    <span class="hljs-type">BiConsumer</span>&lt;M, T&gt; <span class="hljs-variable">accumulator</span>
+            <span class="hljs-operator">=</span> (map, element) -&gt; map.merge(keyMapper.apply(element),
+                                          valueMapper.apply(element), mergeFunction);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">CollectorImpl</span>&lt;&gt;(mapSupplier, accumulator, mapMerger(mergeFunction), CH_ID);
+}
+</code></pre>
+<p><code>Map</code> 接口的 <code>merge()</code> 方法如下，这个方法是接口中的默认实现。</p>
+<blockquote>
+<p>如果你还不了解 Java 8 新特性的话，请看这篇文章：<a href="https://mp.weixin.qq.com/s/ojyl7B6PiHaTWADqmUq2rw" target="_blank" rel="noopener">《Java8 新特性总结》</a>。</p>
+</blockquote>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">default</span> <span class="hljs-type">V</span> <span class="hljs-title function_">merge</span><span class="hljs-params">(K key, V value,
+        BiFunction&lt;? <span class="hljs-built_in">super</span> V, ? <span class="hljs-built_in">super</span> V, ? extends V&gt; remappingFunction)</span> {
+    Objects.requireNonNull(remappingFunction);
+    Objects.requireNonNull(value);
+    <span class="hljs-type">V</span> <span class="hljs-variable">oldValue</span> <span class="hljs-operator">=</span> get(key);
+    <span class="hljs-type">V</span> <span class="hljs-variable">newValue</span> <span class="hljs-operator">=</span> (oldValue == <span class="hljs-literal">null</span>) ? value :
+               remappingFunction.apply(oldValue, value);
+    <span class="hljs-keyword">if</span>(newValue == <span class="hljs-literal">null</span>) {
+        remove(key);
+    } <span class="hljs-keyword">else</span> {
+        put(key, newValue);
+    }
+    <span class="hljs-keyword">return</span> newValue;
+}
+</code></pre>
+<p><code>merge()</code> 方法会先调用 <code>Objects.requireNonNull()</code> 方法判断 value 是否为空。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">T</span> <span class="hljs-title function_">requireNonNull</span><span class="hljs-params">(T obj)</span> {
+    <span class="hljs-keyword">if</span> (obj == <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NullPointerException</span>();
+    <span class="hljs-keyword">return</span> obj;
+}
+</code></pre>
+<blockquote>
+<p><code>Collectors</code> 也提供了无需 mergeFunction 的 <code>toMap()</code> 方法，但此时若出现 key 冲突，则会抛出 <code>duplicateKeyException</code> 异常，因此强烈建议使用 <code>toMap()</code> 方法必填 mergeFunction。</p>
+</blockquote>
+<h2 id="集合遍历" tabindex="-1">集合遍历</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>不要在 foreach 循环里进行元素的 <code>remove/add</code> 操作。remove 元素请使用 <code>Iterator</code> 方式，如果并发操作，需要对 <code>Iterator</code> 对象加锁。</strong></p>
+</blockquote>
+<p>需要注意的是，仅对 <code>Iterator</code> 对象加锁并不能阻止其他线程修改集合。以 <code>Collections.synchronizedXxx()</code> 返回的同步包装器为例，遍历时应当同步包装后的集合对象，并确保所有访问都通过该包装器完成。</p>
+<p>通过反编译你会发现 foreach 语法底层其实还是依赖 <code>Iterator</code>。不过， <code>remove/add</code> 操作直接调用的是集合自己的方法，而不是 <code>Iterator</code> 的 <code>remove/add</code> 方法</p>
+<p>这就导致 <code>Iterator</code> 莫名其妙地发现自己有元素被 <code>remove/add</code>，然后，它就会抛出一个 <code>ConcurrentModificationException</code> 来提示用户发生了并发修改异常。这就是单线程状态下产生的 <strong>fail-fast 机制</strong>。</p>
+<blockquote>
+<p><strong>fail-fast 机制</strong>：多个线程对 fail-fast 集合进行修改的时候，可能会抛出 <code>ConcurrentModificationException</code>。 即使是单线程下也有可能会出现这种情况，上面已经提到过。</p>
+<p>相关阅读：<a href="https://www.cnblogs.com/54chensongxia/p/12470446.html" target="_blank" rel="noopener">什么是 fail-fast</a>。</p>
+</blockquote>
+<p>Java8 开始，可以使用 <code>Collection#removeIf()</code> 方法删除满足特定条件的元素，如</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span>&lt;Integer&gt; <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; i &lt;= <span class="hljs-number">10</span>; ++i) {
+    list.add(i);
+}
+list.removeIf(filter -&gt; filter % <span class="hljs-number">2</span> == <span class="hljs-number">0</span>); <span class="hljs-comment">/* 删除list中的所有偶数 */</span>
+System.out.println(list); <span class="hljs-comment">/* [1, 3, 5, 7, 9] */</span>
+</code></pre>
+<p>除了上面介绍的直接使用 <code>Iterator</code> 进行遍历操作之外，你还可以：</p>
+<ul>
+<li>使用普通的 for 循环</li>
+<li>根据场景使用支持快照迭代或弱一致性迭代的集合类。例如，<code>CopyOnWriteArrayList</code> 的迭代器基于快照，<code>ConcurrentHashMap</code> 的迭代器是弱一致的。</li>
+<li>……</li>
+</ul>
+<h2 id="集合去重" tabindex="-1">集合去重</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>可以利用 <code>Set</code> 元素唯一的特性，可以快速对一个集合进行去重操作，避免使用 <code>List</code> 的 <code>contains()</code> 进行遍历去重或者判断包含操作。</strong></p>
+</blockquote>
+<p>这里我们以 <code>HashSet</code> 和 <code>ArrayList</code> 为例说明。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// Set 去重代码示例</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">Set</span>&lt;T&gt; <span class="hljs-title function_">removeDuplicateBySet</span><span class="hljs-params">(List&lt;T&gt; data)</span> {
+
+    <span class="hljs-keyword">if</span> (CollectionUtils.isEmpty(data)) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;&gt;();
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;&gt;(data);
+}
+
+<span class="hljs-comment">// List 去重代码示例</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">List</span>&lt;T&gt; <span class="hljs-title function_">removeDuplicateByList</span><span class="hljs-params">(List&lt;T&gt; data)</span> {
+
+    <span class="hljs-keyword">if</span> (CollectionUtils.isEmpty(data)) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+
+    }
+    <span class="hljs-type">List</span>&lt;T&gt; <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;(data.size());
+    <span class="hljs-keyword">for</span> (T current : data) {
+        <span class="hljs-keyword">if</span> (!result.contains(current)) {
+            result.add(current);
+        }
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+
+</code></pre>
+<p>两者的核心差别在于 <code>contains()</code> 方法的实现。</p>
+<p><code>HashSet</code> 的 <code>contains()</code> 方法底部依赖的 <code>HashMap</code> 的 <code>containsKey()</code> 方法，时间复杂度接近于 O（1）（没有出现哈希冲突的时候为 O（1））。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-keyword">transient</span> HashMap&lt;E,Object&gt; map;
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">contains</span><span class="hljs-params">(Object o)</span> {
+    <span class="hljs-keyword">return</span> map.containsKey(o);
+}
+</code></pre>
+<p>我们有 N 个元素插入进 Set 中，那时间复杂度就接近是 O (n)。</p>
+<p><code>ArrayList</code> 的 <code>contains()</code> 方法是通过遍历所有元素的方法来做的，时间复杂度接近是 O(n)。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">contains</span><span class="hljs-params">(Object o)</span> {
+    <span class="hljs-keyword">return</span> indexOf(o) &gt;= <span class="hljs-number">0</span>;
+}
+<span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">indexOf</span><span class="hljs-params">(Object o)</span> {
+    <span class="hljs-keyword">if</span> (o == <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; size; i++)
+            <span class="hljs-keyword">if</span> (elementData[i]==<span class="hljs-literal">null</span>)
+                <span class="hljs-keyword">return</span> i;
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; size; i++)
+            <span class="hljs-keyword">if</span> (o.equals(elementData[i]))
+                <span class="hljs-keyword">return</span> i;
+    }
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+}
+
+</code></pre>
+<h2 id="集合转数组" tabindex="-1">集合转数组</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>使用集合转数组的方法，必须使用集合的 <code>toArray(T[] array)</code>，传入的是类型完全一致、长度为 0 的空数组。</strong></p>
+</blockquote>
+<p><code>toArray(T[] array)</code> 方法的参数是一个泛型数组，如果 <code>toArray</code> 方法中没有传递任何参数的话返回的是 <code>Object</code> 类 型数组。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> [] <span class="hljs-variable">s</span><span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[]{
+    <span class="hljs-string">&quot;dog&quot;</span>, <span class="hljs-string">&quot;lazy&quot;</span>, <span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;over&quot;</span>, <span class="hljs-string">&quot;jumps&quot;</span>, <span class="hljs-string">&quot;fox&quot;</span>, <span class="hljs-string">&quot;brown&quot;</span>, <span class="hljs-string">&quot;quick&quot;</span>, <span class="hljs-string">&quot;A&quot;</span>
+};
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> Arrays.asList(s);
+Collections.reverse(list);
+<span class="hljs-comment">//没有指定类型的话会报错</span>
+s=list.toArray(<span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[<span class="hljs-number">0</span>]);
+</code></pre>
+<p>由于 JVM 优化，<code>new String[0]</code> 作为 <code>Collection.toArray()</code> 方法的参数现在使用更好，<code>new String[0]</code> 就是起一个模板的作用，指定了返回数组的类型，0 是为了节省空间，因为它只是为了说明返回的类型。详见：<a href="https://shipilev.net/blog/2016/arrays-wisdom-ancients/" target="_blank" rel="noopener">https://shipilev.net/blog/2016/arrays-wisdom-ancients/</a></p>
+<h2 id="数组转集合" tabindex="-1">数组转集合</h2>
+<p>《阿里巴巴 Java 开发手册》的描述如下：</p>
+<blockquote>
+<p><strong>使用工具类 <code>Arrays.asList()</code> 把数组转换成集合时，不能使用其修改集合相关的方法， 它的 <code>add/remove/clear</code> 方法会抛出 <code>UnsupportedOperationException</code> 异常。</strong></p>
+</blockquote>
+<p>我在之前的一个项目中就遇到一个类似的坑。</p>
+<p><code>Arrays.asList()</code> 在平时开发中还是比较常见的，我们可以使用它将一个数组转换为一个 <code>List</code> 集合。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span>[] <span class="hljs-variable">myArray</span> <span class="hljs-operator">=</span> {<span class="hljs-string">&quot;Apple&quot;</span>, <span class="hljs-string">&quot;Banana&quot;</span>, <span class="hljs-string">&quot;Orange&quot;</span>};
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.asList(myArray);
+<span class="hljs-comment">//上面两个语句等价于下面一条语句</span>
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.asList(<span class="hljs-string">&quot;Apple&quot;</span>,<span class="hljs-string">&quot;Banana&quot;</span>, <span class="hljs-string">&quot;Orange&quot;</span>);
+</code></pre>
+<p>JDK 源码对于这个方法的说明：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+  *返回由指定数组支持的固定大小的列表。此方法作为基于数组和基于集合的API之间的桥梁，
+  * 与 Collection.toArray()结合使用。返回的List是可序列化并实现RandomAccess接口。
+  */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">List</span>&lt;T&gt; <span class="hljs-title function_">asList</span><span class="hljs-params">(T... a)</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;(a);
+}
+</code></pre>
+<p>下面我们来总结一下使用注意事项。</p>
+<p><strong>1、<code>Arrays.asList()</code> 不会将基本类型数组自动装箱并展开为列表元素。</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-variable">myArray</span> <span class="hljs-operator">=</span> {<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>};
+<span class="hljs-type">List</span> <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.asList(myArray);
+System.out.println(myList.size());<span class="hljs-comment">//1</span>
+System.out.println(myList.get(<span class="hljs-number">0</span>));<span class="hljs-comment">//数组地址值</span>
+System.out.println(myList.get(<span class="hljs-number">1</span>));<span class="hljs-comment">//报错：ArrayIndexOutOfBoundsException</span>
+<span class="hljs-type">int</span>[] <span class="hljs-variable">array</span> <span class="hljs-operator">=</span> (<span class="hljs-type">int</span>[]) myList.get(<span class="hljs-number">0</span>);
+System.out.println(array[<span class="hljs-number">0</span>]);<span class="hljs-comment">//1</span>
+</code></pre>
+<p>当传入一个原生数据类型数组时，<code>Arrays.asList()</code> 的真正得到的参数就不是数组中的元素，而是数组对象本身！此时 <code>List</code> 的唯一元素就是这个数组，这也就解释了上面的代码。</p>
+<p>我们使用包装类型数组就可以解决这个问题。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span>[] <span class="hljs-variable">myArray</span> <span class="hljs-operator">=</span> {<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>};
+</code></pre>
+<p><strong>2、使用集合的修改方法: <code>add()</code>、<code>remove()</code>、<code>clear()</code> 会抛出异常。</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span> <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);
+myList.add(<span class="hljs-number">4</span>);<span class="hljs-comment">//运行时报错：UnsupportedOperationException</span>
+myList.remove(<span class="hljs-number">1</span>);<span class="hljs-comment">//运行时报错：UnsupportedOperationException</span>
+myList.clear();<span class="hljs-comment">//运行时报错：UnsupportedOperationException</span>
+</code></pre>
+<p><code>Arrays.asList()</code> 方法返回的并不是 <code>java.util.ArrayList</code>，而是 <code>java.util.Arrays</code> 的一个内部类，这个内部类并没有实现集合的修改方法或者说并没有重写这些方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span> <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);
+System.out.println(myList.getClass());<span class="hljs-comment">//class java.util.Arrays$ArrayList</span>
+</code></pre>
+<p>下图是 <code>java.util.Arrays$ArrayList</code> 的简易源码，我们可以看到这个类重写的方法有哪些。</p>
+<pre class="md-pre"><code class="hljs">  <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ArrayList</span>&lt;E&gt; <span class="hljs-keyword">extends</span> <span class="hljs-title class_">AbstractList</span>&lt;E&gt;
+        <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RandomAccess</span>, java.io.Serializable
+    {
+        ...
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">E</span> <span class="hljs-title function_">get</span><span class="hljs-params">(<span class="hljs-type">int</span> index)</span> {
+          ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">E</span> <span class="hljs-title function_">set</span><span class="hljs-params">(<span class="hljs-type">int</span> index, E element)</span> {
+          ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">indexOf</span><span class="hljs-params">(Object o)</span> {
+          ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">contains</span><span class="hljs-params">(Object o)</span> {
+           ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">forEach</span><span class="hljs-params">(Consumer&lt;? <span class="hljs-built_in">super</span> E&gt; action)</span> {
+          ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">replaceAll</span><span class="hljs-params">(UnaryOperator&lt;E&gt; operator)</span> {
+          ...
+        }
+
+        <span class="hljs-meta">@Override</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">sort</span><span class="hljs-params">(Comparator&lt;? <span class="hljs-built_in">super</span> E&gt; c)</span> {
+          ...
+        }
+    }
+</code></pre>
+<p>我们再看一下 <code>java.util.AbstractList</code> 的 <code>add/remove/clear</code> 方法就知道为什么会抛出 <code>UnsupportedOperationException</code> 了。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">E</span> <span class="hljs-title function_">remove</span><span class="hljs-params">(<span class="hljs-type">int</span> index)</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">UnsupportedOperationException</span>();
+}
+<span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">add</span><span class="hljs-params">(E e)</span> {
+    add(size(), e);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+}
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">add</span><span class="hljs-params">(<span class="hljs-type">int</span> index, E element)</span> {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">UnsupportedOperationException</span>();
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">clear</span><span class="hljs-params">()</span> {
+    removeRange(<span class="hljs-number">0</span>, size());
+}
+<span class="hljs-keyword">protected</span> <span class="hljs-type">void</span> <span class="hljs-title function_">removeRange</span><span class="hljs-params">(<span class="hljs-type">int</span> fromIndex, <span class="hljs-type">int</span> toIndex)</span> {
+    <span class="hljs-type">ListIterator</span>&lt;E&gt; <span class="hljs-variable">it</span> <span class="hljs-operator">=</span> listIterator(fromIndex);
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span><span class="hljs-operator">=</span><span class="hljs-number">0</span>, n=toIndex-fromIndex; i&lt;n; i++) {
+        it.next();
+        it.remove();
+    }
+}
+</code></pre>
+<p><strong>那我们如何正确的将数组转换为 <code>ArrayList</code> ?</strong></p>
+<p>1、手动实现工具类</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">//JDK1.5+</span>
+<span class="hljs-keyword">static</span> &lt;T&gt; <span class="hljs-type">List</span>&lt;T&gt; <span class="hljs-title function_">arrayToList</span><span class="hljs-params">(<span class="hljs-keyword">final</span> T[] array)</span> {
+  <span class="hljs-keyword">final</span> <span class="hljs-type">List</span>&lt;T&gt; <span class="hljs-variable">l</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;T&gt;(array.length);
+
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">final</span> T s : array) {
+    l.add(s);
+  }
+  <span class="hljs-keyword">return</span> l;
+}
+
+
+<span class="hljs-type">Integer</span> [] <span class="hljs-variable">myArray</span> <span class="hljs-operator">=</span> { <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span> };
+System.out.println(arrayToList(myArray).getClass());<span class="hljs-comment">//class java.util.ArrayList</span>
+</code></pre>
+<p>2、最简便的方法</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span> <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;(Arrays.asList(<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>, <span class="hljs-string">&quot;c&quot;</span>))
+</code></pre>
+<p>3、使用 Java8 的 <code>Stream</code>（推荐）</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span> [] <span class="hljs-variable">myArray</span> <span class="hljs-operator">=</span> { <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span> };
+<span class="hljs-type">List</span> <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.stream(myArray).collect(Collectors.toList());
+<span class="hljs-comment">//基本类型也可以实现转换（依赖boxed的装箱操作）</span>
+<span class="hljs-type">int</span> [] <span class="hljs-variable">myArray2</span> <span class="hljs-operator">=</span> { <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span> };
+<span class="hljs-type">List</span> <span class="hljs-variable">myList</span> <span class="hljs-operator">=</span> Arrays.stream(myArray2).boxed().collect(Collectors.toList());
+</code></pre>
+<p>4、使用 Guava</p>
+<p>对于不可变集合，你可以使用<a href="https://github.com/google/guava/blob/master/guava/src/com/google/common/collect/ImmutableList.java" target="_blank" rel="noopener"><code>ImmutableList</code></a>类及其<a href="https://github.com/google/guava/blob/master/guava/src/com/google/common/collect/ImmutableList.java#L101" target="_blank" rel="noopener"><code>of()</code></a>与<a href="https://github.com/google/guava/blob/master/guava/src/com/google/common/collect/ImmutableList.java#L225" target="_blank" rel="noopener"><code>copyOf()</code></a>工厂方法：（参数不能为空）</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">il</span> <span class="hljs-operator">=</span> ImmutableList.of(<span class="hljs-string">&quot;string&quot;</span>, <span class="hljs-string">&quot;elements&quot;</span>);  <span class="hljs-comment">// from varargs</span>
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">il</span> <span class="hljs-operator">=</span> ImmutableList.copyOf(aStringArray);      <span class="hljs-comment">// from array</span>
+</code></pre>
+<p>对于可变集合，你可以使用<a href="https://github.com/google/guava/blob/master/guava/src/com/google/common/collect/Lists.java" target="_blank" rel="noopener"><code>Lists</code></a>类及其<a href="https://github.com/google/guava/blob/master/guava/src/com/google/common/collect/Lists.java#L87" target="_blank" rel="noopener"><code>newArrayList()</code></a>工厂方法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">l1</span> <span class="hljs-operator">=</span> Lists.newArrayList(anotherListOrCollection);    <span class="hljs-comment">// from collection</span>
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">l2</span> <span class="hljs-operator">=</span> Lists.newArrayList(aStringArray);               <span class="hljs-comment">// from array</span>
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">l3</span> <span class="hljs-operator">=</span> Lists.newArrayList(<span class="hljs-string">&quot;or&quot;</span>, <span class="hljs-string">&quot;string&quot;</span>, <span class="hljs-string">&quot;elements&quot;</span>); <span class="hljs-comment">// from varargs</span>
+</code></pre>
+<p>5、使用 Apache Commons Collections</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;String&gt;();
+CollectionUtils.addAll(list, str);
+</code></pre>
+<p>6、 使用 Java9 的 <code>List.of()</code> 方法</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span>[] <span class="hljs-variable">array</span> <span class="hljs-operator">=</span> {<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>};
+<span class="hljs-type">List</span>&lt;Integer&gt; <span class="hljs-variable">list</span> <span class="hljs-operator">=</span> List.of(array);
+</code></pre>
+<!-- @include: @article-footer.snippet.md -->

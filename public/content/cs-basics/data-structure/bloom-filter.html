@@ -1,0 +1,280 @@
+<h1 id="布隆过滤器" tabindex="-1">布隆过滤器</h1>
+<p>布隆过滤器相信大家没用过的话，也已经听过了。</p>
+<p>布隆过滤器主要是为了解决海量数据的存在性问题。对于海量数据中判定某个数据是否存在且容忍轻微误差这一场景（比如缓存穿透、海量数据去重）来说，非常适合。</p>
+<p>文章内容概览：</p>
+<ol>
+<li>什么是布隆过滤器？</li>
+<li>布隆过滤器的原理介绍。</li>
+<li>布隆过滤器使用场景。</li>
+<li>通过 Java 编程手动实现布隆过滤器。</li>
+<li>利用 Google 开源的 Guava 中自带的布隆过滤器。</li>
+<li>Redis 中的布隆过滤器。</li>
+</ol>
+<h2 id="什么是布隆过滤器" tabindex="-1">什么是布隆过滤器？</h2>
+<p>首先，我们需要了解布隆过滤器的概念。</p>
+<p>布隆过滤器（Bloom Filter，BF）是一个叫做 Bloom 的老哥于 1970 年提出的。我们可以把它看作由二进制向量（或者说位数组）和一系列随机映射函数（哈希函数）两部分组成的数据结构。相比于我们平时常用的 List、Map、Set 等数据结构，它占用空间更少并且效率更高，但是缺点是其返回的结果是概率性的，而不是非常准确的。理论情况下添加到集合中的元素越多，误报的可能性就越大。并且，存放在布隆过滤器的数据不容易删除。</p>
+<p>Bloom Filter 会使用一个较大的 bit 数组来保存所有的数据，数组中的每个元素都只占用 1 bit，并且每个元素只能是 0 或者 1（代表 false 或者 true），这也是 Bloom Filter 节省内存的核心所在。这样来算的话，申请一个 100w 个元素的位数组只占用 1000000 Bit / 8 = 125000 Byte = 125000 / 1024 KB ≈ 122 KB 的空间。</p>
+<p><img src="/img/bloom-filter-bit-table-b8f56b57.png" alt="" loading="lazy"></p>
+<p>总结：<strong>一个名叫 Bloom 的人提出了一种来检索元素是否在给定大集合中的数据结构，这种数据结构是高效且性能很好的，但缺点是具有一定的错误识别率和删除难度。并且，理论情况下，添加到集合中的元素越多，误报的可能性就越大。</strong></p>
+<h2 id="布隆过滤器的原理介绍" tabindex="-1">布隆过滤器的原理介绍</h2>
+<p><strong>当一个元素加入布隆过滤器中的时候，会进行如下操作：</strong></p>
+<ol>
+<li>使用布隆过滤器中的哈希函数对元素值进行计算，得到哈希值（有几个哈希函数得到几个哈希值）。</li>
+<li>根据得到的哈希值，在位数组中把对应下标的值置为 1。</li>
+</ol>
+<p><strong>当我们需要判断一个元素是否存在于布隆过滤器的时候，会进行如下操作：</strong></p>
+<ol>
+<li>对给定元素再次进行相同的哈希计算；</li>
+<li>检查这些哈希值对应的 bit：如果存在一个 bit 不为 1，说明该元素一定没有被插入；如果全部为 1，只能说明该元素可能被插入，仍然存在误判。</li>
+</ol>
+<p>Bloom Filter 的简单原理图如下：</p>
+<p><img src="/img/bloom-filter-simple-schematic-diagram-ecf8f3d1.png" alt="" loading="lazy"></p>
+<p>如图所示，当字符串要加入布隆过滤器时，该字符串首先由多个哈希函数生成不同的哈希值，然后将位数组中的对应位置设置为 1（位数组初始化时，所有位置均为 0）。再次查询相同字符串时，对应位置会全部为 1，因此布隆过滤器会返回“可能存在”；最终是否真的存在，仍需结合业务数据确认。</p>
+<p>如果需要判断某个字符串是否在布隆过滤器中，只需对它再次进行相同的哈希计算。如果任一对应位置为 0，该元素一定没有被插入；如果所有对应位置都是 1，该元素可能被插入，也可能是其他元素共同造成的假阳性。</p>
+<p><strong>不同的字符串可能哈希出来的位置相同，这种情况我们可以适当增加位数组大小或者调整我们的哈希函数。</strong></p>
+<p>综上，我们可以得出：<strong>布隆过滤器说某个元素存在，小概率会误判。布隆过滤器说某个元素不在，那么这个元素一定不在。</strong></p>
+<h2 id="布隆过滤器使用场景" tabindex="-1">布隆过滤器使用场景</h2>
+<ol>
+<li>判断给定数据是否存在：比如判断一个数字是否存在于包含大量数字的数字集中（数字集很大，上亿）、防止缓存穿透（判断请求的数据是否有效避免直接绕过缓存请求数据库）等等、邮箱的垃圾邮件过滤（判断一个邮件地址是否在垃圾邮件列表中）、黑名单功能（判断一个 IP 地址或手机号码是否在黑名单中）等等。</li>
+<li>去重：比如爬给定网址的时候对已经爬取过的 URL 去重、对巨量的 QQ 号/订单号去重。</li>
+</ol>
+<p>去重场景也需要用到判断给定数据是否存在，因此布隆过滤器主要是为了解决海量数据的存在性问题。</p>
+<h2 id="编码实战" tabindex="-1">编码实战</h2>
+<h3 id="通过-java-编程手动实现布隆过滤器" tabindex="-1">通过 Java 编程手动实现布隆过滤器</h3>
+<p>我们上面已经说了布隆过滤器的原理，知道了布隆过滤器的原理之后就可以自己手动实现一个了。</p>
+<p>如果你想要手动实现一个的话，你需要：</p>
+<ol>
+<li>一个合适大小的位数组保存数据</li>
+<li>几个不同的哈希函数</li>
+<li>添加元素到位数组（布隆过滤器）的方法实现</li>
+<li>判断给定元素是否存在于位数组（布隆过滤器）的方法实现。</li>
+</ol>
+<p>下面给出一个我觉得写的还算不错的代码（参考网上已有代码改进得到，对于所有类型对象皆适用）：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.util.BitSet;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">MyBloomFilter</span> {
+
+    <span class="hljs-comment">/**
+     * 位数组的大小
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">DEFAULT_SIZE</span> <span class="hljs-operator">=</span> <span class="hljs-number">2</span> &lt;&lt; <span class="hljs-number">24</span>;
+    <span class="hljs-comment">/**
+     * 通过这个数组可以创建 6 个不同的哈希函数
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span>[] <span class="hljs-variable">SEEDS</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[]{<span class="hljs-number">3</span>, <span class="hljs-number">13</span>, <span class="hljs-number">46</span>, <span class="hljs-number">71</span>, <span class="hljs-number">91</span>, <span class="hljs-number">134</span>};
+
+    <span class="hljs-comment">/**
+     * 位数组。数组中的元素只能是 0 或者 1
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">BitSet</span> <span class="hljs-variable">bits</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BitSet</span>(DEFAULT_SIZE);
+
+    <span class="hljs-comment">/**
+     * 存放包含 hash 函数的类的数组
+     */</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-type">SimpleHash</span>[] <span class="hljs-variable">func</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleHash</span>[SEEDS.length];
+
+    <span class="hljs-comment">/**
+     * 初始化多个包含 hash 函数的类的数组，每个类中的 hash 函数都不一样
+     */</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">MyBloomFilter</span><span class="hljs-params">()</span> {
+        <span class="hljs-comment">// 初始化多个不同的 Hash 函数</span>
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; SEEDS.length; i++) {
+            func[i] = <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleHash</span>(DEFAULT_SIZE, SEEDS[i]);
+        }
+    }
+
+    <span class="hljs-comment">/**
+     * 添加元素到位数组
+     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">add</span><span class="hljs-params">(Object value)</span> {
+        <span class="hljs-keyword">for</span> (SimpleHash f : func) {
+            bits.set(f.hash(value), <span class="hljs-literal">true</span>);
+        }
+    }
+
+    <span class="hljs-comment">/**
+     * 判断指定元素是否存在于位数组
+     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">contains</span><span class="hljs-params">(Object value)</span> {
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">ret</span> <span class="hljs-operator">=</span> <span class="hljs-literal">true</span>;
+        <span class="hljs-keyword">for</span> (SimpleHash f : func) {
+            ret = bits.get(f.hash(value));
+            <span class="hljs-keyword">if</span>(!ret)
+              <span class="hljs-keyword">return</span> ret;
+        }
+        <span class="hljs-keyword">return</span> ret;
+    }
+
+    <span class="hljs-comment">/**
+     * 静态内部类。用于 hash 操作！
+     */</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleHash</span> {
+
+        <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> cap;
+        <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> seed;
+
+        <span class="hljs-type">public</span> <span class="hljs-title function_">SimpleHash</span><span class="hljs-params">(<span class="hljs-type">int</span> cap, <span class="hljs-type">int</span> seed)</span> {
+            <span class="hljs-built_in">this</span>.cap = cap;
+            <span class="hljs-built_in">this</span>.seed = seed;
+        }
+
+        <span class="hljs-comment">/**
+         * 计算 hash 值
+         */</span>
+        <span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">hash</span><span class="hljs-params">(Object value)</span> {
+            <span class="hljs-type">int</span> h;
+            <span class="hljs-keyword">return</span> (value == <span class="hljs-literal">null</span>) ? <span class="hljs-number">0</span> : Math.abs((cap - <span class="hljs-number">1</span>) &amp; seed * ((h = value.hashCode()) ^ (h &gt;&gt;&gt; <span class="hljs-number">16</span>)));
+        }
+
+    }
+}
+</code></pre>
+<p>测试：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">value1</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;https://javaguide.cn/&quot;</span>;
+<span class="hljs-type">String</span> <span class="hljs-variable">value2</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;https://github.com/Snailclimb&quot;</span>;
+<span class="hljs-type">MyBloomFilter</span> <span class="hljs-variable">filter</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">MyBloomFilter</span>();
+System.out.println(filter.contains(value1));
+System.out.println(filter.contains(value2));
+filter.add(value1);
+filter.add(value2);
+System.out.println(filter.contains(value1));
+System.out.println(filter.contains(value2));
+</code></pre>
+<p>Output:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-literal">false</span>
+<span class="hljs-literal">false</span>
+<span class="hljs-literal">true</span>
+<span class="hljs-literal">true</span>
+</code></pre>
+<p>测试：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span> <span class="hljs-variable">value1</span> <span class="hljs-operator">=</span> <span class="hljs-number">13423</span>;
+<span class="hljs-type">Integer</span> <span class="hljs-variable">value2</span> <span class="hljs-operator">=</span> <span class="hljs-number">22131</span>;
+<span class="hljs-type">MyBloomFilter</span> <span class="hljs-variable">filter</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">MyBloomFilter</span>();
+System.out.println(filter.contains(value1));
+System.out.println(filter.contains(value2));
+filter.add(value1);
+filter.add(value2);
+System.out.println(filter.contains(value1));
+System.out.println(filter.contains(value2));
+</code></pre>
+<p>Output:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-literal">false</span>
+<span class="hljs-literal">false</span>
+<span class="hljs-literal">true</span>
+<span class="hljs-literal">true</span>
+</code></pre>
+<h3 id="利用-google-开源的-guava-中自带的布隆过滤器" tabindex="-1">利用 Google 开源的 Guava 中自带的布隆过滤器</h3>
+<p>自己实现的目的主要是为了让自己搞懂布隆过滤器的原理，Guava 中布隆过滤器的实现算是比较权威的，所以实际项目中我们不需要手动实现一个布隆过滤器。</p>
+<p>首先我们需要在项目中引入 Guava 的依赖。版本建议由项目的依赖管理统一维护，并根据 <a href="https://github.com/google/guava/releases" target="_blank" rel="noopener">Guava Releases</a> 选择仍受维护的版本：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.google.guava<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>guava<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>${guava.version}<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+</code></pre>
+<p>实际使用如下：</p>
+<p>我们创建了一个预计插入 1500 个整数的布隆过滤器，并将目标误判率设置为 1%（0.01）。这里的 1500 是容量估计，不是达到后立即失效的硬上限。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 创建布隆过滤器对象</span>
+<span class="hljs-type">BloomFilter</span>&lt;Integer&gt; <span class="hljs-variable">filter</span> <span class="hljs-operator">=</span> BloomFilter.create(
+    Funnels.integerFunnel(),
+    <span class="hljs-number">1500</span>,
+    <span class="hljs-number">0.01</span>);
+<span class="hljs-comment">// 判断指定元素是否存在</span>
+System.out.println(filter.mightContain(<span class="hljs-number">1</span>));
+System.out.println(filter.mightContain(<span class="hljs-number">2</span>));
+<span class="hljs-comment">// 将元素添加进布隆过滤器</span>
+filter.put(<span class="hljs-number">1</span>);
+filter.put(<span class="hljs-number">2</span>);
+System.out.println(filter.mightContain(<span class="hljs-number">1</span>));
+System.out.println(filter.mightContain(<span class="hljs-number">2</span>));
+</code></pre>
+<p>在这个示例中，<code>mightContain()</code> 返回 <code>false</code> 表示该元素一定没有被插入；返回 <code>true</code> 只表示可能被插入。参数 <code>0.01</code> 表示在容量估计和实现假设成立时，对未插入元素查询的目标假阳性概率约为 1%，不能据此推导出“返回 true 后有 99% 的概率确实存在”。</p>
+<p><strong>Guava 的布隆过滤器保存在当前进程内存中，使用简单，适合单进程或不需要跨节点共享的场景。如果多个节点需要共享同一份过滤器状态，可以考虑 RedisBloom 等集中式方案。</strong></p>
+<h2 id="redis-中的布隆过滤器" tabindex="-1">Redis 中的布隆过滤器</h2>
+<h3 id="介绍" tabindex="-1">介绍</h3>
+<p>RedisBloom 提供布隆过滤器、布谷鸟过滤器等概率型数据结构。从 Redis 8 开始，这些能力已经包含在 Redis Open Source 中，不再需要安装旧的第三方 <code>rebloom</code> 镜像。具体命令和客户端支持可以查看 <a href="https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/" target="_blank" rel="noopener">Redis Bloom Filter 官方文档</a>。</p>
+<h3 id="使用-docker-安装" tabindex="-1">使用 Docker 安装</h3>
+<p>可以通过 Docker 启动 Redis 8 进行体验。实际项目建议固定经过验证的具体版本，不要依赖 <code>latest</code> 标签：</p>
+<pre class="md-pre"><code class="hljs">docker run -d --name redis -p 6379:6379 redis:8
+docker <span class="hljs-built_in">exec</span> -it redis redis-cli
+</code></pre>
+<p>生产环境的安装和版本选择请以 <a href="https://redis.io/docs/latest/operate/oss_and_stack/" target="_blank" rel="noopener">Redis Open Source 安装文档</a> 为准。</p>
+<h3 id="常用命令一览" tabindex="-1">常用命令一览</h3>
+<blockquote>
+<p>注意：key：布隆过滤器的名称，item：添加的元素。</p>
+</blockquote>
+<ol>
+<li><code>BF.ADD</code>：将元素添加到布隆过滤器中，如果该过滤器尚不存在，则创建该过滤器。格式：<code>BF.ADD {key} {item}</code>。</li>
+<li><code>BF.MADD</code>：将一个或多个元素添加到布隆过滤器中，并创建一个尚不存在的过滤器。该命令的操作方式与 <code>BF.ADD</code> 相同，只不过它允许多个输入并返回多个值。格式：<code>BF.MADD {key} {item} [item ...]</code>。</li>
+<li><code>BF.EXISTS</code>：确定元素是否在布隆过滤器中存在。格式：<code>BF.EXISTS {key} {item}</code>。</li>
+<li><code>BF.MEXISTS</code>：确定一个或者多个元素是否在布隆过滤器中存在。格式：<code>BF.MEXISTS {key} {item} [item ...]</code>。</li>
+</ol>
+<p>另外，<code>BF.RESERVE</code> 命令需要单独介绍一下：</p>
+<p>这个命令的格式如下：</p>
+<p><code>BF.RESERVE {key} {error_rate} {capacity} [EXPANSION expansion]</code>。</p>
+<p>下面简单介绍一下每个参数的具体含义：</p>
+<ol>
+<li>key：布隆过滤器的名称</li>
+<li>error_rate：期望的误报率。该值必须介于 0 到 1 之间。例如，对于期望的误报率 0.1%（1000 中为 1），error_rate 应该设置为 0.001。该数字越接近零，则每个项目的内存消耗越大，并且每个操作的 CPU 使用率越高。</li>
+<li>capacity：预计插入的元素数量。可扩展过滤器超过该容量后会创建子过滤器，查询时需要检查更多子过滤器；如果使用 <code>NONSCALING</code> 创建固定容量过滤器，继续插入则会使实际误判率高于设定值。</li>
+</ol>
+<p>可选参数：</p>
+<ul>
+<li>expansion：如果创建了一个新的子过滤器，则其大小将是当前过滤器的大小乘以 <code>expansion</code>。默认扩展值为 2。这意味着每个后续子过滤器将是前一个子过滤器的两倍。</li>
+</ul>
+<h3 id="实际使用" tabindex="-1">实际使用</h3>
+<pre class="md-pre"><code class="hljs">127.0.0.1:6379&gt; BF.ADD myFilter java
+(integer) 1
+127.0.0.1:6379&gt; BF.ADD myFilter javaguide
+(integer) 1
+127.0.0.1:6379&gt; BF.EXISTS myFilter java
+(integer) 1
+127.0.0.1:6379&gt; BF.EXISTS myFilter javaguide
+(integer) 1
+127.0.0.1:6379&gt; BF.EXISTS myFilter github
+(integer) 0
+</code></pre>
+<h2 id="面试复盘重点" tabindex="-1">面试复盘重点</h2>
+<p>布隆过滤器面试最常见的 4 个问题是：为什么快、为什么省空间、为什么会误判、为什么不好删除。</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>回答要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么省空间？</td>
+<td>用位数组和多个哈希函数表示集合，不存储原始元素</td>
+</tr>
+<tr>
+<td>为什么会误判？</td>
+<td>多个元素可能把同一批 bit 置为 1，查询时误以为目标存在</td>
+</tr>
+<tr>
+<td>会不会漏判？</td>
+<td>标准布隆过滤器不会把已加入元素判断为不存在</td>
+</tr>
+<tr>
+<td>为什么删除困难？</td>
+<td>一个 bit 可能被多个元素共享，清零会影响其他元素</td>
+</tr>
+</tbody>
+</table>
+<p>典型工程场景：</p>
+<ul>
+<li>缓存穿透：先用布隆过滤器判断 key 是否可能存在，不存在就不查数据库。</li>
+<li>大规模去重：比如 URL 去重、黑名单过滤、推荐系统已读过滤。</li>
+<li>分布式场景：单机 Guava 方案简单，但跨节点共享通常会考虑 RedisBloom。</li>
+</ul>
+<p>回答时要主动补一句局限：布隆过滤器适合“允许少量误判，但不能接受漏判”的场景。如果业务要求 100% 精确存在性判断，就不能只靠布隆过滤器。</p>
+<h2 id="常见追问" tabindex="-1">常见追问</h2>
+<ul>
+<li>误判率和位数组大小、哈希函数个数有什么关系？</li>
+<li>布隆过滤器能不能删除元素？</li>
+<li>缓存穿透、缓存击穿、缓存雪崩分别是什么？</li>
+<li>Guava 布隆过滤器和 RedisBloom 怎么选？</li>
+<li>如果容量预估错了，会发生什么？</li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

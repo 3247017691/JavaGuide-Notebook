@@ -1,0 +1,199 @@
+<p>Top K 问题在后端面试里很常见，因为它既能考算法，也能自然追问工程场景：排行榜、热词统计、数据流中位数、日志里最常见的错误码，都能落到 Top K。</p>
+<p>这类题不要只记一种写法。面试官常会追问：如果数据量很大怎么办？如果是数据流怎么办？如果要求前 K 高频怎么办？不同条件下方案会变。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能用堆解决第 K 大和前 K 高频。</li>
+<li>能说清小顶堆和大顶堆怎么选。</li>
+<li>能对比堆、快排分区、桶计数的复杂度。</li>
+<li>能处理数据流场景。</li>
+<li>能写出 Java <code>PriorityQueue</code> 比较器。</li>
+</ul>
+<h2 id="top-k-题怎么选方案" tabindex="-1">Top K 题怎么选方案？</h2>
+<p>先看 3 个条件：</p>
+<ol>
+<li>是否只需要第 K 个元素，还是要完整的前 K 个元素？</li>
+<li>数据是一次性给出，还是持续到来的数据流？</li>
+<li>是否需要结果有序？</li>
+</ol>
+<p>如果只是一次性数组里找第 K 大，快排分区平均更快；如果数据持续到来，维护一个大小为 K 的堆更自然；如果题目问前 K 高频，要先做频率统计，再对频率做 Top K。</p>
+<h2 id="方案对比" tabindex="-1">方案对比</h2>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>适合场景</th>
+<th>时间复杂度</th>
+<th>空间复杂度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>排序</td>
+<td>数据量不大，代码简单优先</td>
+<td><code>O(nlogn)</code></td>
+<td>取决于排序实现</td>
+</tr>
+<tr>
+<td>小顶堆</td>
+<td>找前 K 大或第 K 大</td>
+<td><code>O(nlogk)</code></td>
+<td><code>O(k)</code></td>
+</tr>
+<tr>
+<td>快排分区</td>
+<td>找第 K 大，平均效率高</td>
+<td>平均 <code>O(n)</code></td>
+<td><code>O(1)</code> 到 <code>O(logn)</code></td>
+</tr>
+<tr>
+<td>桶计数</td>
+<td>频率范围有限，前 K 高频</td>
+<td><code>O(n)</code></td>
+<td><code>O(n)</code></td>
+</tr>
+<tr>
+<td>双堆</td>
+<td>数据流中位数</td>
+<td>每次插入 <code>O(logn)</code></td>
+<td><code>O(n)</code></td>
+</tr>
+</tbody>
+</table>
+<p>面试里可以这样回答取舍：</p>
+<ul>
+<li>排序最简单，适合数据量不大或不追求最优复杂度。</li>
+<li>堆适合 K 比 n 小很多的场景，空间只需要 <code>O(k)</code>。</li>
+<li>快排分区适合一次性找第 K 大，平均 <code>O(n)</code>，但最坏会退化。</li>
+<li>桶计数适合频率类问题，尤其是频率范围不超过 <code>n</code>。</li>
+</ul>
+<h2 id="小顶堆求第-k-大" tabindex="-1">小顶堆求第 K 大</h2>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">findKthLargest</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-type">PriorityQueue</span>&lt;Integer&gt; <span class="hljs-variable">heap</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PriorityQueue</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> num : nums) {
+        heap.offer(num);
+        <span class="hljs-keyword">if</span> (heap.size() &gt; k) {
+            heap.poll();
+        }
+    }
+    <span class="hljs-keyword">return</span> heap.peek();
+}
+</code></pre>
+<p>堆里始终保留当前最大的 K 个数，堆顶就是这 K 个数里最小的，也就是整体第 K 大。</p>
+<p>为什么是小顶堆？因为堆里要保留最大的 K 个元素。当新元素进来后，如果堆大小超过 K，就应该淘汰这 K + 1 个元素里最小的那个。小顶堆的堆顶正好是最小值。</p>
+<p>如果求第 K 小，思路反过来：维护大小为 K 的大顶堆，超过 K 时弹出最大值。</p>
+<h2 id="代表题精讲前-k-高频元素" tabindex="-1">代表题精讲：前 K 高频元素</h2>
+<p><a href="https://leetcode.cn/problems/top-k-frequent-elements/" target="_blank" rel="noopener">347. 前 K 个高频元素</a> 是 Top K 里最常见的频率题。题目给定一个整数数组和整数 <code>k</code>，要求返回出现频率最高的 <code>k</code> 个元素，结果顺序通常不重要。</p>
+<p>这题不要直接对原数组排序，因为要比较的是“频率”，不是元素值。更稳的拆法是两步：</p>
+<ol>
+<li>用 <code>HashMap</code> 统计每个元素出现次数。</li>
+<li>维护一个按频率升序的小顶堆，堆里只保留当前频率最高的 <code>k</code> 个元素。</li>
+</ol>
+<p>为什么还是小顶堆？因为堆满以后，新元素进来时，只要堆大小超过 <code>k</code>，就弹出当前频率最低的元素。这样遍历完所有不同元素后，堆里剩下的就是前 <code>k</code> 高频。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-title function_">topKFrequent</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-type">Map</span>&lt;Integer, Integer&gt; <span class="hljs-variable">freq</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> num : nums) {
+        freq.put(num, freq.getOrDefault(num, <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
+    }
+    <span class="hljs-type">PriorityQueue</span>&lt;<span class="hljs-type">int</span>[]&gt; <span class="hljs-variable">heap</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PriorityQueue</span>&lt;&gt;(Comparator.comparingInt(a -&gt; a[<span class="hljs-number">1</span>]));
+    <span class="hljs-keyword">for</span> (Map.Entry&lt;Integer, Integer&gt; entry : freq.entrySet()) {
+        heap.offer(<span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {entry.getKey(), entry.getValue()});
+        <span class="hljs-keyword">if</span> (heap.size() &gt; k) {
+            heap.poll();
+        }
+    }
+    <span class="hljs-type">int</span>[] <span class="hljs-variable">ans</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[k];
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> k - <span class="hljs-number">1</span>; i &gt;= <span class="hljs-number">0</span>; i--) {
+        ans[i] = heap.poll()[<span class="hljs-number">0</span>];
+    }
+    <span class="hljs-keyword">return</span> ans;
+}
+</code></pre>
+<p>这里堆按频率升序，堆大小超过 K 时弹出频率最小的元素。</p>
+<p>以 <code>nums = [1,1,1,2,2,3]</code>、<code>k = 2</code> 为例，频率表是 <code>{1=3, 2=2, 3=1}</code>。堆先放入 <code>1</code> 和 <code>2</code>，再放入 <code>3</code> 时大小超过 2，会弹出频率最低的 <code>3</code>，最终保留 <code>1</code> 和 <code>2</code>。</p>
+<p>如果 <code>k</code> 等于不同元素个数，堆最后会保留全部元素；如果面试官要求输出按频率降序排列，最后还需要对结果额外排序。</p>
+<p>如果面试官要求相同频率时按元素大小或字典序排序，比较器就要把第二排序规则写进去。比如前 K 高频单词通常要求频率高的在前，频率相同时字典序小的在前。</p>
+<h2 id="快排分区思路" tabindex="-1">快排分区思路</h2>
+<p>快排分区适合找第 K 大，不要求输出有序的前 K 个元素。思路是每次把数组按 pivot 分成两边，根据 pivot 的排名决定继续搜索哪一边。平均时间复杂度是 <code>O(n)</code>，但最坏可能退化到 <code>O(n^2)</code>，实际写法通常会随机选 pivot。</p>
+<p>快排分区的优势是不用维护堆，平均时间复杂度低；局限是它更适合内存中的一次性数据。如果数据流不断到来，或者数据太大不能一次性放进内存，堆方案更容易落地。</p>
+<h2 id="数据流场景" tabindex="-1">数据流场景</h2>
+<p>数据流题不能每来一个元素就重新排序。常见做法是持续维护一个数据结构：</p>
+<ul>
+<li>数据流第 K 大：维护大小为 K 的小顶堆。</li>
+<li>数据流中位数：维护两个堆，左边大顶堆放较小的一半，右边小顶堆放较大的一半。</li>
+<li>滑动窗口中位数：还要处理过期元素，普通堆删除任意元素不方便，通常需要延迟删除或有序集合。</li>
+</ul>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>以数组 <code>[3, 2, 1, 5, 6, 4]</code> 求第 2 大为例，维护大小为 2 的小顶堆。表中为了方便阅读，按值升序展示堆中的元素，不代表 Java <code>PriorityQueue</code> 的内部数组顺序。</p>
+<table>
+<thead>
+<tr>
+<th>读入元素</th>
+<th>候选元素</th>
+<th>超过 K 后处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td><code>[3]</code></td>
+<td>不处理</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>[2, 3]</code></td>
+<td>不处理</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>[1, 2, 3]</code></td>
+<td>弹出 1，保留 <code>[2, 3]</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>[2, 3, 5]</code></td>
+<td>弹出 2，保留 <code>[3, 5]</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>[3, 5, 6]</code></td>
+<td>弹出 3，保留 <code>[5, 6]</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>[4, 5, 6]</code></td>
+<td>弹出 4，保留 <code>[5, 6]</code></td>
+</tr>
+</tbody>
+</table>
+<p>最后堆顶是 <code>5</code>，也就是第 2 大。</p>
+<p>常见错误写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">PriorityQueue</span>&lt;Integer&gt; <span class="hljs-variable">heap</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PriorityQueue</span>&lt;&gt;((a, b) -&gt; b - a);
+</code></pre>
+<p>这个比较器在极端整数值下可能溢出。更稳妥的写法是：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">PriorityQueue</span>&lt;Integer&gt; <span class="hljs-variable">heap</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PriorityQueue</span>&lt;&gt;((a, b) -&gt; Integer.compare(b, a));
+</code></pre>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>找前 K 大通常用小顶堆，找前 K 小通常用大顶堆。</li>
+<li><code>PriorityQueue</code> 默认是小顶堆。</li>
+<li>前 K 高频要先统计频率，再对频率做 Top K。</li>
+<li>如果要输出有序结果，堆或快排分区后还需要额外排序。</li>
+<li>数据流场景不能把所有数据每次重新排序。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>找第 K 大为什么通常维护大小为 K 的小顶堆？</li>
+<li>小顶堆和大顶堆分别适合哪些 Top K 场景？</li>
+<li>堆方案和快排分区方案的时间复杂度、空间复杂度有什么区别？</li>
+<li>前 K 高频元素为什么要先做频率统计？</li>
+<li>数据流中位数为什么适合用两个堆维护？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/kth-largest-element-in-an-array/" target="_blank" rel="noopener">215. 数组中的第 K 个最大元素</a></li>
+<li><a href="https://leetcode.cn/problems/top-k-frequent-elements/" target="_blank" rel="noopener">347. 前 K 个高频元素</a></li>
+<li><a href="https://leetcode.cn/problems/top-k-frequent-words/" target="_blank" rel="noopener">692. 前 K 个高频单词</a></li>
+<li><a href="https://leetcode.cn/problems/kth-largest-element-in-a-stream/" target="_blank" rel="noopener">703. 数据流中的第 K 大元素</a></li>
+<li><a href="https://leetcode.cn/problems/find-median-from-data-stream/" target="_blank" rel="noopener">295. 数据流的中位数</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,377 @@
+<p>刷数据结构题，不建议只按难度从 Easy 刷到 Hard。更稳的方式是按结构建立题型：数组看下标和区间，链表看指针，栈队列看顺序约束，树图看遍历，堆看优先级，哈希表看快速定位。</p>
+<p>下面的题单控制在面试高频和模板代表题范围内。每类先做“必刷题”，再做“进阶题”。题目做完后，至少写下复杂度、边界样例和这题属于哪个模板。</p>
+<h2 id="怎么用这份题单" tabindex="-1">怎么用这份题单</h2>
+<p>数据结构题不要只记结论。每刷一类题，先回到对应结构看一次“存储方式、核心操作、复杂度”，再动手写题。这样面试官追问 Java 集合、Redis、MySQL 索引或缓存场景时，答案不会只停在题解层面。</p>
+<table>
+<thead>
+<tr>
+<th>结构</th>
+<th>先读什么</th>
+<th>刷题时重点看什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数组、链表、栈队列</td>
+<td><a href="/read/cs-basics/data-structure/linear-data-structure.html">线性数据结构详解</a>、<a href="/read/cs-basics/algorithms/two-pointers-and-sliding-window.html">双指针与滑动窗口</a></td>
+<td>下标、指针更新、入栈出栈时机</td>
+</tr>
+<tr>
+<td>哈希表</td>
+<td><a href="/read/cs-basics/data-structure/hash-table.html">哈希表面试题总结</a></td>
+<td>key 的设计、计数时机、冲突和扩容</td>
+</tr>
+<tr>
+<td>树和图</td>
+<td><a href="/read/cs-basics/data-structure/tree.html">树结构详解</a>、<a href="/read/cs-basics/data-structure/graph.html">图详解</a>、<a href="/read/cs-basics/algorithms/dfs-bfs.html">DFS 与 BFS</a></td>
+<td>递归返回值、访问标记、BFS 层数统计</td>
+</tr>
+<tr>
+<td>堆和 Top K</td>
+<td><a href="/read/cs-basics/data-structure/heap.html">堆详解</a>、<a href="/read/cs-basics/algorithms/top-k.html">Top K 问题面试题总结</a></td>
+<td>堆大小、比较器、数据流场景</td>
+</tr>
+<tr>
+<td>Trie 和并查集</td>
+<td><a href="/read/cs-basics/data-structure/trie.html">Trie 前缀树面试题总结</a>、<a href="/read/cs-basics/data-structure/union-find.html">并查集面试题总结</a></td>
+<td>节点结构、结束标记、路径压缩、连通判断</td>
+</tr>
+<tr>
+<td>LRU</td>
+<td><a href="/read/cs-basics/data-structure/lru-cache.html">LRU 缓存面试题总结</a></td>
+<td>哈希表和双向链表如何保持 O(1)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="数组" tabindex="-1">数组</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>二分查找</td>
+<td><a href="https://leetcode.cn/problems/binary-search/" target="_blank" rel="noopener">704. 二分查找</a></td>
+<td><a href="https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/" target="_blank" rel="noopener">34. 在排序数组中查找元素的第一个和最后一个位置</a></td>
+<td>考循环条件和边界</td>
+<td><code>left &lt;= right</code>、左右边界更新</td>
+</tr>
+<tr>
+<td>原地修改</td>
+<td><a href="https://leetcode.cn/problems/remove-duplicates-from-sorted-array/" target="_blank" rel="noopener">26. 删除有序数组中的重复项</a></td>
+<td><a href="https://leetcode.cn/problems/remove-duplicates-from-sorted-array-ii/" target="_blank" rel="noopener">80. 删除有序数组中的重复项 II</a></td>
+<td>考双指针写法</td>
+<td>慢指针含义、覆盖时机</td>
+</tr>
+<tr>
+<td>双指针</td>
+<td><a href="https://leetcode.cn/problems/squares-of-a-sorted-array/" target="_blank" rel="noopener">977. 有序数组的平方</a></td>
+<td><a href="https://leetcode.cn/problems/3sum/" target="_blank" rel="noopener">15. 三数之和</a></td>
+<td>高频数组题</td>
+<td>排序后去重、左右指针移动</td>
+</tr>
+<tr>
+<td>前缀和</td>
+<td><a href="https://leetcode.cn/problems/range-sum-query-immutable/" target="_blank" rel="noopener">303. 区域和检索 - 数组不可变</a></td>
+<td><a href="https://leetcode.cn/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">560. 和为 K 的子数组</a></td>
+<td>子数组题入口</td>
+<td>前缀和含义、哈希表计数</td>
+</tr>
+</tbody>
+</table>
+<h2 id="链表" tabindex="-1">链表</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基础操作</td>
+<td><a href="https://leetcode.cn/problems/design-linked-list/" target="_blank" rel="noopener">707. 设计链表</a></td>
+<td><a href="https://leetcode.cn/problems/swap-nodes-in-pairs/" target="_blank" rel="noopener">24. 两两交换链表中的节点</a></td>
+<td>考节点操作基本功</td>
+<td>虚拟头节点、插入删除顺序</td>
+</tr>
+<tr>
+<td>链表反转</td>
+<td><a href="https://leetcode.cn/problems/reverse-linked-list/" target="_blank" rel="noopener">206. 反转链表</a></td>
+<td><a href="https://leetcode.cn/problems/reverse-linked-list-ii/" target="_blank" rel="noopener">92. 反转链表 II</a></td>
+<td>高频手写题</td>
+<td><code>prev</code>、<code>cur</code>、<code>next</code> 的更新顺序</td>
+</tr>
+<tr>
+<td>快慢指针</td>
+<td><a href="https://leetcode.cn/problems/linked-list-cycle/" target="_blank" rel="noopener">141. 环形链表</a></td>
+<td><a href="https://leetcode.cn/problems/linked-list-cycle-ii/" target="_blank" rel="noopener">142. 环形链表 II</a></td>
+<td>常见追问题</td>
+<td>相遇点和入环点推导</td>
+</tr>
+<tr>
+<td>删除节点</td>
+<td><a href="https://leetcode.cn/problems/remove-nth-node-from-end-of-list/" target="_blank" rel="noopener">19. 删除链表的倒数第 N 个结点</a></td>
+<td><a href="https://leetcode.cn/problems/rotate-list/" target="_blank" rel="noopener">61. 旋转链表</a></td>
+<td>考边界处理</td>
+<td>链表长度、头节点被删</td>
+</tr>
+</tbody>
+</table>
+<h2 id="栈与队列" tabindex="-1">栈与队列</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>结构模拟</td>
+<td><a href="https://leetcode.cn/problems/implement-queue-using-stacks/" target="_blank" rel="noopener">232. 用栈实现队列</a></td>
+<td><a href="https://leetcode.cn/problems/implement-stack-using-queues/" target="_blank" rel="noopener">225. 用队列实现栈</a></td>
+<td>考结构理解</td>
+<td>入队栈、出队栈职责</td>
+</tr>
+<tr>
+<td>括号匹配</td>
+<td><a href="https://leetcode.cn/problems/valid-parentheses/" target="_blank" rel="noopener">20. 有效的括号</a></td>
+<td><a href="https://leetcode.cn/problems/decode-string/" target="_blank" rel="noopener">394. 字符串解码</a></td>
+<td>字符串栈题入口</td>
+<td>什么时候入栈、什么时候弹栈</td>
+</tr>
+<tr>
+<td>单调栈</td>
+<td><a href="https://leetcode.cn/problems/daily-temperatures/" target="_blank" rel="noopener">739. 每日温度</a></td>
+<td><a href="https://leetcode.cn/problems/largest-rectangle-in-histogram/" target="_blank" rel="noopener">84. 柱状图中最大的矩形</a></td>
+<td>中高频题型</td>
+<td>栈中维护递增还是递减</td>
+</tr>
+<tr>
+<td>单调队列</td>
+<td><a href="https://leetcode.cn/problems/sliding-window-maximum/" target="_blank" rel="noopener">239. 滑动窗口最大值</a></td>
+<td><a href="https://leetcode.cn/problems/shortest-subarray-with-sum-at-least-k/" target="_blank" rel="noopener">862. 和至少为 K 的最短子数组</a></td>
+<td>Hard 题常见模板</td>
+<td>队首过期、队尾维护单调性</td>
+</tr>
+</tbody>
+</table>
+<h2 id="哈希表" tabindex="-1">哈希表</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>快速查找</td>
+<td><a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">1. 两数之和</a></td>
+<td><a href="https://leetcode.cn/problems/group-anagrams/" target="_blank" rel="noopener">49. 字母异位词分组</a></td>
+<td>哈希表入门</td>
+<td>key 的设计</td>
+</tr>
+<tr>
+<td>计数</td>
+<td><a href="https://leetcode.cn/problems/valid-anagram/" target="_blank" rel="noopener">242. 有效的字母异位词</a></td>
+<td><a href="https://leetcode.cn/problems/top-k-frequent-elements/" target="_blank" rel="noopener">347. 前 K 个高频元素</a></td>
+<td>高频统计题</td>
+<td>数组计数和 Map 计数怎么选</td>
+</tr>
+<tr>
+<td>前缀和 + 哈希</td>
+<td><a href="https://leetcode.cn/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">560. 和为 K 的子数组</a></td>
+<td><a href="https://leetcode.cn/problems/subarray-sums-divisible-by-k/" target="_blank" rel="noopener">974. 和可被 K 整除的子数组</a></td>
+<td>子数组题常考</td>
+<td>先查再加，避免把当前前缀算进去</td>
+</tr>
+<tr>
+<td>缓存结构</td>
+<td><a href="https://leetcode.cn/problems/lru-cache/" target="_blank" rel="noopener">146. LRU 缓存</a></td>
+<td><a href="https://leetcode.cn/problems/lfu-cache/" target="_blank" rel="noopener">460. LFU 缓存</a></td>
+<td>手写设计题</td>
+<td>哈希表和双向链表协作</td>
+</tr>
+</tbody>
+</table>
+<h2 id="二叉树" tabindex="-1">二叉树</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>遍历</td>
+<td><a href="https://leetcode.cn/problems/binary-tree-preorder-traversal/" target="_blank" rel="noopener">144. 二叉树的前序遍历</a></td>
+<td><a href="https://leetcode.cn/problems/binary-tree-level-order-traversal/" target="_blank" rel="noopener">102. 二叉树的层序遍历</a></td>
+<td>树题基础</td>
+<td>递归边界、队列层数</td>
+</tr>
+<tr>
+<td>路径问题</td>
+<td><a href="https://leetcode.cn/problems/path-sum/" target="_blank" rel="noopener">112. 路径总和</a></td>
+<td><a href="https://leetcode.cn/problems/binary-tree-maximum-path-sum/" target="_blank" rel="noopener">124. 二叉树中的最大路径和</a></td>
+<td>DFS 高频</td>
+<td>返回值和全局答案分开</td>
+</tr>
+<tr>
+<td>构造树</td>
+<td><a href="https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/" target="_blank" rel="noopener">105. 从前序与中序遍历序列构造二叉树</a></td>
+<td><a href="https://leetcode.cn/problems/construct-binary-tree-from-inorder-and-postorder-traversal/" target="_blank" rel="noopener">106. 从中序与后序遍历序列构造二叉树</a></td>
+<td>考递归区间</td>
+<td>下标范围别写乱</td>
+</tr>
+<tr>
+<td>最近公共祖先</td>
+<td><a href="https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/" target="_blank" rel="noopener">236. 二叉树的最近公共祖先</a></td>
+<td><a href="https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-search-tree/" target="_blank" rel="noopener">235. 二叉搜索树的最近公共祖先</a></td>
+<td>高频追问</td>
+<td>普通树和 BST 的解法差异</td>
+</tr>
+</tbody>
+</table>
+<h2 id="图" tabindex="-1">图</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>网格 DFS/BFS</td>
+<td><a href="https://leetcode.cn/problems/number-of-islands/" target="_blank" rel="noopener">200. 岛屿数量</a></td>
+<td><a href="https://leetcode.cn/problems/max-area-of-island/" target="_blank" rel="noopener">695. 岛屿的最大面积</a></td>
+<td>图搜索入门</td>
+<td>越界、访问标记</td>
+</tr>
+<tr>
+<td>拓扑排序</td>
+<td><a href="https://leetcode.cn/problems/course-schedule/" target="_blank" rel="noopener">207. 课程表</a></td>
+<td><a href="https://leetcode.cn/problems/course-schedule-ii/" target="_blank" rel="noopener">210. 课程表 II</a></td>
+<td>依赖关系题</td>
+<td>入度数组、队列</td>
+</tr>
+<tr>
+<td>最短路径</td>
+<td><a href="https://leetcode.cn/problems/rotting-oranges/" target="_blank" rel="noopener">994. 腐烂的橘子</a></td>
+<td><a href="https://leetcode.cn/problems/word-ladder/" target="_blank" rel="noopener">127. 单词接龙</a></td>
+<td>BFS 层序应用</td>
+<td>每层步数统计</td>
+</tr>
+<tr>
+<td>连通性</td>
+<td><a href="https://leetcode.cn/problems/number-of-provinces/" target="_blank" rel="noopener">547. 省份数量</a></td>
+<td><a href="https://leetcode.cn/problems/redundant-connection/" target="_blank" rel="noopener">684. 冗余连接</a></td>
+<td>并查集入口</td>
+<td><code>find</code> 和 <code>union</code> 模板</td>
+</tr>
+</tbody>
+</table>
+<h2 id="堆" tabindex="-1">堆</h2>
+<table>
+<thead>
+<tr>
+<th>题型</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 K 大</td>
+<td><a href="https://leetcode.cn/problems/kth-largest-element-in-an-array/" target="_blank" rel="noopener">215. 数组中的第 K 个最大元素</a></td>
+<td><a href="https://leetcode.cn/problems/kth-largest-element-in-a-stream/" target="_blank" rel="noopener">703. 数据流中的第 K 大元素</a></td>
+<td>Top K 高频</td>
+<td>小顶堆大小保持为 K</td>
+</tr>
+<tr>
+<td>频率统计</td>
+<td><a href="https://leetcode.cn/problems/top-k-frequent-elements/" target="_blank" rel="noopener">347. 前 K 个高频元素</a></td>
+<td><a href="https://leetcode.cn/problems/top-k-frequent-words/" target="_blank" rel="noopener">692. 前 K 个高频单词</a></td>
+<td>哈希表 + 堆</td>
+<td>比较器写法</td>
+</tr>
+<tr>
+<td>双堆</td>
+<td><a href="https://leetcode.cn/problems/find-median-from-data-stream/" target="_blank" rel="noopener">295. 数据流的中位数</a></td>
+<td><a href="https://leetcode.cn/problems/sliding-window-median/" target="_blank" rel="noopener">480. 滑动窗口中位数</a></td>
+<td>进阶设计题</td>
+<td>大顶堆和小顶堆平衡</td>
+</tr>
+</tbody>
+</table>
+<h2 id="trie-与并查集" tabindex="-1">Trie 与并查集</h2>
+<table>
+<thead>
+<tr>
+<th>结构</th>
+<th>必刷题</th>
+<th>进阶题</th>
+<th>面试价值</th>
+<th>复盘重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trie</td>
+<td><a href="https://leetcode.cn/problems/implement-trie-prefix-tree/" target="_blank" rel="noopener">208. 实现 Trie</a></td>
+<td><a href="https://leetcode.cn/problems/design-add-and-search-words-data-structure/" target="_blank" rel="noopener">211. 添加与搜索单词</a></td>
+<td>字符串集合题</td>
+<td>节点结构、结束标记</td>
+</tr>
+<tr>
+<td>Trie + DFS</td>
+<td><a href="https://leetcode.cn/problems/word-search-ii/" target="_blank" rel="noopener">212. 单词搜索 II</a></td>
+<td><a href="https://leetcode.cn/problems/replace-words/" target="_blank" rel="noopener">648. 单词替换</a></td>
+<td>中高频题</td>
+<td>前缀剪枝</td>
+</tr>
+<tr>
+<td>并查集</td>
+<td><a href="https://leetcode.cn/problems/number-of-provinces/" target="_blank" rel="noopener">547. 省份数量</a></td>
+<td><a href="https://leetcode.cn/problems/number-of-operations-to-make-network-connected/" target="_blank" rel="noopener">1319. 连通网络的操作次数</a></td>
+<td>连通性模板</td>
+<td>路径压缩</td>
+</tr>
+<tr>
+<td>并查集判环</td>
+<td><a href="https://leetcode.cn/problems/redundant-connection/" target="_blank" rel="noopener">684. 冗余连接</a></td>
+<td><a href="https://leetcode.cn/problems/satisfiability-of-equality-equations/" target="_blank" rel="noopener">990. 等式方程的可满足性</a></td>
+<td>图题常见变体</td>
+<td>先合并等式，再检查冲突</td>
+</tr>
+</tbody>
+</table>
+<h2 id="复习路线入口" tabindex="-1">复习路线入口</h2>
+<p>这篇文章只保留数据结构相关题单。7 天复习路线和 30 天复习路线统一维护在<a href="/read/cs-basics/data-structure/README.html">数据结构复习总览</a>，避免题单文章和总览页重复维护同一套计划。</p>
+<!-- @include: @article-footer.snippet.md -->

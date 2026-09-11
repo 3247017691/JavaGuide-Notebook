@@ -1,0 +1,1251 @@
+<h2 id="基础概念与常识" tabindex="-1">基础概念与常识</h2>
+<h3 id="java-语言有哪些特点" tabindex="-1">Java 语言有哪些特点？</h3>
+<ol>
+<li>简单易学（语法简单，上手容易）；</li>
+<li>面向对象（封装，继承，多态）；</li>
+<li>平台无关性（Java 虚拟机实现平台无关性）；</li>
+<li>支持多线程（C++ 语言没有内置的多线程机制，因此必须调用操作系统的多线程功能来进行多线程程序设计，而 Java 语言却提供了多线程支持）；</li>
+<li>可靠性（具备异常处理和自动内存管理机制）；</li>
+<li>安全性（Java 语言本身的设计就提供了多重安全防护机制如访问权限修饰符、限制程序直接访问操作系统资源）；</li>
+<li>高效性（通过 Just In Time 编译器等技术的优化，Java 语言的运行效率还是非常不错的）；</li>
+<li>支持网络编程并且很方便；</li>
+<li>编译与解释并存；</li>
+<li>……</li>
+</ol>
+<blockquote>
+<p><strong>🐛 修正（参见：<a href="https://github.com/Snailclimb/JavaGuide/issues/544" target="_blank" rel="noopener">issue#544</a>）</strong>：C++11 开始（2011 年的时候），C++ 就引入了多线程库，在 Windows、Linux、macOS 都可以使用 <code>std::thread</code> 和 <code>std::async</code> 来创建线程。参考链接：<a href="http://www.cplusplus.com/reference/thread/thread/?kw=thread" target="_blank" rel="noopener">http://www.cplusplus.com/reference/thread/thread/?kw=thread</a></p>
+</blockquote>
+<p>🌈 拓展一下：</p>
+<p>“Write Once, Run Anywhere（一次编写，随处运行）”这句宣传口号，真心经典，流传了好多年！以至于，直到今天，依然有很多人觉得跨平台是 Java 语言最大的优势。实际上，跨平台已经不是 Java 最大的卖点了，各种 JDK 新特性也不是。目前市面上虚拟化技术已经非常成熟，比如你通过 Docker 就很容易实现跨平台了。在我看来，Java 强大的生态才是！</p>
+<h3 id="java-se-vs-java-ee" tabindex="-1">Java SE vs Java EE</h3>
+<ul>
+<li>Java SE（Java Platform, Standard Edition）: Java 平台标准版，Java 编程语言的基础，它包含了支持 Java 应用程序开发和运行的核心类库以及虚拟机等核心组件。Java SE 可以用于构建桌面应用程序或简单的服务器应用程序。</li>
+<li>Java EE（Java Platform, Enterprise Edition）：Java 平台企业版，建立在 Java SE 的基础上，包含了支持企业级应用程序开发和部署的标准和规范（比如 Servlet、JSP、EJB、JDBC、JPA、JTA、JavaMail、JMS）。 Java EE 可以用于构建分布式、可移植、健壮、可伸缩和安全的服务端 Java 应用程序，例如 Web 应用程序。</li>
+</ul>
+<p>简单来说，Java SE 是 Java 的基础版本，Java EE 是 Java 的高级版本。Java SE 更适合开发桌面应用程序或简单的服务器应用程序，Java EE 更适合开发复杂的企业级应用程序或 Web 应用程序。</p>
+<p>除了 Java SE 和 Java EE，还有一个 Java ME（Java Platform，Micro Edition）。Java ME 是 Java 的微型版本，主要用于开发嵌入式消费电子设备的应用程序，例如手机、PDA、机顶盒、冰箱、空调等。Java ME 无需重点关注，知道有这个东西就好了，现在已经用不上了。</p>
+<h3 id="-jvm-vs-jdk-vs-jre" tabindex="-1">⭐️ JVM vs JDK vs JRE</h3>
+<h4 id="jvm" tabindex="-1">JVM</h4>
+<p>Java 虚拟机（Java Virtual Machine, JVM）是运行 Java 字节码的虚拟机。JVM 有针对不同系统的特定实现（Windows，Linux，macOS），目的是使用相同的字节码，它们都会给出相同的结果。字节码和不同系统的 JVM 实现是 Java 语言“一次编译，随处可以运行”的关键所在。</p>
+<p>如下图所示，不同编程语言（Java、Groovy、Kotlin、JRuby、Clojure ...）通过各自的编译器编译成 <code>.class</code> 文件，并最终通过 JVM 在不同平台（Windows、Mac、Linux）上运行。</p>
+<p><img src="/img/java-virtual-machine-program-language-os-feab1dfc.png" alt="" loading="lazy"></p>
+<p><strong>JVM 并不是只有一种！只要满足 JVM 规范，每个公司、组织或者个人都可以开发自己的专属 JVM。</strong> 也就是说我们平时接触到的 HotSpot VM 仅仅是是 JVM 规范的一种实现而已。</p>
+<p>除了我们平时最常用的 HotSpot VM 外，还有 J9 VM、Zing VM、JRockit VM 等 JVM。维基百科上就有常见 JVM 的对比：<a href="https://en.wikipedia.org/wiki/Comparison_of_Java_virtual_machines" target="_blank" rel="noopener">Comparison of Java virtual machines</a>，感兴趣的可以去看看。并且，你可以在 <a href="https://docs.oracle.com/javase/specs/index.html" target="_blank" rel="noopener">Java SE Specifications</a> 上找到各个版本的 JDK 对应的 JVM 规范。</p>
+<p><img src="/img/JavaSeSpecifications-d34d7adf.jpg" alt="" loading="lazy"></p>
+<h4 id="jdk-和-jre" tabindex="-1">JDK 和 JRE</h4>
+<p>JDK（Java Development Kit）是一个功能齐全的 Java 开发工具包，供开发者使用，用于创建和编译 Java 程序。它包含了 JRE（Java Runtime Environment），以及编译器 javac 和其他工具，如 javadoc（文档生成器）、jdb（调试器）、jconsole（监控工具）、javap（反编译工具）等。</p>
+<p>JRE 是运行已编译 Java 程序所需的环境，主要包含以下两个部分：</p>
+<ol>
+<li><strong>JVM</strong> : 也就是我们上面提到的 Java 虚拟机。</li>
+<li><strong>Java 基础类库（Class Library）</strong>：一组标准的类库，提供常用的功能和 API（如 I/O 操作、网络通信、数据结构等）。</li>
+</ol>
+<p>简单来说，JRE 只包含运行 Java 程序所需的环境和类库，而 JDK 不仅包含 JRE，还包括用于开发和调试 Java 程序的工具。</p>
+<p>如果需要编写、编译 Java 程序或使用 JDK 附带的开发工具，就需要安装 JDK。某些会在运行时编译 Java 源码的应用程序（如 JSP 转换为 Servlet）也可能需要 JDK。Java 核心反射 API 属于运行时类库，使用反射本身并不要求安装完整 JDK。</p>
+<p>下图清晰展示了 JDK、JRE 和 JVM 的关系。</p>
+<p><img src="/img/jdk-include-jre-2e6540e0.png" alt="" loading="lazy"></p>
+<p>不过，从 JDK 9 开始，就不需要区分 JDK 和 JRE 的关系了，取而代之的是模块系统（JDK 被重新组织成 94 个模块）+ <a href="http://openjdk.java.net/jeps/282" target="_blank" rel="noopener">jlink</a> 工具（随 Java 9 一起发布的新命令行工具，用于生成自定义 Java 运行时映像，该映像仅包含给定应用程序所需的模块）。并且，从 JDK 11 开始，Oracle 不再提供单独的 JRE 下载。</p>
+<p>在 <a href="/read/java/new-features/java9.html">Java 9 新特性概览</a>这篇文章中，我在介绍模块化系统的时候提到：</p>
+<blockquote>
+<p>在引入了模块系统之后，JDK 被重新组织成 94 个模块。Java 应用可以通过新增的 jlink 工具，创建出只包含所依赖的 JDK 模块的自定义运行时镜像。这样可以极大的减少 Java 运行时环境的大小。</p>
+</blockquote>
+<p>也就是说，可以用 jlink 根据自己的需求，创建一个更小的 runtime（运行时），而不是不管什么应用，都是同样的 JRE。</p>
+<p>定制的、模块化的 Java 运行时映像有助于简化 Java 应用的部署和节省内存并增强安全性和可维护性。这对于满足现代应用程序架构的需求，如虚拟化、容器化、微服务和云原生开发，是非常重要的。</p>
+<h3 id="-什么是字节码采用字节码的好处是什么" tabindex="-1">⭐️ 什么是字节码？采用字节码的好处是什么？</h3>
+<p>在 Java 中，JVM 可以理解的代码就叫做字节码（即扩展名为 <code>.class</code> 的文件），它不面向任何特定的处理器，只面向虚拟机。Java 语言通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题，同时又保留了解释型语言可移植的特点。所以， Java 程序运行时相对来说还是高效的（不过，和 C、 C++，Rust，Go 等语言还是有一定差距的），而且，由于字节码并不针对一种特定的机器，因此，Java 程序无须重新编译便可在多种不同操作系统的计算机上运行。</p>
+<p><strong>Java 程序从源代码到运行的过程如下图所示</strong>：</p>
+<p><img src="/img/java-code-to-machine-code-37ed6c43.png" alt="" loading="lazy"></p>
+<p>我们需要格外注意的是 <code>.class-&gt;机器码</code> 这一步。以 HotSpot 为例，JVM 加载字节码后可以先解释执行，并识别经常调用的方法和代码块（即热点代码），再由 <strong>JIT（Just in Time Compilation）</strong> 编译器将热点字节码编译为机器码。在当前 JVM 进程后续执行这些代码时，可以直接使用已编译的机器码。这也解释了我们为什么经常会说 <strong>Java 是编译与解释共存的语言</strong>。不过，JVM 规范并不要求具体实现必须包含解释器或 JIT 编译器。</p>
+<blockquote>
+<p>🌈 拓展阅读：</p>
+<ul>
+<li><a href="https://mp.weixin.qq.com/s/7PH8o1tbjLsM4-nOnjbwLw" target="_blank" rel="noopener">基本功 | Java 即时编译器原理解析及实践 - 美团技术团队</a></li>
+<li><a href="https://mp.weixin.qq.com/s/4haTyXUmh8m-dBQaEzwDJw" target="_blank" rel="noopener">基于静态编译构建微服务应用 - 阿里巴巴中间件</a></li>
+</ul>
+</blockquote>
+<p><img src="/img/java-code-to-machine-code-with-jit-51acbefc.png" alt="" loading="lazy"></p>
+<blockquote>
+<p>HotSpot 采用了惰性评估(Lazy Evaluation)的做法，根据二八定律，消耗大部分系统资源的只有那一小部分的代码（热点代码），而这也就是 JIT 所需要编译的部分。JVM 会根据代码每次被执行的情况收集信息并相应地做出一些优化，因此执行的次数越多，它的速度就越快。</p>
+</blockquote>
+<p>JDK、JRE、JVM、JIT 这四者的关系如下图所示。</p>
+<p><img src="/img/jdk-jre-jvm-jit-d68707ea.png" alt="" loading="lazy"></p>
+<p>下面这张图是 JVM 的大致结构模型。</p>
+<p><img src="/img/jvm-rough-structure-model-999a2f86.png" alt="" loading="lazy"></p>
+<h3 id="-为什么说-java-语言编译与解释并存" tabindex="-1">⭐️ 为什么说 Java 语言“编译与解释并存”？</h3>
+<p>其实这个问题我们讲字节码的时候已经提到过，因为比较重要，所以我们这里再提一下。</p>
+<p>我们可以将高级编程语言按照程序的执行方式分为两种：</p>
+<ul>
+<li><strong>编译型</strong>：<a href="https://zh.wikipedia.org/wiki/%E7%B7%A8%E8%AD%AF%E8%AA%9E%E8%A8%80" target="_blank" rel="noopener">编译型语言</a> 会通过<a href="https://zh.wikipedia.org/wiki/%E7%B7%A8%E8%AD%AF%E5%99%A8" target="_blank" rel="noopener">编译器</a>将源代码一次性翻译成可被该平台执行的机器码。一般情况下，编译语言的执行速度比较快，开发效率比较低。常见的编译性语言有 C、C++、Go、Rust 等等。</li>
+<li><strong>解释型</strong>：<a href="https://zh.wikipedia.org/wiki/%E7%9B%B4%E8%AD%AF%E8%AA%9E%E8%A8%80" target="_blank" rel="noopener">解释型语言</a>会通过<a href="https://zh.wikipedia.org/wiki/%E7%9B%B4%E8%AD%AF%E5%99%A8" target="_blank" rel="noopener">解释器</a>一句一句的将代码解释（interpret）为机器代码后再执行。解释型语言开发效率比较快，执行速度比较慢。常见的解释性语言有 Python、JavaScript、PHP 等等。</li>
+</ul>
+<p><img src="/img/compiled-and-interpreted-languages-3e999c60.png" alt="" loading="lazy"></p>
+<p>根据维基百科介绍：</p>
+<blockquote>
+<p>为了改善解释语言的效率而发展出的<a href="https://zh.wikipedia.org/wiki/%E5%8D%B3%E6%99%82%E7%B7%A8%E8%AD%AF" target="_blank" rel="noopener">即时编译</a>技术，已经缩小了这两种语言间的差距。这种技术混合了编译语言与解释型语言的优点，它像编译语言一样，先把程序源代码编译成<a href="https://zh.wikipedia.org/wiki/%E5%AD%97%E8%8A%82%E7%A0%81" target="_blank" rel="noopener">字节码</a>。到执行期时，再将字节码直译，之后执行。<a href="https://zh.wikipedia.org/wiki/Java" target="_blank" rel="noopener">Java</a>与<a href="https://zh.wikipedia.org/wiki/LLVM" target="_blank" rel="noopener">LLVM</a>是这种技术的代表产物。</p>
+<p>相关阅读：<a href="https://mp.weixin.qq.com/s/7PH8o1tbjLsM4-nOnjbwLw" target="_blank" rel="noopener">基本功 | Java 即时编译器原理解析及实践</a></p>
+</blockquote>
+<p><strong>为什么说 Java 语言“编译与解释并存”？</strong></p>
+<p>这是因为常见的 Java 实现同时使用编译和解释技术：Java 源码先由编译器生成字节码（<code>.class</code> 文件），字节码可由 JVM 解释执行，也可在运行时由 JIT 编译为机器码。字节码并非必须由解释器执行，具体执行策略由 JVM 实现决定。</p>
+<h3 id="aot-有什么优点为什么不全部使用-aot-呢" tabindex="-1">AOT 有什么优点？为什么不全部使用 AOT 呢？</h3>
+<p>JDK 9 曾通过 JEP 295 引入实验性的 AOT（Ahead of Time Compilation）工具 <code>jaotc</code>，但该工具已在 JDK 17 中移除。因此，JDK 17 及之后的标准 JDK 不再包含这套内置 AOT 编译器；下文讨论的是一般意义上的 AOT，以及 GraalVM Native Image 等独立工具链（Native Image 是 GraalVM 提供的一项 AOT 技术，后文会进一步介绍 GraalVM）。和 JIT 不同，AOT 会在程序执行前将代码编译为机器码，能够减少运行时预热开销并改善启动速度，但具体的内存占用、峰值性能和适用场景取决于所使用的 AOT 实现与应用负载。</p>
+<p>下面的对比以常见的 HotSpot JIT 和 GraalVM Native Image 为例。不同 AOT 工具的实现方式并不完全相同，实际表现还会受到构建参数、应用负载，以及是否使用 PGO（Profile-Guided Optimization，即利用程序实际运行时收集的性能信息辅助优化）等因素影响。</p>
+<table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>JIT（即时编译）</th>
+<th>AOT（提前编译）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>编译时机</strong></td>
+<td>运行时根据代码执行情况编译</td>
+<td>构建阶段提前编译</td>
+</tr>
+<tr>
+<td><strong>启动与预热</strong></td>
+<td>启动后通常需要解释执行和编译热点代码</td>
+<td>通常启动更快，不需要等待 JIT 预热</td>
+</tr>
+<tr>
+<td><strong>长期运行性能</strong></td>
+<td>可以利用运行时采集的信息持续优化热点代码</td>
+<td>缺少完整的运行时信息，具体表现取决于实现和构建配置</td>
+</tr>
+<tr>
+<td><strong>运行时内存</strong></td>
+<td>需要保存编译器、性能数据和生成的机器码</td>
+<td>Native Image 等实现通常占用更少的运行时内存</td>
+</tr>
+<tr>
+<td><strong>运行依赖</strong></td>
+<td>需要 JVM 和相应运行时</td>
+<td>Native Image 可以生成独立的本地可执行文件</td>
+</tr>
+<tr>
+<td><strong>动态特性</strong></td>
+<td>支持运行时加载、反射和字节码生成</td>
+<td>闭世界分析工具通常需要元数据或构建期处理</td>
+</tr>
+<tr>
+<td><strong>常见场景</strong></td>
+<td>长时间运行、重视持续吞吐量的服务</td>
+<td>CLI、Serverless、弹性扩缩容和冷启动敏感的服务</td>
+</tr>
+</tbody>
+</table>
+<img src="/img/jit-vs-aot-e5a20b1f.png" loading="lazy"  alt="JIT vs AOT" style="zoom: 25%;" >
+<p>AOT 的优势主要体现在启动速度和运行时内存占用，比较适合冷启动频繁、实例生命周期较短或者需要快速扩容的应用。JIT 则能根据程序运行时收集到的信息优化热点代码，长时间运行的服务通常更容易发挥这方面的优势。二者的吞吐量和延迟表现不能只由编译方式直接下结论，还需要结合具体工具链和实际负载测试。</p>
+<p>提到 AOT 就不得不提 <a href="https://www.graalvm.org/" target="_blank" rel="noopener">GraalVM</a> 了！GraalVM 是一种高性能的 JDK（完整的 JDK 发行版本），它可以运行 Java 和其他 JVM 语言，以及 JavaScript、Python 等非 JVM 语言。 GraalVM 不仅能提供 AOT 编译，还能提供 JIT 编译。感兴趣的同学，可以去看看 GraalVM 的官方文档：<a href="https://www.graalvm.org/latest/docs/" target="_blank" rel="noopener">https://www.graalvm.org/latest/docs/</a>。如果觉得官方文档看着比较难理解的话，也可以找一些文章来看看，比如：</p>
+<ul>
+<li><a href="https://mp.weixin.qq.com/s/4haTyXUmh8m-dBQaEzwDJw" target="_blank" rel="noopener">基于静态编译构建微服务应用</a></li>
+<li><a href="https://cn.dubbo.apache.org/zh-cn/blog/2023/06/28/%e8%b5%b0%e5%90%91-native-%e5%8c%96springdubbo-aot-%e6%8a%80%e6%9c%af%e7%a4%ba%e4%be%8b%e4%b8%8e%e5%8e%9f%e7%90%86%e8%ae%b2%e8%a7%a3/" target="_blank" rel="noopener">走向 Native 化：Spring&amp;Dubbo AOT 技术示例与原理讲解</a></li>
+</ul>
+<p><strong>既然 AOT 这么多优点，那为什么不全部使用这种编译方式呢？</strong></p>
+<p>以 GraalVM Native Image 为例，它在构建本地可执行文件时会进行闭世界分析：构建器从程序入口出发，分析哪些类、方法和字段可能在运行时被访问，只把可达代码和必要的元数据放进最终产物。程序依旧可以接收动态输入和创建对象；构建阶段完全未知的代码则不会自动进入分析结果。</p>
+<p>下面这段代码中的类名来自运行时参数，构建器无法仅靠静态调用关系确定要保留哪些类：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">className</span> <span class="hljs-operator">=</span> args[<span class="hljs-number">0</span>];
+<span class="hljs-type">Class</span>&lt;?&gt; <span class="hljs-variable">clazz</span> <span class="hljs-operator">=</span> Class.forName(className);
+<span class="hljs-type">Object</span> <span class="hljs-variable">instance</span> <span class="hljs-operator">=</span> clazz.getDeclaredConstructor().newInstance();
+</code></pre>
+<p>反射、动态代理和 JNI 在 Native Image 中仍然可以使用。对于静态分析无法推断的动态访问，通常需要<a href="https://www.graalvm.org/latest/reference-manual/native-image/metadata/" target="_blank" rel="noopener">可达性元数据</a>，提前声明运行时可能访问的类、方法、字段、代理接口和 JNI 元素。运行时动态加载未知类、生成并加载新字节码的限制会更严格，因为相关代码在构建阶段并不存在。</p>
+<p>Spring 使用 AOT 处理来适配这种执行方式。它会在构建阶段分析应用上下文，生成 Java 源码、代理字节码以及反射、资源和代理所需的 <code>RuntimeHints</code>。CGLIB 通常借助 ASM 在运行时生成代理类；到了 Native Image 场景，这类工作可以提前到构建阶段完成。框架或应用提供相应的构建期适配后，Spring、CGLIB 和 ASM 仍可参与 AOT 应用的构建与运行。具体机制可以参考 <a href="https://docs.spring.io/spring-framework/reference/core/aot.html" target="_blank" rel="noopener">Spring AOT 官方文档</a>。</p>
+<p>AOT 把一部分运行时工作和信息搬到了构建阶段，同时增加了构建时间、元数据维护和兼容性适配成本。对于依赖运行时动态加载、Java Agent 或大量动态字节码生成的应用，JIT 模式通常更省事；对于冷启动和内存占用敏感的应用，AOT 更有吸引力。</p>
+<h3 id="oracle-jdk-vs-openjdk" tabindex="-1">Oracle JDK vs OpenJDK</h3>
+<p>可能在看这个问题之前很多人和我一样并没有接触和使用过 OpenJDK。那么 Oracle JDK 和 OpenJDK 之间是否存在重大差异？下面我通过收集到的一些资料，为你解答这个被很多人忽视的问题。</p>
+<p>首先，2006 年 SUN 公司将 Java 开源，也就有了 OpenJDK。2009 年 Oracle 收购了 Sun 公司，于是自己在 OpenJDK 的基础上搞了一个 Oracle JDK。Oracle JDK 是不开源的，并且刚开始的几个版本（Java8 ~ Java11）还会相比于 OpenJDK 添加一些特有的功能和工具。</p>
+<p>其次，对于 Java 7 而言，OpenJDK 和 Oracle JDK 是十分接近的。 Oracle JDK 是基于 OpenJDK 7 构建的，只添加了一些小功能，由 Oracle 工程师参与维护。</p>
+<p>下面这段话摘自 Oracle 官方在 2012 年发表的一个博客：</p>
+<blockquote>
+<p>问：OpenJDK 存储库中的源代码与用于构建 Oracle JDK 的代码之间有什么区别？</p>
+<p>答：非常接近 - 我们的 Oracle JDK 版本构建过程基于 OpenJDK 7 构建，只添加了几个部分，例如部署代码，其中包括 Oracle 的 Java 插件和 Java WebStart 的实现，以及一些闭源的第三方组件，如图形光栅化器，一些开源的第三方组件，如 Rhino，以及一些零碎的东西，如附加文档或第三方字体。展望未来，我们的目的是开源 Oracle JDK 的所有部分，除了我们考虑商业功能的部分。</p>
+</blockquote>
+<p>最后，简单总结一下 Oracle JDK 和 OpenJDK 的区别：</p>
+<ol>
+<li><strong>是否开源</strong>：OpenJDK 是一个参考模型并且是完全开源的，而 Oracle JDK 是基于 OpenJDK 实现的，并不是完全开源的（个人观点：众所周知，JDK 原来是 SUN 公司开发的，后来 SUN 公司又卖给了 Oracle 公司，Oracle 公司以 Oracle 数据库而著名，而 Oracle 数据库又是闭源的，这个时候 Oracle 公司就不想完全开源了，但是原来的 SUN 公司又把 JDK 给开源了，如果这个时候 Oracle 收购回来之后就把他给闭源，必然会引起很多 Java 开发者的不满，导致大家对 Java 失去信心，那 Oracle 公司收购回来不就把 Java 烂在手里了吗！然后，Oracle 公司就想了个骚操作，这样吧，我把一部分核心代码开源出来给你们玩，并且我要和你们自己搞的 JDK 区分下，你们叫 OpenJDK，我叫 Oracle JDK，我发布我的，你们继续玩你们的，要是你们搞出来什么好玩的东西，我后续发布 Oracle JDK 也会拿来用一下，一举两得！）OpenJDK 开源项目：<a href="https://github.com/openjdk/jdk" target="_blank" rel="noopener">https://github.com/openjdk/jdk</a>。</li>
+<li><strong>是否免费</strong>：Oracle JDK 的许可取决于具体版本和更新版本。Oracle JDK 21 及之后的特定更新在 NFTC 有效期内允许包括商业生产在内的免费使用；例如，Oracle 计划对 JDK 21 更新采用 NFTC 至 2026 年 9 月，对 JDK 25 更新采用 NFTC 至 2028 年 9 月。免费期结束后改变的是后续更新的许可，已经下载的版本仍按下载时的许可证使用。Oracle 的 OpenJDK 构建则使用 GPLv2 + Classpath Exception。</li>
+<li><strong>功能性</strong>：Oracle JDK 在 OpenJDK 的基础上添加了一些特有的功能和工具，比如 Java Flight Recorder（JFR，一种监控工具）、Java Mission Control（JMC，一种监控工具）等工具。不过，在 Java 11 之后，OracleJDK 和 OpenJDK 的功能基本一致，之前 OracleJDK 中的私有组件大多数也已经被捐赠给开源组织。</li>
+<li><strong>长期支持</strong>：OpenJDK 项目本身不承诺商业 LTS 服务；Oracle 以及多家 OpenJDK 发行版厂商会为特定版本提供长期支持。Java 8、11、17、21、25 是 Oracle LTS 版本，Oracle 计划未来每两年发布一个 LTS 版本。</li>
+<li><strong>协议</strong>：Oracle JDK 的许可证随版本和更新版本而异，可能是 NFTC 或 OTN；BCL 仅用于 2019 年 4 月 16 日之前发布的版本。Oracle OpenJDK 使用 GPLv2 + Classpath Exception。</li>
+</ol>
+<blockquote>
+<p>既然 Oracle JDK 这么好，那为什么还要有 OpenJDK？</p>
+<p>答：</p>
+<ol>
+<li>OpenJDK 是开源的，开源意味着你可以对它根据你自己的需要进行修改、优化，比如 Alibaba 基于 OpenJDK 开发了 Dragonwell8：<a href="https://github.com/alibaba/dragonwell8" target="_blank" rel="noopener">https://github.com/alibaba/dragonwell8</a></li>
+<li>OpenJDK 是商业免费的（这也是为什么通过 yum 包管理器上默认安装的 JDK 是 OpenJDK 而不是 Oracle JDK）。虽然 Oracle JDK 也是商业免费（比如 JDK 8），但并不是所有版本都是免费的。</li>
+<li>OpenJDK 与 Oracle JDK 的特性版本都遵循六个月发布节奏；各发行版的更新与支持周期则可能不同。</li>
+</ol>
+<p>基于以上这些原因，OpenJDK 还是有存在的必要的！</p>
+</blockquote>
+<p><img src="/img/oracle-jdk-release-cadence-9010bc5a.jpg" alt="" loading="lazy"></p>
+<p><strong>Oracle JDK 和 OpenJDK 如何选择？</strong></p>
+<p>建议选择 OpenJDK 或者基于 OpenJDK 的发行版，比如 AWS 的 Amazon Corretto，阿里巴巴的 Alibaba Dragonwell。</p>
+<p>🌈 拓展一下：</p>
+<ul>
+<li>BCL 协议（Oracle Binary Code License Agreement）：可以使用 JDK（支持商用），但是不能进行修改。</li>
+<li>OTN 协议（Oracle Technology Network License Agreement）：11 及之后新发布的 JDK 用的都是这个协议，可以自己私下用，但是商用需要付费。</li>
+</ul>
+<h3 id="java-和-c-的区别" tabindex="-1">Java 和 C++ 的区别？</h3>
+<p>我知道很多人没学过 C++，但是面试官就是没事喜欢拿咱们 Java 和 C++ 比呀！没办法！！！就算没学过 C++，也要记下来。</p>
+<p>虽然，Java 和 C++ 都是面向对象的语言，都支持封装、继承和多态，但是，它们还是有挺多不相同的地方：</p>
+<ul>
+<li>Java 不提供指针来直接访问内存，程序内存更加安全</li>
+<li>Java 的类是单继承的，C++ 支持多重继承；虽然 Java 的类不可以多继承，但是接口可以多继承。</li>
+<li>Java 有自动内存管理垃圾回收机制(GC)，不需要程序员手动释放无用内存。</li>
+<li>C ++同时支持方法重载和操作符重载，但是 Java 只支持方法重载（操作符重载增加了复杂性，这与 Java 最初的设计思想不符）。</li>
+<li>……</li>
+</ul>
+<h2 id="基本语法" tabindex="-1">基本语法</h2>
+<h3 id="注释有哪几种形式" tabindex="-1">注释有哪几种形式？</h3>
+<p>Java 中的注释有三种：</p>
+<ol>
+<li>
+<p><strong>单行注释</strong>：通常用于解释方法内某单行代码的作用。</p>
+</li>
+<li>
+<p><strong>多行注释</strong>：通常用于解释一段代码的作用。</p>
+</li>
+<li>
+<p><strong>文档注释</strong>：通常用于生成 Java 开发文档。</p>
+</li>
+</ol>
+<p>用的比较多的还是单行注释和文档注释，多行注释在实际开发中使用的相对较少。</p>
+<p><img src="/img/image-20220714112336911-eeced53e.png" alt="" loading="lazy"></p>
+<p>在我们编写代码的时候，如果代码量比较少，我们自己或者团队其他成员还可以很轻易地看懂代码，但是当项目结构一旦复杂起来，我们就需要用到注释了。注释并不会执行（编译器在编译代码之前会把代码中的所有注释抹掉，字节码中不保留注释），是我们程序员写给自己看的，注释是你的代码说明书，能够帮助看代码的人快速地理清代码之间的逻辑关系。因此，在写程序的时候随手加上注释是一个非常好的习惯。</p>
+<p>《Clean Code》这本书明确指出：</p>
+<blockquote>
+<p><strong>代码的注释不是越详细越好。实际上好的代码本身就是注释，我们要尽量规范和美化自己的代码来减少不必要的注释。</strong></p>
+<p><strong>若编程语言足够有表达力，就不需要注释，尽量通过代码来阐述。</strong></p>
+<p>举个例子：</p>
+<p>去掉下面复杂的注释，只需要创建一个与注释所言同一事物的函数即可</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// check to see if the employee is eligible for full benefits</span>
+<span class="hljs-keyword">if</span> ((employee.flags &amp; HOURLY_FLAG) &amp;&amp; (employee.age &gt; <span class="hljs-number">65</span>))
+</code></pre>
+<p>应替换为</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">if</span> (employee.isEligibleForFullBenefits())
+</code></pre>
+</blockquote>
+<h3 id="标识符和关键字的区别是什么" tabindex="-1">标识符和关键字的区别是什么？</h3>
+<p>在我们编写程序的时候，需要大量地为程序、类、变量、方法等取名字，于是就有了 <strong>标识符</strong>。简单来说， <strong>标识符就是一个名字</strong>。</p>
+<p>有一些标识符，Java 语言已经赋予了其特殊的含义，只能用于特定的地方，这些特殊的标识符就是 <strong>关键字</strong>。简单来说，<strong>关键字是被赋予特殊含义的标识符</strong>。比如，在我们的日常生活中，如果我们想要开一家店，则要给这个店起一个名字，起的这个“名字”就叫标识符。但是我们店的名字不能叫“警察局”，因为“警察局”这个名字已经被赋予了特殊的含义，而“警察局”就是我们日常生活中的关键字。</p>
+<h3 id="java-语言关键字有哪些" tabindex="-1">Java 语言关键字有哪些？</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">分类</th>
+<th>关键字</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">访问控制</td>
+<td>private</td>
+<td>protected</td>
+<td>public</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">类，方法和变量修饰符</td>
+<td>abstract</td>
+<td>class</td>
+<td>extends</td>
+<td>final</td>
+<td>implements</td>
+<td>interface</td>
+<td>native</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td>new</td>
+<td>static</td>
+<td>strictfp</td>
+<td>synchronized</td>
+<td>transient</td>
+<td>volatile</td>
+<td>enum</td>
+</tr>
+<tr>
+<td style="text-align:left">程序控制</td>
+<td>break</td>
+<td>continue</td>
+<td>return</td>
+<td>do</td>
+<td>while</td>
+<td>if</td>
+<td>else</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td>for</td>
+<td>instanceof</td>
+<td>switch</td>
+<td>case</td>
+<td>default</td>
+<td>assert</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">错误处理</td>
+<td>try</td>
+<td>catch</td>
+<td>throw</td>
+<td>throws</td>
+<td>finally</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">包相关</td>
+<td>import</td>
+<td>package</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">基本类型</td>
+<td>boolean</td>
+<td>byte</td>
+<td>char</td>
+<td>double</td>
+<td>float</td>
+<td>int</td>
+<td>long</td>
+</tr>
+<tr>
+<td style="text-align:left"></td>
+<td>short</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">变量引用</td>
+<td>super</td>
+<td>this</td>
+<td>void</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align:left">保留字</td>
+<td>goto</td>
+<td>const</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Tips：所有的关键字都是小写的，在 IDE 中会以特殊颜色显示。</p>
+<p><code>default</code> 这个关键字很特殊，既属于程序控制，也属于类，方法和变量修饰符，还属于访问控制。</p>
+<ul>
+<li>在程序控制中，当在 <code>switch</code> 中匹配不到任何情况时，可以使用 <code>default</code> 来编写默认匹配的情况。</li>
+<li>在类，方法和变量修饰符中，从 JDK8 开始引入了默认方法，可以使用 <code>default</code> 关键字来定义一个方法的默认实现。</li>
+<li>在访问控制中，如果一个方法前没有任何修饰符，则默认会有一个修饰符 <code>default</code>，但是这个修饰符加上了就会报错。</li>
+</ul>
+</blockquote>
+<p>⚠️ 注意：虽然 <code>true</code>, <code>false</code>, 和 <code>null</code> 看起来像关键字但实际上他们是字面值，同时你也不可以作为标识符来使用。</p>
+<p>官方文档：<a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html" target="_blank" rel="noopener">https://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html</a></p>
+<h3 id="-自增自减运算符" tabindex="-1">⭐️ 自增自减运算符</h3>
+<p>在写代码的过程中，常见的一种情况是需要某个整数类型变量增加 1 或减少 1。Java 提供了自增运算符 (<code>++</code>) 和自减运算符 (<code>--</code>) 来简化这种操作。</p>
+<p><code>++</code> 和 <code>--</code> 运算符可以放在变量之前，也可以放在变量之后：</p>
+<ul>
+<li><strong>前缀形式</strong>（例如 <code>++a</code> 或 <code>--a</code>）：先自增/自减变量的值，然后再使用该变量，例如，<code>b = ++a</code> 先将 <code>a</code> 增加 1，然后把增加后的值赋给 <code>b</code>。</li>
+<li><strong>后缀形式</strong>（例如 <code>a++</code> 或 <code>a--</code>）：先使用变量的当前值，然后再自增/自减变量的值。例如，<code>b = a++</code> 先将 <code>a</code> 的当前值赋给 <code>b</code>，然后再将 <code>a</code> 增加 1。</li>
+</ul>
+<p>为了方便记忆，可以使用下面的口诀：<strong>符号在前就先加/减，符号在后就后加/减</strong>。</p>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart LR
+    %% 定义全局样式
+    classDef step fill:#4CA497,color:#fff,rx:10,ry:10
+    classDef example fill:#E99151,color:#fff,rx:10,ry:10
+
+    subgraph Prefix[&quot;前缀形式 ++a / --a&quot;]
+        direction TB
+        style Prefix fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+        P1[&quot;第一步：变量自增/自减&quot;]:::step --&gt; P2[&quot;第二步：使用新值参与运算&quot;]:::step
+        P3[&quot;示例：b = ++a&lt;br先 a=a+1，再 b=a&quot;]:::example
+    end
+
+    subgraph Suffix[&quot;后缀形式 a++ / a--&quot;]
+        direction TB
+        style Suffix fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+        S1[&quot;第一步：使用当前值参与运算&quot;]:::step --&gt; S2[&quot;第二步：变量自增/自减&quot;]:::step
+        S3[&quot;示例：b = a++&lt;br先 b=a，再 a=a+1&quot;]:::example
+    end
+
+    linkStyle default stroke-width:1.5px,opacity:0.8
+</pre></div>
+<p>下面来看一个考察自增自减运算符的高频笔试题：执行下面的代码后，<code>a</code>、<code>b</code>、 <code>c</code>、<code>d</code> 和 <code>e</code> 的值是？</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-variable">a</span> <span class="hljs-operator">=</span> <span class="hljs-number">9</span>;
+<span class="hljs-type">int</span> <span class="hljs-variable">b</span> <span class="hljs-operator">=</span> a++;
+<span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> ++a;
+<span class="hljs-type">int</span> <span class="hljs-variable">d</span> <span class="hljs-operator">=</span> c--;
+<span class="hljs-type">int</span> <span class="hljs-variable">e</span> <span class="hljs-operator">=</span> --d;
+</code></pre>
+<p>答案：<code>a = 11</code>、<code>b = 9</code>、 <code>c = 11</code>、 <code>d = 10</code>、 <code>e = 10</code>。</p>
+<h3 id="-移位运算符" tabindex="-1">⭐️ 移位运算符</h3>
+<p>移位运算符是最基本的运算符之一，几乎每种编程语言都包含这一运算符。移位操作中，被操作的数据被视为二进制数，移位就是将其向左或向右移动若干位的运算。</p>
+<p>移位运算符在各种框架以及 JDK 自身的源码中使用还是挺广泛的，<code>HashMap</code>（JDK1.8） 中的 <code>hash</code> 方法的源码就用到了移位运算符：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">hash</span><span class="hljs-params">(Object key)</span> {
+    <span class="hljs-type">int</span> h;
+    <span class="hljs-comment">// key.hashCode()：返回散列值也就是hashcode</span>
+    <span class="hljs-comment">// ^：按位异或</span>
+    <span class="hljs-comment">// &gt;&gt;&gt;:无符号右移，忽略符号位，空位都以0补齐</span>
+    <span class="hljs-keyword">return</span> (key == <span class="hljs-literal">null</span>) ? <span class="hljs-number">0</span> : (h = key.hashCode()) ^ (h &gt;&gt;&gt; <span class="hljs-number">16</span>);
+  }
+
+</code></pre>
+<p><strong>使用移位运算符的主要原因</strong>：</p>
+<ol>
+<li><strong>高效</strong>：移位运算符直接对应于处理器的移位指令。现代处理器具有专门的硬件指令来执行这些移位操作，这些指令通常在一个时钟周期内完成。相比之下，乘法和除法等算术运算在硬件层面上需要更多的时钟周期来完成。</li>
+<li><strong>节省内存</strong>：通过移位操作，可以使用一个整数（如 <code>int</code> 或 <code>long</code>）来存储多个布尔值或标志位，从而节省内存。</li>
+</ol>
+<p>移位运算符最常用于快速乘以或除以 2 的幂次方。除此之外，它还在以下方面发挥着重要作用：</p>
+<ul>
+<li><strong>位字段管理</strong>：例如存储和操作多个布尔值。</li>
+<li><strong>哈希算法和加密解密</strong>：通过移位和与、或等操作来混淆数据。</li>
+<li><strong>数据压缩</strong>：例如霍夫曼编码通过移位运算符可以快速处理和操作二进制数据，以生成紧凑的压缩格式。</li>
+<li><strong>数据校验</strong>：例如 CRC（循环冗余校验）通过移位和多项式除法生成和校验数据完整性。</li>
+<li><strong>内存对齐</strong>：通过移位操作，可以轻松计算和调整数据的对齐地址。</li>
+</ul>
+<p>掌握最基本的移位运算符知识还是很有必要的，这不光可以帮助我们在代码中使用，还可以帮助我们理解源码中涉及到移位运算符的代码。</p>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart TB
+    %% 定义全局样式，保持统一风格
+    classDef left fill:#4CA497,color:#fff,rx:10,ry:10
+    classDef right fill:#00838F,color:#fff,rx:10,ry:10
+    classDef uright fill:#E99151,color:#fff,rx:10,ry:10
+
+    subgraph ShiftOps[&quot;Java 三种移位运算符&quot;]
+        direction TB
+        style ShiftOps fill:#F0F2F5,stroke:#E0E6ED,stroke-width:1.5px
+
+        subgraph Left[&quot;左移 &lt;&lt;&quot;]
+            style Left fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+            L1[&quot;操作：向左移动 n 位&quot;]:::left
+            L2[&quot;规则：高位丢弃，低位补 0&quot;]:::left
+            L3[&quot;效果：相当于 × 2^n&quot;]:::left
+            L4[&quot;示例：8 &lt;&lt; 2 = 32&quot;]:::left
+        end
+
+        subgraph Right[&quot;带符号右移 &gt;&gt;&quot;]
+            style Right fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+            R1[&quot;操作：向右移动 n 位&quot;]:::right
+            R2[&quot;规则：低位丢弃，高位补符号位&quot;]:::right
+            R3[&quot;效果：相当于 ÷ 2^n&quot;]:::right
+            R4[&quot;示例：-8 &gt;&gt; 2 = -2&quot;]:::right
+        end
+
+        subgraph URight[&quot;无符号右移 &gt;&gt;&gt;&quot;]
+            style URight fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+            U1[&quot;操作：向右移动 n 位&quot;]:::uright
+            U2[&quot;规则：低位丢弃，高位补 0&quot;]:::uright
+            U3[&quot;效果：逻辑右移&quot;]:::uright
+            U4[&quot;示例：-8 &gt;&gt;&gt; 2 = 1073741822&quot;]:::uright
+        end
+    end
+
+    linkStyle default stroke-width:1.5px,opacity:0.8
+</pre></div>
+<p>Java 中有三种移位运算符：</p>
+<ul>
+<li><code>&lt;&lt;</code> :左移运算符，向左移若干位，高位丢弃，低位补零。<code>x &lt;&lt; n</code>，相当于 x 乘以 2 的 n 次方（不溢出的情况下）。</li>
+<li><code>&gt;&gt;</code> :带符号右移，向右移若干位，高位补符号位，低位丢弃。正数高位补 0，负数高位补 1。<code>x &gt;&gt; n</code>，相当于 x 除以 2 的 n 次方。</li>
+<li><code>&gt;&gt;&gt;</code> :无符号右移，忽略符号位，空位都以 0 补齐。</li>
+</ul>
+<p>虽然移位运算本质上可以分为左移和右移，但在实际应用中，右移操作需要考虑符号位的处理方式。</p>
+<p>由于 <code>double</code>，<code>float</code> 在二进制中的表现比较特殊，因此不能来进行移位操作。</p>
+<p>移位操作符实际上支持的类型只有 <code>int</code> 和 <code>long</code>，编译器在对 <code>short</code>、<code>byte</code>、<code>char</code> 类型进行移位前，都会将其转换为 <code>int</code> 类型再操作。</p>
+<p><strong>如果移位的位数超过数值所占有的位数会怎样？</strong></p>
+<p>当 int 类型左移/右移位数大于等于 32 位操作时，会先求余（%）后再进行左移/右移操作。也就是说左移/右移 32 位相当于不进行移位操作（32%32=0），左移/右移 42 位相当于左移/右移 10 位（42%32=10）。当 long 类型进行左移/右移操作时，由于 long 对应的二进制是 64 位，因此求余操作的基数也变成了 64。</p>
+<p>也就是说：<code>x&lt;&lt;42</code> 等同于 <code>x&lt;&lt;10</code>，<code>x&gt;&gt;42</code> 等同于 <code>x&gt;&gt;10</code>，<code>x &gt;&gt;&gt;42</code> 等同于 <code>x &gt;&gt;&gt; 10</code>。</p>
+<p><strong>左移运算符代码示例</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> -<span class="hljs-number">1</span>;
+System.out.println(<span class="hljs-string">&quot;初始数据：&quot;</span> + i);
+System.out.println(<span class="hljs-string">&quot;初始数据对应的二进制字符串：&quot;</span> + Integer.toBinaryString(i));
+i &lt;&lt;= <span class="hljs-number">10</span>;
+System.out.println(<span class="hljs-string">&quot;左移 10 位后的数据 &quot;</span> + i);
+System.out.println(<span class="hljs-string">&quot;左移 10 位后的数据对应的二进制字符 &quot;</span> + Integer.toBinaryString(i));
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">初始数据：<span class="hljs-string">-1</span>
+初始数据对应的二进制字符串：11111111111111111111111111111111
+左移 10 位后的数据 <span class="hljs-string">-1024</span>
+左移 10 位后的数据对应的二进制字符 11111111111111111111110000000000
+</code></pre>
+<p>由于左移位数大于等于 32 位操作时，会先求余（%）后再进行左移操作，所以下面的代码左移 42 位相当于左移 10 位（42%32=10），输出结果和前面的代码一样。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> -<span class="hljs-number">1</span>;
+System.out.println(<span class="hljs-string">&quot;初始数据：&quot;</span> + i);
+System.out.println(<span class="hljs-string">&quot;初始数据对应的二进制字符串：&quot;</span> + Integer.toBinaryString(i));
+i &lt;&lt;= <span class="hljs-number">42</span>;
+System.out.println(<span class="hljs-string">&quot;左移 10 位后的数据 &quot;</span> + i);
+System.out.println(<span class="hljs-string">&quot;左移 10 位后的数据对应的二进制字符 &quot;</span> + Integer.toBinaryString(i));
+</code></pre>
+<p>右移运算符使用类似，篇幅问题，这里就不做演示了。</p>
+<h3 id="continuebreak-和-return-的区别是什么" tabindex="-1">continue、break 和 return 的区别是什么？</h3>
+<p>在循环结构中，当循环条件不满足或者循环次数达到要求时，循环会正常结束。但是，有时候可能需要在循环的过程中，当发生了某种条件之后，提前终止循环，这就需要用到下面几个关键词：</p>
+<ol>
+<li><code>continue</code>：指跳出当前的这一次循环，继续下一次循环。</li>
+<li><code>break</code>：指跳出整个循环体，继续执行循环下面的语句。</li>
+</ol>
+<p><code>return</code> 用于跳出所在方法，结束该方法的运行。return 一般有两种用法：</p>
+<ol>
+<li><code>return;</code>：直接使用 return 结束方法执行，用于没有返回值函数的方法</li>
+<li><code>return value;</code>：return 一个特定值，用于有返回值函数的方法</li>
+</ol>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart TB
+    subgraph Method[&quot;方法体&quot;]
+        direction TB
+        style Method fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+        Start[&quot;方法开始&quot;] --&gt; Loop
+
+        subgraph Loop[&quot;循环体 for/while&quot;]
+            direction TB
+            style Loop fill:#F0F2F5,stroke:#E0E6ED,stroke-width:1.5px
+            L1[&quot;循环条件判断&quot;] --&gt;|&quot;满足&quot;| L2[&quot;执行循环体&quot;]
+            L2 --&gt; L3{{&quot;遇到关键字？&quot;}}
+            L3 --&gt;|&quot;continue&quot;| Continue[&quot;跳过本次&lt;br/&gt;继续下一次循环&quot;]
+            L3 --&gt;|&quot;break&quot;| Break[&quot;跳出整个循环&quot;]
+            L3 --&gt;|&quot;无&quot;| L1
+            Continue --&gt; L1
+        end
+
+        Break --&gt; AfterLoop[&quot;循环后的代码&quot;]
+        L1 --&gt;|&quot;不满足&quot;| AfterLoop
+        AfterLoop --&gt; L4{{&quot;遇到 return？&quot;}}
+        L4 --&gt;|&quot;是&quot;| Return[&quot;结束整个方法&quot;]
+        L4 --&gt;|&quot;否&quot;| End[&quot;方法正常结束&quot;]
+    end
+
+    classDef start fill:#E99151,color:#fff,rx:10,ry:10
+    classDef loop fill:#4CA497,color:#fff,rx:10,ry:10
+    classDef decision fill:#00838F,color:#fff,rx:10,ry:10
+    classDef alert fill:#C44545,color:#fff,rx:10,ry:10
+
+    class Start,End start
+    class L1,L2,AfterLoop loop
+    class L3,L4 decision
+    class Continue,Break,Return alert
+
+    linkStyle default stroke-width:1.5px,opacity:0.8
+</pre></div>
+<p>思考一下：下列语句的运行结果是什么？</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+    <span class="hljs-type">boolean</span> <span class="hljs-variable">flag</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt;= <span class="hljs-number">3</span>; i++) {
+        <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) {
+            System.out.println(<span class="hljs-string">&quot;0&quot;</span>);
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">1</span>) {
+            System.out.println(<span class="hljs-string">&quot;1&quot;</span>);
+            <span class="hljs-keyword">continue</span>;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">2</span>) {
+            System.out.println(<span class="hljs-string">&quot;2&quot;</span>);
+            flag = <span class="hljs-literal">true</span>;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">3</span>) {
+            System.out.println(<span class="hljs-string">&quot;3&quot;</span>);
+            <span class="hljs-keyword">break</span>;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">4</span>) {
+            System.out.println(<span class="hljs-string">&quot;4&quot;</span>);
+        }
+        System.out.println(<span class="hljs-string">&quot;xixi&quot;</span>);
+    }
+    <span class="hljs-keyword">if</span> (flag) {
+        System.out.println(<span class="hljs-string">&quot;haha&quot;</span>);
+        <span class="hljs-keyword">return</span>;
+    }
+    System.out.println(<span class="hljs-string">&quot;heihei&quot;</span>);
+}
+</code></pre>
+<p>运行结果：</p>
+<pre class="md-pre"><code class="hljs">0
+xixi
+1
+2
+xixi
+3
+haha
+</code></pre>
+<h2 id="-基本数据类型" tabindex="-1">⭐️ 基本数据类型</h2>
+<h3 id="java-中的几种基本数据类型了解么" tabindex="-1">Java 中的几种基本数据类型了解么？</h3>
+<p>Java 中有 8 种基本数据类型，分别为：</p>
+<ul>
+<li>6 种数字类型：
+<ul>
+<li>4 种整数型：<code>byte</code>、<code>short</code>、<code>int</code>、<code>long</code></li>
+<li>2 种浮点型：<code>float</code>、<code>double</code></li>
+</ul>
+</li>
+<li>1 种字符类型：<code>char</code></li>
+<li>1 种布尔型：<code>boolean</code>。</li>
+</ul>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart TB
+    Root[&quot;Java 8种基本数据类型&quot;] --&gt; Numeric[&quot;数字类型（6种）&quot;]
+    Root --&gt; Char[&quot;字符类型&quot;]
+    Root --&gt; Bool[&quot;布尔类型&quot;]
+
+    Numeric --&gt; IntType[&quot;整数型（4种）&quot;]
+    Numeric --&gt; FloatType[&quot;浮点型（2种）&quot;]
+
+    IntType --&gt; byte[&quot;byte&lt;br/&gt;8位&quot;]
+    IntType --&gt; short[&quot;short&lt;br/&gt;16位&quot;]
+    IntType --&gt; int[&quot;int&lt;br/&gt;32位&quot;]
+    IntType --&gt; long[&quot;long&lt;br/&gt;64位&quot;]
+
+    FloatType --&gt; float[&quot;float&lt;br/&gt;32位&quot;]
+    FloatType --&gt; double[&quot;double&lt;br/&gt;64位&quot;]
+
+    Char --&gt; char[&quot;char&lt;br/&gt;16位&quot;]
+    Bool --&gt; boolean[&quot;boolean&lt;br/&gt;存储大小未规定&quot;]
+
+    classDef root fill:#E99151,color:#fff,rx:10,ry:10
+    classDef category fill:#00838F,color:#fff,rx:10,ry:10
+    classDef type fill:#4CA497,color:#fff,rx:10,ry:10
+
+    class Root root
+    class Numeric,Char,Bool,IntType,FloatType category
+    class byte,short,int,long,float,double,char,boolean type
+
+    linkStyle default stroke-width:1.5px,opacity:0.8
+</pre></div>
+<p>这 8 种基本数据类型的默认值以及所占空间的大小如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">基本类型</th>
+<th style="text-align:left">位数</th>
+<th style="text-align:left">字节</th>
+<th style="text-align:left">默认值</th>
+<th>取值范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>byte</code></td>
+<td style="text-align:left">8</td>
+<td style="text-align:left">1</td>
+<td style="text-align:left">0</td>
+<td>-128 ~ 127</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>short</code></td>
+<td style="text-align:left">16</td>
+<td style="text-align:left">2</td>
+<td style="text-align:left">0</td>
+<td>-32768（-2^15） ~ 32767（2^15 - 1）</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>int</code></td>
+<td style="text-align:left">32</td>
+<td style="text-align:left">4</td>
+<td style="text-align:left">0</td>
+<td>-2147483648 ~ 2147483647</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>long</code></td>
+<td style="text-align:left">64</td>
+<td style="text-align:left">8</td>
+<td style="text-align:left">0L</td>
+<td>-9223372036854775808（-2^63） ~ 9223372036854775807（2^63 -1）</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>char</code></td>
+<td style="text-align:left">16</td>
+<td style="text-align:left">2</td>
+<td style="text-align:left">'\u0000'</td>
+<td>0 ~ 65535（2^16 - 1）</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>float</code></td>
+<td style="text-align:left">32</td>
+<td style="text-align:left">4</td>
+<td style="text-align:left">0f</td>
+<td>约 -3.4028235E38 ~ 3.4028235E38，最小正非零值约 1.4E-45，另含 ±0、±∞、NaN</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>double</code></td>
+<td style="text-align:left">64</td>
+<td style="text-align:left">8</td>
+<td style="text-align:left">0d</td>
+<td>约 -1.7976931348623157E308 ~ 1.7976931348623157E308，最小正非零值约 4.9E-324，另含 ±0、±∞、NaN</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>boolean</code></td>
+<td style="text-align:left">未规定</td>
+<td style="text-align:left">未规定</td>
+<td style="text-align:left">false</td>
+<td>true、false</td>
+</tr>
+</tbody>
+</table>
+<p>可以看到，像 <code>byte</code>、<code>short</code>、<code>int</code>、<code>long</code> 能表示的最大正数都减 1 了。这是为什么呢？这是因为在二进制补码表示法中，最高位是用来表示符号的（0 表示正数，1 表示负数），其余位表示数值部分。所以，如果我们要表示最大的正数，我们需要把除了最高位之外的所有位都设为 1。如果我们再加 1，就会导致溢出，变成一个负数。</p>
+<p>对于 <code>boolean</code>，官方文档未明确定义，它依赖于 JVM 厂商的具体实现。逻辑上理解是占用 1 位，但是实际中会考虑计算机高效存储因素。</p>
+<p>另外，Java 的每种基本类型所占存储空间的大小不会像其他大多数语言那样随机器硬件架构的变化而变化。这种所占存储空间大小的不变性是 Java 程序比用其他大多数语言编写的程序更具可移植性的原因之一（《Java 编程思想》2.2 节有提到）。</p>
+<p><strong>注意：</strong></p>
+<ol>
+<li>整数字面量默认按 <code>int</code> 解析；超出 <code>int</code> 范围或需要显式写成 <code>long</code> 字面量时，应在数值后加 <strong>L</strong>。能通过赋值转换表示的 <code>int</code> 字面量可以直接赋给 <code>long</code>，例如 <code>long n = 1;</code>。</li>
+<li>带小数点或指数的浮点字面量默认是 <code>double</code>，赋给 <code>float</code> 时通常需要加 <strong>f 或 F</strong>；整数字面量在可转换时可直接赋给 <code>float</code>，例如 <code>float n = 1;</code>。</li>
+<li><code>char a = 'h'</code>char :单引号，<code>String a = &quot;hello&quot;</code> :双引号。</li>
+</ol>
+<p>这八种基本类型都有对应的包装类分别为：<code>Byte</code>、<code>Short</code>、<code>Integer</code>、<code>Long</code>、<code>Float</code>、<code>Double</code>、<code>Character</code>、<code>Boolean</code>。</p>
+<h3 id="基本类型和包装类型的区别" tabindex="-1">基本类型和包装类型的区别？</h3>
+<ul>
+<li><strong>用途</strong>：除了定义一些常量和局部变量之外，我们在其他地方比如方法参数、对象属性中很少会使用基本类型来定义变量。并且，包装类型可用于泛型，而基本类型不可以。</li>
+<li><strong>存储方式</strong>：基本数据类型的局部变量保存在当前栈帧的局部变量表中，基本数据类型的实例字段属于对象状态。包装类型属于对象类型，其实例通常分配在堆中，但 JIT 可能通过逃逸分析和标量替换消除实际分配。</li>
+<li><strong>占用空间</strong>：相比于包装类型（对象类型）， 基本数据类型占用的空间往往非常小。</li>
+<li><strong>默认值</strong>：成员变量包装类型不赋值就是 <code>null</code>，而基本类型有默认值且不是 <code>null</code>。</li>
+<li><strong>比较方式</strong>：对于基本数据类型来说，<code>==</code> 比较的是值。对于包装数据类型来说，<code>==</code> 比较两个引用是否指向同一个对象（或都为 <code>null</code>）。比较包装对象表示的数值通常使用 <code>equals()</code> 或相应的 <code>compare()</code>/<code>compareTo()</code> 方法。</li>
+</ul>
+<p><strong>为什么说对象实例通常存在于堆中呢？</strong> JVM 规范将堆定义为分配类实例和数组的运行时数据区。不过，JIT 可以通过逃逸分析和标量替换消除某些对象的实际分配，这不等同于必须把完整对象分配到栈上。</p>
+<p>⚠️ 注意：<strong>基本数据类型存放在栈中是一个常见的误区！</strong> 基本数据类型的存储位置取决于变量种类：局部变量保存在栈帧的局部变量表中，实例字段属于堆中对象的一部分；静态字段属于类，具体存储方式由 JVM 实现决定，不能笼统地说在方法区或元空间中。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Test</span> {
+    <span class="hljs-comment">// 成员变量，存放在堆中</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">a</span> <span class="hljs-operator">=</span> <span class="hljs-number">10</span>;
+    <span class="hljs-comment">// 静态字段的存储属于 JVM 实现细节；在 JDK 8 及之后的 HotSpot 中位于 Java 堆。</span>
+    <span class="hljs-comment">// 变量属于类，不属于对象。</span>
+    <span class="hljs-keyword">static</span> <span class="hljs-type">int</span> <span class="hljs-variable">b</span> <span class="hljs-operator">=</span> <span class="hljs-number">20</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span> {
+        <span class="hljs-comment">// 局部变量，存放在栈中</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> <span class="hljs-number">30</span>;
+        <span class="hljs-keyword">static</span> <span class="hljs-type">int</span> <span class="hljs-variable">d</span> <span class="hljs-operator">=</span> <span class="hljs-number">40</span>; <span class="hljs-comment">// 编译错误，不能在方法中使用 static 修饰局部变量</span>
+    }
+}
+</code></pre>
+<h3 id="包装类型的缓存机制了解么" tabindex="-1">包装类型的缓存机制了解么？</h3>
+<p>Java 基本数据类型的包装类型的大部分都用到了缓存机制来提升性能。</p>
+<p><code>Byte</code>,<code>Short</code>,<code>Integer</code>,<code>Long</code> 这 4 种包装类默认创建了数值 <strong>[-128，127]</strong> 的相应类型的缓存数据，<code>Character</code> 创建了数值在 <strong>[0,127]</strong> 范围的缓存数据，<code>Boolean</code> 直接返回 <code>TRUE</code> or <code>FALSE</code>。</p>
+<p>对于 <code>Integer</code>，可以通过 JVM 参数 <code>-XX:AutoBoxCacheMax=&lt;size&gt;</code> 修改缓存上限，但不能修改下限 -128。实际使用时，并不建议设置过大的值，避免浪费内存，甚至是 OOM。</p>
+<p>对于 <code>Byte</code>,<code>Short</code>,<code>Long</code> ,<code>Character</code> 没有类似 <code>-XX:AutoBoxCacheMax</code> 参数可以修改，因此缓存范围是固定的，无法通过 JVM 参数调整。<code>Boolean</code> 则直接返回预定义的 <code>TRUE</code> 和 <code>FALSE</code> 实例，没有缓存范围的概念。</p>
+<p><strong>Integer 缓存源码：</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Integer</span> <span class="hljs-title function_">valueOf</span><span class="hljs-params">(<span class="hljs-type">int</span> i)</span> {
+    <span class="hljs-keyword">if</span> (i &gt;= IntegerCache.low &amp;&amp; i &lt;= IntegerCache.high)
+        <span class="hljs-keyword">return</span> IntegerCache.cache[i + (-IntegerCache.low)];
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Integer</span>(i);
+}
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">IntegerCache</span> {
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">low</span> <span class="hljs-operator">=</span> -<span class="hljs-number">128</span>;
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> high;
+    <span class="hljs-keyword">static</span> {
+        <span class="hljs-comment">// high value may be configured by property</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">h</span> <span class="hljs-operator">=</span> <span class="hljs-number">127</span>;
+    }
+}
+</code></pre>
+<p><strong><code>Character</code> 缓存源码:</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Character</span> <span class="hljs-title function_">valueOf</span><span class="hljs-params">(<span class="hljs-type">char</span> c)</span> {
+    <span class="hljs-keyword">if</span> (c &lt;= <span class="hljs-number">127</span>) { <span class="hljs-comment">// must cache</span>
+      <span class="hljs-keyword">return</span> CharacterCache.cache[(<span class="hljs-type">int</span>)c];
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Character</span>(c);
+}
+
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">CharacterCache</span> {
+    <span class="hljs-type">private</span> <span class="hljs-title function_">CharacterCache</span><span class="hljs-params">()</span>{}
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Character</span> <span class="hljs-variable">cache</span>[] <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Character</span>[<span class="hljs-number">127</span> + <span class="hljs-number">1</span>];
+    <span class="hljs-keyword">static</span> {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; cache.length; i++)
+            cache[i] = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Character</span>((<span class="hljs-type">char</span>)i);
+    }
+
+}
+</code></pre>
+<p><strong><code>Boolean</code> 缓存源码：</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">Boolean</span> <span class="hljs-title function_">valueOf</span><span class="hljs-params">(<span class="hljs-type">boolean</span> b)</span> {
+    <span class="hljs-keyword">return</span> (b ? TRUE : FALSE);
+}
+</code></pre>
+<p>如果超出对应范围仍然会去创建新的对象，缓存的范围区间的大小只是在性能和资源之间的权衡。</p>
+<p>两种浮点数类型的包装类 <code>Float</code>,<code>Double</code> 并没有实现缓存机制。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span> <span class="hljs-variable">i1</span> <span class="hljs-operator">=</span> <span class="hljs-number">33</span>;
+<span class="hljs-type">Integer</span> <span class="hljs-variable">i2</span> <span class="hljs-operator">=</span> <span class="hljs-number">33</span>;
+System.out.println(i1 == i2);<span class="hljs-comment">// 输出 true</span>
+
+<span class="hljs-type">Float</span> <span class="hljs-variable">i11</span> <span class="hljs-operator">=</span> <span class="hljs-number">333f</span>;
+<span class="hljs-type">Float</span> <span class="hljs-variable">i22</span> <span class="hljs-operator">=</span> <span class="hljs-number">333f</span>;
+System.out.println(i11 == i22);<span class="hljs-comment">// 输出 false</span>
+
+<span class="hljs-type">Double</span> <span class="hljs-variable">i3</span> <span class="hljs-operator">=</span> <span class="hljs-number">1.2</span>;
+<span class="hljs-type">Double</span> <span class="hljs-variable">i4</span> <span class="hljs-operator">=</span> <span class="hljs-number">1.2</span>;
+System.out.println(i3 == i4);<span class="hljs-comment">// 输出 false</span>
+</code></pre>
+<p>下面我们来看一个问题：下面的代码的输出结果是 <code>true</code> 还是 <code>false</code> 呢？</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span> <span class="hljs-variable">i1</span> <span class="hljs-operator">=</span> <span class="hljs-number">40</span>;
+<span class="hljs-type">Integer</span> <span class="hljs-variable">i2</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Integer</span>(<span class="hljs-number">40</span>);
+System.out.println(i1==i2);
+</code></pre>
+<p><code>Integer i1=40</code> 这一行代码会发生装箱，也就是说这行代码等价于 <code>Integer i1=Integer.valueOf(40)</code>。因此，<code>i1</code> 直接使用的是缓存中的对象。而 <code>Integer i2 = new Integer(40)</code> 会直接创建新的对象。</p>
+<p>因此，答案是 <code>false</code>。你答对了吗？</p>
+<p>记住：<strong>所有整型包装类对象之间值的比较，全部使用 equals 方法比较</strong>。</p>
+<p><img src="/img/up-1ae0425ce8646adfb768b5374951eeb820d-e27193e9.png" alt="" loading="lazy"></p>
+<h3 id="自动装箱与拆箱了解吗原理是什么" tabindex="-1">自动装箱与拆箱了解吗？原理是什么？</h3>
+<p><strong>什么是自动拆装箱？</strong></p>
+<ul>
+<li><strong>装箱（Boxing）</strong>：将基本类型用它们对应的引用类型包装起来；</li>
+<li><strong>拆箱（Unboxing）</strong>：将包装类型转换为基本数据类型；</li>
+</ul>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart LR
+  subgraph Row[&quot;装箱与拆箱对比&quot;]
+    direction LR
+    style Row fill:#F0F2F5,stroke:#E0E6ED,stroke-width:1.5px
+
+    subgraph Unboxing[&quot;拆箱过程&quot;]
+      direction LR
+      style Unboxing fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+      D[&quot;Integer obj&quot;] --&gt;|&quot;自动拆箱&quot;| E[&quot;obj.intValue()&quot;]
+      E --&gt; F[&quot;int 基本类型&quot;]
+    end
+
+    subgraph Boxing[&quot;装箱过程&quot;]
+      direction LR
+      style Boxing fill:#F5F7FA,stroke:#E0E6ED,stroke-width:1.5px
+      A[&quot;int i = 10&quot;] --&gt;|&quot;自动装箱&quot;| B[&quot;Integer.valueOf(10)&quot;]
+      B --&gt; C[&quot;Integer 对象&quot;]
+    end
+  end
+
+  classDef core fill:#4CA497,color:#fff,rx:10,ry:10
+  classDef highlight fill:#E99151,color:#fff,rx:10,ry:10
+
+  class A,D core
+  class C,F highlight
+
+  linkStyle default stroke-width:1.5px,opacity:0.8
+</pre></div>
+<p>举例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Integer</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">10</span>;  <span class="hljs-comment">//装箱</span>
+<span class="hljs-type">int</span> <span class="hljs-variable">n</span> <span class="hljs-operator">=</span> i;   <span class="hljs-comment">//拆箱</span>
+</code></pre>
+<p>上面这两行代码对应的字节码为：</p>
+<pre class="md-pre"><code class="hljs">   L1
+
+    LINENUMBER <span class="hljs-number">8</span> L1
+
+    ALOAD <span class="hljs-number">0</span>
+
+    BIPUSH <span class="hljs-number">10</span>
+
+    INVOKESTATIC java/lang/Integer.valueOf (I)Ljava/lang/Integer;
+
+    PUTFIELD AutoBoxTest.i : Ljava/lang/Integer;
+
+   L2
+
+    LINENUMBER <span class="hljs-number">9</span> L2
+
+    ALOAD <span class="hljs-number">0</span>
+
+    ALOAD <span class="hljs-number">0</span>
+
+    GETFIELD AutoBoxTest.i : Ljava/lang/Integer;
+
+    INVOKEVIRTUAL java/lang/Integer.intValue ()I
+
+    PUTFIELD AutoBoxTest.n : I
+
+    RETURN
+</code></pre>
+<p>从字节码中，我们发现装箱其实就是调用了 包装类的 <code>valueOf()</code> 方法，拆箱其实就是调用了 <code>xxxValue()</code> 方法。</p>
+<p>因此，</p>
+<ul>
+<li><code>Integer i = 10</code> 等价于 <code>Integer i = Integer.valueOf(10)</code></li>
+<li><code>int n = i</code> 等价于 <code>int n = i.intValue()</code>;</li>
+</ul>
+<p>注意：<strong>如果频繁拆装箱的话，也会严重影响系统的性能。我们应该尽量避免不必要的拆装箱操作。</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">long</span> <span class="hljs-title function_">sum</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">// 应该使用 long 而不是 Long</span>
+    <span class="hljs-type">Long</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> <span class="hljs-number">0L</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">long</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt;= Integer.MAX_VALUE; i++)
+        sum += i;
+    <span class="hljs-keyword">return</span> sum;
+}
+</code></pre>
+<h3 id="为什么浮点数运算的时候会有精度丢失的风险" tabindex="-1">为什么浮点数运算的时候会有精度丢失的风险？</h3>
+<p>浮点数运算精度丢失代码演示：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">float</span> <span class="hljs-variable">a</span> <span class="hljs-operator">=</span> <span class="hljs-number">2.0f</span> - <span class="hljs-number">1.9f</span>;
+<span class="hljs-type">float</span> <span class="hljs-variable">b</span> <span class="hljs-operator">=</span> <span class="hljs-number">1.8f</span> - <span class="hljs-number">1.7f</span>;
+System.out.printf(<span class="hljs-string">&quot;%.9f&quot;</span>,a);<span class="hljs-comment">// 0.100000024</span>
+System.out.println(b);<span class="hljs-comment">// 0.099999905</span>
+System.out.println(a == b);<span class="hljs-comment">// false</span>
+</code></pre>
+<p><strong>为什么会出现这个问题呢？</strong></p>
+<p>这个和计算机保存浮点数的机制有很大关系。计算机使用有限位宽的二进制格式表示 <code>float</code> 和 <code>double</code>，许多十进制小数转换为二进制后会无限循环，只能舍入为有限位数，因此存在精度损失的风险。不过，像 0.5、0.25 这样能够表示为有限二进制小数的值可以被精确表示。</p>
+<p>就比如说十进制下的 0.2 就没办法精确转换成二进制小数：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 0.2 转换为二进制数的过程为，不断乘以 2，直到不存在小数为止，</span>
+<span class="hljs-comment">// 在这个计算过程中，得到的整数部分从上到下排列就是二进制的结果。</span>
+<span class="hljs-number">0.2</span> * <span class="hljs-number">2</span> = <span class="hljs-number">0.4</span> -&gt; <span class="hljs-number">0</span>
+<span class="hljs-number">0.4</span> * <span class="hljs-number">2</span> = <span class="hljs-number">0.8</span> -&gt; <span class="hljs-number">0</span>
+<span class="hljs-number">0.8</span> * <span class="hljs-number">2</span> = <span class="hljs-number">1.6</span> -&gt; <span class="hljs-number">1</span>
+<span class="hljs-number">0.6</span> * <span class="hljs-number">2</span> = <span class="hljs-number">1.2</span> -&gt; <span class="hljs-number">1</span>
+<span class="hljs-number">0.2</span> * <span class="hljs-number">2</span> = <span class="hljs-number">0.4</span> -&gt; <span class="hljs-number">0</span>（发生循环）
+...
+</code></pre>
+<p>关于浮点数的更多内容，建议看一下<a href="http://kaito-kidd.com/2018/08/08/computer-system-float-point/" target="_blank" rel="noopener">计算机系统基础（四）浮点数</a>这篇文章。</p>
+<h3 id="如何解决浮点数运算的精度丢失问题" tabindex="-1">如何解决浮点数运算的精度丢失问题？</h3>
+<p><code>BigDecimal</code> 可以精确表示十进制数，并提供可显式指定精度和舍入规则的运算。使用有限精度、舍入除法或转换为 <code>float</code>、<code>double</code> 时仍可能发生舍入。通常情况下，大部分需要十进制精确运算结果的业务场景（比如涉及到钱的场景）都会使用 <code>BigDecimal</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">BigDecimal</span> <span class="hljs-variable">a</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigDecimal</span>(<span class="hljs-string">&quot;1.0&quot;</span>);
+<span class="hljs-type">BigDecimal</span> <span class="hljs-variable">b</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigDecimal</span>(<span class="hljs-string">&quot;1.00&quot;</span>);
+<span class="hljs-type">BigDecimal</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BigDecimal</span>(<span class="hljs-string">&quot;0.8&quot;</span>);
+
+<span class="hljs-type">BigDecimal</span> <span class="hljs-variable">x</span> <span class="hljs-operator">=</span> a.subtract(c);
+<span class="hljs-type">BigDecimal</span> <span class="hljs-variable">y</span> <span class="hljs-operator">=</span> b.subtract(c);
+
+System.out.println(x); <span class="hljs-comment">/* 0.2 */</span>
+System.out.println(y); <span class="hljs-comment">/* 0.20 */</span>
+<span class="hljs-comment">// 比较内容，不是比较值</span>
+System.out.println(Objects.equals(x, y)); <span class="hljs-comment">/* false */</span>
+<span class="hljs-comment">// 比较值相等用相等compareTo，相等返回0</span>
+System.out.println(<span class="hljs-number">0</span> == x.compareTo(y)); <span class="hljs-comment">/* true */</span>
+</code></pre>
+<p>关于 <code>BigDecimal</code> 的详细介绍，可以看看我写的这篇文章：<a href="/read/java/basis/bigdecimal.html">BigDecimal 详解</a>。</p>
+<h3 id="超过-long-整型的数据应该如何表示" tabindex="-1">超过 long 整型的数据应该如何表示？</h3>
+<p>基本数值类型都有一个表达范围，如果超过这个范围就会有数值溢出的风险。</p>
+<p>在 Java 中，64 位 long 整型是最大的整数类型。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">long</span> <span class="hljs-variable">l</span> <span class="hljs-operator">=</span> Long.MAX_VALUE;
+System.out.println(l + <span class="hljs-number">1</span>); <span class="hljs-comment">// -9223372036854775808</span>
+System.out.println(l + <span class="hljs-number">1</span> == Long.MIN_VALUE); <span class="hljs-comment">// true</span>
+</code></pre>
+<p><code>BigInteger</code> 内部使用 <code>int[]</code> 数组来存储任意大小的整形数据。</p>
+<p>相对于常规整数类型的运算来说，<code>BigInteger</code> 运算的效率会相对较低。</p>
+<h2 id="变量" tabindex="-1">变量</h2>
+<h3 id="-成员变量与局部变量的区别" tabindex="-1">⭐️ 成员变量与局部变量的区别？</h3>
+<p><img src="/img/java-basis-variables-member-variable-vs-local-va-c37b29ea.png" alt="" loading="lazy"></p>
+<ul>
+<li><strong>语法形式</strong>：从语法形式上看，成员变量是属于类的，而局部变量是在代码块或方法中定义的变量或是方法的参数；成员变量可以被 <code>public</code>,<code>private</code>,<code>static</code> 等修饰符所修饰，而局部变量不能被访问控制修饰符及 <code>static</code> 所修饰；但是，成员变量和局部变量都能被 <code>final</code> 所修饰。</li>
+<li><strong>存储方式</strong>：如果成员变量使用 <code>static</code> 修饰，那么它属于类；如果没有使用 <code>static</code> 修饰，那么它属于实例。实例字段是对象状态的一部分，方法参数和局部变量则保存在当前栈帧的局部变量表中。JIT 优化可能消除部分实际存储。</li>
+<li><strong>生存时间</strong>：从变量在内存中的生存时间上看，成员变量是对象的一部分，它随着对象的创建而存在，而局部变量随着方法的调用而自动生成，随着方法的调用结束而消亡。</li>
+<li><strong>默认值</strong>：从变量是否有默认值来看，成员变量如果没有被赋初始值，则会自动以类型的默认值而赋值（一种情况例外：被 <code>final</code> 修饰的成员变量也必须显式地赋值），而局部变量则不会自动赋值。</li>
+</ul>
+<p><strong>为什么成员变量有默认值？</strong></p>
+<p>JLS 规定，类变量、实例变量和数组元素在创建时会被初始化为各自类型的默认值，例如数值类型为 0、<code>boolean</code> 为 <code>false</code>、引用类型为 <code>null</code>。局部变量不进行默认初始化，并受“明确赋值”（definite assignment）规则约束：在读取局部变量前，编译器必须能够确定它已经被赋值。这里是语言规范直接规定的两套初始化规则，并不是因为编译器无法预测成员变量何时赋值。</p>
+<p>成员变量与局部变量代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VariableExample</span> {
+
+    <span class="hljs-comment">// 成员变量</span>
+    <span class="hljs-keyword">private</span> String name;
+    <span class="hljs-keyword">private</span> <span class="hljs-type">int</span> age;
+
+    <span class="hljs-comment">// 方法中的局部变量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">int</span> <span class="hljs-variable">num1</span> <span class="hljs-operator">=</span> <span class="hljs-number">10</span>; <span class="hljs-comment">// 栈中分配的局部变量</span>
+        <span class="hljs-type">String</span> <span class="hljs-variable">str</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Hello, world!&quot;</span>; <span class="hljs-comment">// 栈中分配的局部变量</span>
+        System.out.println(num1);
+        System.out.println(str);
+    }
+
+    <span class="hljs-comment">// 带参数的方法中的局部变量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method2</span><span class="hljs-params">(<span class="hljs-type">int</span> num2)</span> {
+        <span class="hljs-type">int</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> num2 + <span class="hljs-number">10</span>; <span class="hljs-comment">// 栈中分配的局部变量</span>
+        System.out.println(sum);
+    }
+
+    <span class="hljs-comment">// 构造方法中的局部变量</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">VariableExample</span><span class="hljs-params">(String name, <span class="hljs-type">int</span> age)</span> {
+        <span class="hljs-built_in">this</span>.name = name; <span class="hljs-comment">// 对成员变量进行赋值</span>
+        <span class="hljs-built_in">this</span>.age = age; <span class="hljs-comment">// 对成员变量进行赋值</span>
+        <span class="hljs-type">int</span> <span class="hljs-variable">num3</span> <span class="hljs-operator">=</span> <span class="hljs-number">20</span>; <span class="hljs-comment">// 栈中分配的局部变量</span>
+        <span class="hljs-type">String</span> <span class="hljs-variable">str2</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Hello, &quot;</span> + <span class="hljs-built_in">this</span>.name + <span class="hljs-string">&quot;!&quot;</span>; <span class="hljs-comment">// 栈中分配的局部变量</span>
+        System.out.println(num3);
+        System.out.println(str2);
+    }
+}
+
+</code></pre>
+<h3 id="静态变量有什么作用" tabindex="-1">静态变量有什么作用？</h3>
+<p>静态变量也就是被 <code>static</code> 关键字修饰的变量。它可以被类的所有实例共享，无论一个类创建了多少个对象，它们都共享同一份静态变量。也就是说，静态变量只会被分配一次内存，即使创建多个对象，这样可以节省内存。</p>
+<p><img src="/img/java-basis-variables-static-variable-7165eb10.png" alt="" loading="lazy"></p>
+<p>静态变量是通过类名来访问的，例如 <code>StaticVariableExample.staticVar</code>（如果被 <code>private</code> 关键字修饰就无法这样访问了）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StaticVariableExample</span> {
+    <span class="hljs-comment">// 静态变量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">int</span> <span class="hljs-variable">staticVar</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+}
+</code></pre>
+<p>通常情况下，静态变量会被 <code>final</code> 关键字修饰成为常量。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ConstantVariableExample</span> {
+    <span class="hljs-comment">// 常量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-variable">constantVar</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+}
+</code></pre>
+<h3 id="字符型常量和字符串常量的区别" tabindex="-1">字符型常量和字符串常量的区别？</h3>
+<ul>
+<li><strong>形式</strong> : 字符常量是单引号引起的一个字符，字符串常量是双引号引起的 0 个或若干个字符。</li>
+<li><strong>含义</strong> : 字符常量是一个 <code>char</code> 值，表示 UTF-16 代码单元，可以参与数值运算；字符串常量是对 <code>String</code> 对象的引用，不是语言层面暴露的内存地址。</li>
+<li><strong>占用空间</strong>：<code>char</code> 值是 16 位无符号整数。<code>String</code> 对象的内存占用属于 JVM 实现细节，不能通过字符串编码后的字节数直接得出。</li>
+</ul>
+<p>⚠️ 注意 <code>char</code> 在 Java 中占两个字节。</p>
+<p>字符型常量和字符串常量代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">StringExample</span> {
+    <span class="hljs-comment">// 字符型常量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">char</span> <span class="hljs-variable">LETTER_A</span> <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;A&#x27;</span>;
+
+    <span class="hljs-comment">// 字符串常量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">GREETING_MESSAGE</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Hello, world!&quot;</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        System.out.println(<span class="hljs-string">&quot;字符型常量占用的字节数为：&quot;</span>+Character.BYTES);
+        System.out.println(<span class="hljs-string">&quot;字符串使用 UTF-8 编码后的字节数为：&quot;</span>+GREETING_MESSAGE.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+    }
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">字符型常量占用的字节数为：2
+字符串使用 UTF<span class="hljs-string">-8</span> 编码后的字节数为：13
+</code></pre>
+<h2 id="方法" tabindex="-1">方法</h2>
+<h3 id="什么是方法的返回值方法有哪几种类型" tabindex="-1">什么是方法的返回值？方法有哪几种类型？</h3>
+<p><strong>方法的返回值</strong> 是指我们获取到的某个方法体中的代码执行后产生的结果！（前提是该方法可能产生结果）。返回值的作用是接收出结果，使得它可以用于其他的操作！</p>
+<p>我们可以按照方法的返回值和参数类型将方法分为下面这几种：</p>
+<p><strong>1、无参数无返回值的方法</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">f1</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">//......</span>
+}
+<span class="hljs-comment">// 下面这个方法也没有返回值，虽然用到了 return</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">f</span><span class="hljs-params">(<span class="hljs-type">int</span> a)</span> {
+    <span class="hljs-keyword">if</span> (...) {
+        <span class="hljs-comment">// 表示结束方法的执行，下方的输出语句不会执行</span>
+        <span class="hljs-keyword">return</span>;
+    }
+    System.out.println(a);
+}
+</code></pre>
+<p><strong>2、有参数无返回值的方法</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">f2</span><span class="hljs-params">(Parameter <span class="hljs-number">1</span>, ..., Parameter n)</span> {
+    <span class="hljs-comment">//......</span>
+}
+</code></pre>
+<p><strong>3、有返回值无参数的方法</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">f3</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">//......</span>
+    <span class="hljs-keyword">return</span> x;
+}
+</code></pre>
+<p><strong>4、有返回值有参数的方法</strong></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">f4</span><span class="hljs-params">(<span class="hljs-type">int</span> a, <span class="hljs-type">int</span> b)</span> {
+    <span class="hljs-keyword">return</span> a * b;
+}
+</code></pre>
+<h3 id="静态方法为什么不能调用非静态成员" tabindex="-1">静态方法为什么不能调用非静态成员？</h3>
+<p>静态方法在静态上下文中执行，没有隐式的当前实例 <code>this</code>，因此不能直接访问实例成员。静态方法仍然可以通过一个显式的对象引用访问该对象的实例成员，这与类加载或成员是否已经“分配内存”无关。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Example</span> {
+    <span class="hljs-comment">// 定义一个字符型常量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">char</span> <span class="hljs-variable">LETTER_A</span> <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;A&#x27;</span>;
+
+    <span class="hljs-comment">// 定义一个字符串常量</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">GREETING_MESSAGE</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;Hello, world!&quot;</span>;
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        <span class="hljs-comment">// 输出字符型常量的值</span>
+        System.out.println(<span class="hljs-string">&quot;字符型常量的值为：&quot;</span> + LETTER_A);
+
+        <span class="hljs-comment">// 输出字符串常量的值</span>
+        System.out.println(<span class="hljs-string">&quot;字符串常量的值为：&quot;</span> + GREETING_MESSAGE);
+    }
+}
+</code></pre>
+<h3 id="-静态方法和实例方法有何不同" tabindex="-1">⭐️ 静态方法和实例方法有何不同？</h3>
+<p><strong>1、调用方式</strong></p>
+<p>在外部调用静态方法时，可以使用 <code>类名.方法名</code> 的方式，也可以使用 <code>对象.方法名</code> 的方式，而实例方法只有后面这种方式。也就是说，<strong>调用静态方法可以无需创建对象</strong>。</p>
+<p>不过，需要注意的是一般不建议使用 <code>对象.方法名</code> 的方式来调用静态方法。这种方式非常容易造成混淆，静态方法不属于类的某个对象而是属于这个类。</p>
+<p>因此，一般建议使用 <code>类名.方法名</code> 的方式来调用静态方法。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Person</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method</span><span class="hljs-params">()</span> {
+      <span class="hljs-comment">//......</span>
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">staicMethod</span><span class="hljs-params">()</span>{
+      <span class="hljs-comment">//......</span>
+    }
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        <span class="hljs-type">Person</span> <span class="hljs-variable">person</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>();
+        <span class="hljs-comment">// 调用实例方法</span>
+        person.method();
+        <span class="hljs-comment">// 调用静态方法</span>
+        Person.staicMethod()
+    }
+}
+</code></pre>
+<p><strong>2、访问类成员是否存在限制</strong></p>
+<p>静态方法在访问本类的成员时，只允许访问静态成员（即静态成员变量和静态方法），不允许访问实例成员（即实例成员变量和实例方法），而实例方法不存在这个限制。</p>
+<h3 id="-重载和重写有什么区别" tabindex="-1">⭐️ 重载和重写有什么区别？</h3>
+<blockquote>
+<p>重载就是同样的一个方法能够根据输入数据的不同，做出不同的处理</p>
+<p>重写就是当子类继承自父类的相同方法，输入数据一样，但要做出有别于父类的响应时，你就要覆盖父类方法</p>
+</blockquote>
+<h4 id="重载" tabindex="-1">重载</h4>
+<p>发生在同一个类中（或者父类和子类之间），方法名必须相同，参数类型不同、个数不同、顺序不同，方法返回值和访问修饰符可以不同。</p>
+<p>《Java 核心技术》这本书是这样介绍重载的：</p>
+<blockquote>
+<p>如果多个方法(比如 <code>StringBuilder</code> 的构造方法)有相同的名字、不同的参数， 便产生了重载。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
+<span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb2</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>(<span class="hljs-string">&quot;HelloWorld&quot;</span>);
+</code></pre>
+<p>编译器必须挑选出具体执行哪个方法，它通过用各个方法给出的参数类型与特定方法调用所使用的值类型进行匹配来挑选出相应的方法。 如果编译器找不到匹配的参数， 就会产生编译时错误， 因为根本不存在匹配， 或者没有一个比其他的更好(这个过程被称为重载解析(overloading resolution))。</p>
+<p>Java 允许重载任何方法， 而不只是构造器方法。</p>
+</blockquote>
+<p>综上：重载就是同一个类中多个同名方法根据不同的传参来执行不同的逻辑处理。</p>
+<h4 id="重写" tabindex="-1">重写</h4>
+<p>重写是子类实例方法与父类可访问实例方法之间的声明关系，由编译器按规则检查；运行期发生的是对重写方法的动态分派。</p>
+<ol>
+<li>方法名、参数列表必须相同，子类方法返回值类型应比父类方法返回值类型更小或相等，抛出的异常范围小于等于父类，访问修饰符范围大于等于父类。</li>
+<li>如果父类方法访问修饰符为 <code>private/final/static</code> 则子类就不能重写该方法，但是被 <code>static</code> 修饰的方法能够被再次声明。</li>
+<li>构造方法无法被重写</li>
+</ol>
+<h4 id="总结" tabindex="-1">总结</h4>
+<p>综上：<strong>重写就是子类对父类方法的重新改造，外部样子不能改变，内部逻辑可以改变。</strong></p>
+<table>
+<thead>
+<tr>
+<th>区别点</th>
+<th>重载 (Overloading)</th>
+<th>重写 (Overriding)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>发生范围</strong></td>
+<td>同一个类中。</td>
+<td>父类与子类之间（存在继承关系）。</td>
+</tr>
+<tr>
+<td><strong>方法签名</strong></td>
+<td>方法名<strong>必须相同</strong>，但<strong>参数列表必须不同</strong>（参数的类型、个数或顺序至少有一项不同）。</td>
+<td>方法名、参数列表<strong>必须完全相同</strong>。</td>
+</tr>
+<tr>
+<td><strong>返回类型</strong></td>
+<td>与返回值类型<strong>无关</strong>，可以任意修改。</td>
+<td>子类方法的返回类型必须与父类方法的返回类型<strong>相同</strong>，或者是其<strong>子类</strong>。</td>
+</tr>
+<tr>
+<td><strong>访问修饰符</strong></td>
+<td>与访问修饰符<strong>无关</strong>，可以任意修改。</td>
+<td>子类方法的访问权限<strong>不能低于</strong>父类方法的访问权限。（public &gt; protected &gt; default &gt; private）</td>
+</tr>
+<tr>
+<td><strong>绑定时期</strong></td>
+<td>编译时绑定或称静态绑定</td>
+<td>运行时绑定 (Run-time Binding) 或称动态绑定</td>
+</tr>
+</tbody>
+</table>
+<p><strong>方法的重写要遵循“两同两小一大”</strong>（以下内容摘录自《疯狂 Java 讲义》，<a href="https://github.com/Snailclimb/JavaGuide/issues/892" target="_blank" rel="noopener">issue#892</a>）：</p>
+<ul>
+<li>“两同”即方法名相同、形参列表相同；</li>
+<li>“两小”指的是子类方法返回值类型应比父类方法返回值类型更小或相等，子类方法声明抛出的异常类应比父类方法声明抛出的异常类更小或相等；</li>
+<li>“一大”指的是子类方法的访问权限应比父类方法的访问权限更大或相等。</li>
+</ul>
+<p>⭐️ 关于 <strong>重写的返回值类型</strong> 这里需要额外多说明一下，上面的表述不太清晰准确：如果方法的返回类型是 void 和基本数据类型，则返回值重写时不可修改。但是如果方法的返回值是引用类型，重写时是可以返回该引用类型的子类的。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Hero</span> {
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">name</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;超级英雄&quot;</span>;
+    }
+}
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SuperMan</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Hero</span>{
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">name</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;超人&quot;</span>;
+    }
+    <span class="hljs-keyword">public</span> <span class="hljs-type">Hero</span> <span class="hljs-title function_">hero</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Hero</span>();
+    }
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SuperSuperMan</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">SuperMan</span> {
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">name</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;超级超级英雄&quot;</span>;
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">SuperMan</span> <span class="hljs-title function_">hero</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SuperMan</span>();
+    }
+}
+</code></pre>
+<h3 id="什么是可变长参数" tabindex="-1">什么是可变长参数？</h3>
+<p>从 Java5 开始，Java 支持定义可变长参数，所谓可变长参数就是允许在调用方法时传入不定长度的参数。就比如下面这个方法就可以接受 0 个或者多个参数。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method1</span><span class="hljs-params">(String... args)</span> {
+   <span class="hljs-comment">//......</span>
+}
+</code></pre>
+<p>另外，可变参数只能作为函数的最后一个参数，但其前面可以有也可以没有任何其他参数。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">method2</span><span class="hljs-params">(String arg1, String... args)</span> {
+   <span class="hljs-comment">//......</span>
+}
+</code></pre>
+<p><strong>遇到方法重载的情况怎么办呢？会优先匹配固定参数还是可变参数的方法呢？</strong></p>
+<p>答案是会优先匹配固定参数的方法，因为固定参数的方法匹配度更高。</p>
+<p>我们通过下面这个例子来证明一下。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">/**
+ * 微信搜 JavaGuide 回复&quot;面试突击&quot;即可免费领取个人原创的 Java 面试手册
+ *
+ * <span class="hljs-doctag">@author</span> Guide哥
+ * <span class="hljs-doctag">@date</span> 2021/12/13 16:52
+ **/</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VariableLengthArgument</span> {
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">printVariable</span><span class="hljs-params">(String... args)</span> {
+        <span class="hljs-keyword">for</span> (String s : args) {
+            System.out.println(s);
+        }
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">printVariable</span><span class="hljs-params">(String arg1, String arg2)</span> {
+        System.out.println(arg1 + arg2);
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+        printVariable(<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>);
+        printVariable(<span class="hljs-string">&quot;a&quot;</span>, <span class="hljs-string">&quot;b&quot;</span>, <span class="hljs-string">&quot;c&quot;</span>, <span class="hljs-string">&quot;d&quot;</span>);
+    }
+}
+</code></pre>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">ab
+<span class="hljs-selector-tag">a</span>
+<span class="hljs-selector-tag">b</span>
+c
+d
+</code></pre>
+<p>另外，Java 的可变参数编译后实际会被转换成一个数组，我们看编译后生成的 <code>class</code> 文件就可以看出来了。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VariableLengthArgument</span> {
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">printVariable</span><span class="hljs-params">(String... args)</span> {
+        <span class="hljs-type">String</span>[] <span class="hljs-variable">var1</span> <span class="hljs-operator">=</span> args;
+        <span class="hljs-type">int</span> <span class="hljs-variable">var2</span> <span class="hljs-operator">=</span> args.length;
+
+        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> <span class="hljs-variable">var3</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; var3 &lt; var2; ++var3) {
+            <span class="hljs-type">String</span> <span class="hljs-variable">s</span> <span class="hljs-operator">=</span> var1[var3];
+            System.out.println(s);
+        }
+
+    }
+    <span class="hljs-comment">// ......</span>
+}
+</code></pre>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>What is the difference between JDK and JRE?：<a href="https://stackoverflow.com/questions/1906445/what-is-the-difference-between-jdk-and-jre" target="_blank" rel="noopener">https://stackoverflow.com/questions/1906445/what-is-the-difference-between-jdk-and-jre</a></li>
+<li>Oracle vs OpenJDK：<a href="https://www.educba.com/oracle-vs-openjdk/" target="_blank" rel="noopener">https://www.educba.com/oracle-vs-openjdk/</a></li>
+<li>Differences between Oracle JDK and OpenJDK：<a href="https://stackoverflow.com/questions/22358071/differences-between-oracle-jdk-and-openjdk" target="_blank" rel="noopener">https://stackoverflow.com/questions/22358071/differences-between-oracle-jdk-and-openjdk</a></li>
+<li>彻底弄懂 Java 的移位操作符：<a href="https://juejin.cn/post/6844904025880526861" target="_blank" rel="noopener">https://juejin.cn/post/6844904025880526861</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

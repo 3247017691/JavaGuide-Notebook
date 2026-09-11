@@ -1,0 +1,183 @@
+<blockquote>
+<p>本文由 JavaGuide 翻译并完善，原文地址：<a href="https://medium.com/@AlexanderObregon/maven-best-practices-tips-and-tricks-for-java-developers-438eca03f72b" target="_blank" rel="noopener">https://medium.com/@AlexanderObregon/maven-best-practices-tips-and-tricks-for-java-developers-438eca03f72b</a> 。</p>
+</blockquote>
+<p>Maven 是一种广泛使用的 Java 项目构建自动化工具。它简化了构建过程，并帮助我们管理依赖关系。Maven 详细介绍可以参考这篇文章：<a href="/read/tools/maven/maven-core-concepts.html">Maven 核心概念总结</a>。</p>
+<p>这篇文章不展开 Maven 基础概念，主要讨论项目中更容易踩坑的实践问题：目录结构、编译版本、依赖版本、环境配置、Wrapper、CI 和插件管理。</p>
+<h2 id="maven-标准目录结构" tabindex="-1">Maven 标准目录结构</h2>
+<p>Maven 遵循标准目录结构来保持项目之间的一致性。遵循这种结构可以让其他开发人员更轻松地理解我们的项目。</p>
+<p>Maven 项目的标准目录结构如下：</p>
+<pre class="md-pre"><code class="hljs">src/
+  main/
+    java/
+    resources/
+  test/
+    java/
+    resources/
+pom.xml
+</code></pre>
+<ul>
+<li><code>src/main/java</code>：源代码目录</li>
+<li><code>src/main/resources</code>：资源文件目录</li>
+<li><code>src/test/java</code>：测试代码目录</li>
+<li><code>src/test/resources</code>：测试资源文件目录</li>
+</ul>
+<p>这只是一个最简单的 Maven 项目目录示例。实际项目中，我们还会根据项目规范去做进一步的细分。</p>
+<h2 id="明确指定-java-编译版本" tabindex="-1">明确指定 Java 编译版本</h2>
+<p>不要依赖 Maven 或插件的默认编译版本，项目应该在 <code>pom.xml</code> 中明确声明目标 Java 版本。对于现代 Java 项目，优先使用 <code>maven.compiler.release</code>，它对应 <code>javac --release</code>，比单独配置 <code>source</code> 和 <code>target</code> 更稳妥。</p>
+<p>需要注意的是，<code>javac --release</code> 从 JDK 9 开始提供；Maven Compiler Plugin 3.13.0 及之后版本在 JDK 8 上也支持 <code>maven.compiler.release</code>，会自动转换为 <code>source</code> 和 <code>target</code>。如果项目仍使用更旧的插件或构建环境，再显式配置 <code>source</code>、<code>target</code>。</p>
+<p>例如，项目需要按 Java 17 编译，可以这样写：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">maven.compiler.release</span>&gt;</span>17<span class="hljs-tag">&lt;/<span class="hljs-name">maven.compiler.release</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span>
+</code></pre>
+<p>如果需要直接配置 Maven Compiler Plugin，也可以这样写：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-compiler-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.15.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">release</span>&gt;</span>17<span class="hljs-tag">&lt;/<span class="hljs-name">release</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span>
+</code></pre>
+<p><code>release</code> 的值不要再写成 <code>1.8</code> 这种旧格式。比如 Java 8 写 <code>8</code>，Java 17 写 <code>17</code>，Java 21 写 <code>21</code>。</p>
+<h2 id="有效管理依赖关系" tabindex="-1">有效管理依赖关系</h2>
+<p>Maven 的依赖管理系统是其最强大的功能之一。在父 POM 中，通过 <code>dependencyManagement</code> 定义公共依赖版本，可以避免多个模块各写一份版本号，降低依赖冲突概率。</p>
+<p>例如，假设我们有一个父模块和两个子模块 A 和 B，想要在所有模块中使用 JUnit 5，可以在父模块的 <code>pom.xml</code> 文件中通过 <code>&lt;dependencyManagement&gt;</code> 定义 JUnit 的版本：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">dependencyManagement</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.junit.jupiter<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>junit-jupiter<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>5.10.2<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependencyManagement</span>&gt;</span>
+</code></pre>
+<p>在子模块 A 和 B 的 <code>pom.xml</code> 文件中，只需要引用 JUnit 的 <code>groupId</code> 和 <code>artifactId</code> 即可：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.junit.jupiter<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>junit-jupiter<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span>
+</code></pre>
+<p>对于 Spring Boot、Spring Cloud 这类已经提供 BOM 的生态，优先导入官方 BOM，再在业务模块里省略具体依赖版本。这样能减少“手工拼版本”带来的兼容性问题。</p>
+<h2 id="针对不同环境使用配置文件" tabindex="-1">针对不同环境使用配置文件</h2>
+<p>Maven 配置文件允许我们配置不同环境的构建设置，例如开发、测试和生产。在 <code>pom.xml</code> 文件中定义配置文件并使用命令行参数激活它们：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">profiles</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">profile</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">id</span>&gt;</span>development<span class="hljs-tag">&lt;/<span class="hljs-name">id</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">activation</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">activeByDefault</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">activeByDefault</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">activation</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">environment</span>&gt;</span>dev<span class="hljs-tag">&lt;/<span class="hljs-name">environment</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">profile</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">profile</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">id</span>&gt;</span>production<span class="hljs-tag">&lt;/<span class="hljs-name">id</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">environment</span>&gt;</span>prod<span class="hljs-tag">&lt;/<span class="hljs-name">environment</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">profile</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">profiles</span>&gt;</span>
+</code></pre>
+<p>使用命令行激活配置文件：</p>
+<pre class="md-pre"><code class="hljs">mvn clean install -P production
+</code></pre>
+<h2 id="保持-pomxml-干净且井然有序" tabindex="-1">保持 pom.xml 干净且井然有序</h2>
+<p>组织良好的 <code>pom.xml</code> 文件更易于维护和理解。以下是维护干净的 <code>pom.xml</code> 的一些技巧：</p>
+<ul>
+<li>将相似的依赖项和插件组合在一起。</li>
+<li>使用注释来描述特定依赖项或插件的用途。</li>
+<li>将公共版本号放在 <code>&lt;properties&gt;</code> 标签内，或者统一放到父 POM 的 <code>dependencyManagement</code> / <code>pluginManagement</code> 中管理。</li>
+</ul>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">junit.version</span>&gt;</span>5.10.2<span class="hljs-tag">&lt;/<span class="hljs-name">junit.version</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">mockito.version</span>&gt;</span>5.12.0<span class="hljs-tag">&lt;/<span class="hljs-name">mockito.version</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span>
+</code></pre>
+<p>插件版本也建议显式声明。不要依赖 Maven 的默认插件版本，否则不同 Maven 版本或不同构建环境下可能出现行为差异。</p>
+<h2 id="使用-maven-wrapper" tabindex="-1">使用 Maven Wrapper</h2>
+<p>Maven Wrapper 是一个用于管理和使用 Maven 的工具，它允许在没有预先安装 Maven 的情况下运行和构建 Maven 项目。</p>
+<p>Maven 官方文档是这样介绍 Maven Wrapper 的：</p>
+<blockquote>
+<p>The Maven Wrapper is an easy way to ensure a user of your Maven build has everything necessary to run your Maven build.</p>
+<p>Maven Wrapper 是一种简单的方法，可以确保 Maven 构建的用户拥有运行 Maven 构建所需的一切。</p>
+</blockquote>
+<p>Maven Wrapper 可以确保构建过程使用正确的 Maven 版本，非常方便。要使用 Maven Wrapper，请在项目目录中运行以下命令：</p>
+<pre class="md-pre"><code class="hljs">mvn wrapper:wrapper
+</code></pre>
+<p>此命令会在我们的项目中生成 Maven Wrapper 文件。现在我们可以使用 <code>./mvnw</code> （或 Windows 上的 <code>./mvnw.cmd</code>）而不是 <code>mvn</code> 来执行 Maven 命令。</p>
+<p>团队项目建议提交 <code>mvnw</code>、<code>mvnw.cmd</code> 和 <code>.mvn/wrapper/</code> 目录。这样新成员或 CI 环境不需要预先安装指定版本的 Maven，也能用项目声明的 Maven 版本完成构建。</p>
+<h2 id="通过持续集成实现构建自动化" tabindex="-1">通过持续集成实现构建自动化</h2>
+<p>将 Maven 项目与持续集成 (CI) 系统（例如 Jenkins 或 GitHub Actions）集成，可确保自动构建、测试和部署我们的代码。CI 有助于及早发现问题并在整个团队中提供一致的构建流程。以下是 Maven 项目的简单 GitHub Actions 工作流程示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">name:</span> <span class="hljs-string">Java</span> <span class="hljs-string">CI</span> <span class="hljs-string">with</span> <span class="hljs-string">Maven</span>
+
+<span class="hljs-attr">on:</span> [<span class="hljs-string">push</span>]
+
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">build:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Checkout</span> <span class="hljs-string">code</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Set</span> <span class="hljs-string">up</span> <span class="hljs-string">JDK</span> <span class="hljs-number">17</span>
+        <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-java@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">java-version:</span> <span class="hljs-string">&quot;17&quot;</span>
+          <span class="hljs-attr">distribution:</span> <span class="hljs-string">&quot;temurin&quot;</span>
+          <span class="hljs-attr">cache:</span> <span class="hljs-string">&quot;maven&quot;</span>
+
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span> <span class="hljs-string">with</span> <span class="hljs-string">Maven</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">./mvnw</span> <span class="hljs-string">-B</span> <span class="hljs-string">clean</span> <span class="hljs-string">verify</span>
+</code></pre>
+<p>CI 中建议使用 <code>clean verify</code>，它会执行测试和必要的校验流程。<code>install</code> 会把构建产物安装到本地仓库，只有后续步骤确实依赖本地安装结果时才需要使用。</p>
+<h2 id="利用-maven-插件获得附加功能" tabindex="-1">利用 Maven 插件获得附加功能</h2>
+<p>有许多 Maven 插件可用于扩展 Maven 的功能。一些流行的插件包括（前三个是 Maven 自带的插件，后三个是第三方提供的插件）：</p>
+<ul>
+<li>maven-surefire-plugin：配置并执行单元测试。</li>
+<li>maven-failsafe-plugin：配置并执行集成测试。</li>
+<li>maven-javadoc-plugin：生成 Javadoc 格式的项目文档。</li>
+<li>maven-checkstyle-plugin：强制执行编码标准和最佳实践。</li>
+<li>jacoco-maven-plugin：单测覆盖率。</li>
+<li>sonar-maven-plugin：分析代码质量。</li>
+<li>……</li>
+</ul>
+<p>jacoco-maven-plugin 使用示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.jacoco<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>jacoco-maven-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>0.8.12<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">executions</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">execution</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">goals</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">goal</span>&gt;</span>prepare-agent<span class="hljs-tag">&lt;/<span class="hljs-name">goal</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">goals</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">execution</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">execution</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">id</span>&gt;</span>generate-code-coverage-report<span class="hljs-tag">&lt;/<span class="hljs-name">id</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">phase</span>&gt;</span>test<span class="hljs-tag">&lt;/<span class="hljs-name">phase</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">goals</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">goal</span>&gt;</span>report<span class="hljs-tag">&lt;/<span class="hljs-name">goal</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">goals</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">execution</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">executions</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span>
+</code></pre>
+<p>如果这些已有的插件无法满足我们的需求，我们还可以自定义插件。</p>
+<p>探索可用的插件并在 <code>pom.xml</code> 文件中配置它们以增强我们的开发过程。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>Maven 最重要的不是“能不能把项目跑起来”，而是让团队在本地、CI 和部署环境中使用一致的构建方式。实际项目里，建议优先做好这几件事：使用标准目录结构，显式声明 Java 和插件版本，通过父 POM、BOM、<code>dependencyManagement</code> 管理依赖版本，提交 Maven Wrapper，并在 CI 中固定 JDK 和 Maven 构建命令。</p>

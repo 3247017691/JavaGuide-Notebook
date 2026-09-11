@@ -1,0 +1,394 @@
+<h2 id="io-流简介" tabindex="-1">IO 流简介</h2>
+<p>IO 即 <code>Input/Output</code>，输入和输出。数据输入到计算机内存的过程即输入，反之输出到外部存储（比如数据库，文件，远程主机）的过程即输出。数据传输过程类似于水流，因此称为 IO 流。IO 流在 Java 中分为输入流和输出流，而根据数据的处理方式又分为字节流和字符流。</p>
+<p>Java IO 流的 40 多个类都是从如下 4 个抽象类基类中派生出来的。</p>
+<ul>
+<li><code>InputStream</code>/<code>Reader</code>: 所有的输入流的基类，前者是字节输入流，后者是字符输入流。</li>
+<li><code>OutputStream</code>/<code>Writer</code>: 所有输出流的基类，前者是字节输出流，后者是字符输出流。</li>
+</ul>
+<h2 id="字节流" tabindex="-1">字节流</h2>
+<h3 id="inputstream字节输入流" tabindex="-1">InputStream（字节输入流）</h3>
+<p><code>InputStream</code> 用于从源头（通常是文件）读取数据（字节信息）到内存中，<code>java.io.InputStream</code> 抽象类是所有字节输入流的父类。</p>
+<p><code>InputStream</code> 常用方法：</p>
+<ul>
+<li><code>read()</code>：返回输入流中下一个字节的数据。返回的值介于 0 到 255 之间。如果未读取任何字节，则代码返回 <code>-1</code>，表示文件结束。</li>
+<li><code>read(byte b[ ])</code> : 从输入流中读取一些字节存储到数组 <code>b</code> 中。如果数组 <code>b</code> 的长度为零，则不读取。如果没有可用字节读取，返回 <code>-1</code>。如果有可用字节读取，则最多读取的字节数最多等于 <code>b.length</code>， 返回读取的字节数。这个方法等价于 <code>read(b, 0, b.length)</code>。</li>
+<li><code>read(byte b[], int off, int len)</code>：在 <code>read(byte b[ ])</code> 方法的基础上增加了 <code>off</code> 参数（偏移量）和 <code>len</code> 参数（要读取的最大字节数）。</li>
+<li><code>skip(long n)</code>：忽略输入流中的 n 个字节 ,返回实际忽略的字节数。</li>
+<li><code>available()</code>：返回不阻塞即可读取（或跳过）的字节数估计值，不能用它判断输入流的总长度。</li>
+<li><code>close()</code>：关闭输入流释放相关的系统资源。</li>
+</ul>
+<p>从 Java 9 开始，<code>InputStream</code> 新增加了多个实用的方法：</p>
+<ul>
+<li><code>readAllBytes()</code>：读取输入流中的所有字节，返回字节数组。</li>
+<li><code>readNBytes(byte[] b, int off, int len)</code>：尝试读取最多 <code>len</code> 个字节，读取到指定长度或遇到流末尾时返回；读取过程中可能阻塞，也可能抛出异常。</li>
+<li><code>transferTo(OutputStream out)</code>：将所有字节从一个输入流传递到一个输出流。</li>
+</ul>
+<p><code>FileInputStream</code> 是一个比较常用的字节输入流对象，可直接指定文件路径，可以直接读取单字节数据，也可以读取至字节数组中。</p>
+<p><code>FileInputStream</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">InputStream</span> <span class="hljs-variable">fis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>)) {
+    System.out.println(<span class="hljs-string">&quot;Number of remaining bytes:&quot;</span>
+            + fis.available());
+    <span class="hljs-type">int</span> content;
+    <span class="hljs-type">long</span> <span class="hljs-variable">skip</span> <span class="hljs-operator">=</span> fis.skip(<span class="hljs-number">2</span>);
+    System.out.println(<span class="hljs-string">&quot;The actual number of bytes skipped:&quot;</span> + skip);
+    System.out.print(<span class="hljs-string">&quot;The content read from file:&quot;</span>);
+    <span class="hljs-keyword">while</span> ((content = fis.read()) != -<span class="hljs-number">1</span>) {
+        System.out.print((<span class="hljs-type">char</span>) content);
+    }
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p><code>input.txt</code> 文件内容：</p>
+<p><img src="/img/image-20220419155214614-dcb9ca67.png" alt="" loading="lazy"></p>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">Number <span class="hljs-keyword">of</span> remaining <span class="hljs-keyword">bytes</span>:<span class="hljs-number">11</span>
+The actual <span class="hljs-built_in">number</span> <span class="hljs-keyword">of</span> <span class="hljs-keyword">bytes</span> skipped:<span class="hljs-number">2</span>
+The content <span class="hljs-built_in">read</span> <span class="hljs-built_in">from</span> <span class="hljs-built_in">file</span>:JavaGuide
+</code></pre>
+<p>不过，一般我们是不会直接单独使用 <code>FileInputStream</code>，通常会配合 <code>BufferedInputStream</code>（字节缓冲输入流，后文会讲到）来使用。</p>
+<p>像下面这段代码在我们的项目中就比较常见，我们通过 <code>readAllBytes()</code> 读取输入流所有字节并将其直接赋值给一个 <code>String</code> 对象。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 新建一个 BufferedInputStream 对象</span>
+<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bufferedInputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>));
+<span class="hljs-comment">// 读取文件的内容并复制到 String 对象中</span>
+<span class="hljs-type">String</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>(bufferedInputStream.readAllBytes());
+System.out.println(result);
+</code></pre>
+<p><code>DataInputStream</code> 用于读取指定类型数据，不能单独使用，必须结合其它流，比如 <code>FileInputStream</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">FileInputStream</span> <span class="hljs-variable">fileInputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>);
+<span class="hljs-comment">//必须将fileInputStream作为构造参数才能使用</span>
+<span class="hljs-type">DataInputStream</span> <span class="hljs-variable">dataInputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">DataInputStream</span>(fileInputStream);
+<span class="hljs-comment">//可以读取任意具体的类型数据</span>
+dataInputStream.readBoolean();
+dataInputStream.readInt();
+dataInputStream.readUTF();
+</code></pre>
+<p><code>ObjectInputStream</code> 用于从输入流中读取 Java 对象（反序列化），<code>ObjectOutputStream</code> 用于将对象写入到输出流（序列化）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">ObjectInputStream</span> <span class="hljs-variable">input</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ObjectInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;object.data&quot;</span>));
+<span class="hljs-type">MyClass</span> <span class="hljs-variable">object</span> <span class="hljs-operator">=</span> (MyClass) input.readObject();
+input.close();
+</code></pre>
+<p>另外，用于序列化和反序列化的类必须实现 <code>Serializable</code> 接口，对象中如果有属性不想被序列化，使用 <code>transient</code> 修饰。</p>
+<h3 id="outputstream字节输出流" tabindex="-1">OutputStream（字节输出流）</h3>
+<p><code>OutputStream</code> 用于将数据（字节信息）写入到目的地（通常是文件），<code>java.io.OutputStream</code> 抽象类是所有字节输出流的父类。</p>
+<p><code>OutputStream</code> 常用方法：</p>
+<ul>
+<li><code>write(int b)</code>：将特定字节写入输出流。</li>
+<li><code>write(byte b[ ])</code> : 将数组 <code>b</code> 写入到输出流，等价于 <code>write(b, 0, b.length)</code>。</li>
+<li><code>write(byte[] b, int off, int len)</code> : 在 <code>write(byte b[ ])</code> 方法的基础上增加了 <code>off</code> 参数（偏移量）和 <code>len</code> 参数（要读取的最大字节数）。</li>
+<li><code>flush()</code>：刷新此输出流并强制写出所有缓冲的输出字节。</li>
+<li><code>close()</code>：关闭输出流释放相关的系统资源。</li>
+</ul>
+<p><code>FileOutputStream</code> 是最常用的字节输出流对象，可直接指定文件路径，可以直接输出单字节数据，也可以输出指定的字节数组。</p>
+<p><code>FileOutputStream</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">output</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;output.txt&quot;</span>)) {
+    <span class="hljs-type">byte</span>[] <span class="hljs-variable">array</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;JavaGuide&quot;</span>.getBytes();
+    output.write(array);
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p>运行结果：</p>
+<p><img src="/img/image-20220419155514392-ff8834f9.png" alt="" loading="lazy"></p>
+<p>类似于 <code>FileInputStream</code>，<code>FileOutputStream</code> 通常也会配合 <code>BufferedOutputStream</code>（字节缓冲输出流，后文会讲到）来使用。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">fileOutputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;output.txt&quot;</span>);
+<span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(fileOutputStream);
+</code></pre>
+<p><strong><code>DataOutputStream</code></strong> 用于写入指定类型数据，不能单独使用，必须结合其它流，比如 <code>FileOutputStream</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 输出流</span>
+<span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">fileOutputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;out.txt&quot;</span>);
+<span class="hljs-type">DataOutputStream</span> <span class="hljs-variable">dataOutputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">DataOutputStream</span>(fileOutputStream);
+<span class="hljs-comment">// 输出任意数据类型</span>
+dataOutputStream.writeBoolean(<span class="hljs-literal">true</span>);
+dataOutputStream.writeByte(<span class="hljs-number">1</span>);
+</code></pre>
+<p><code>ObjectInputStream</code> 用于从输入流中读取 Java 对象（反序列化），<code>ObjectOutputStream</code> 将对象写入到输出流（序列化）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">ObjectOutputStream</span> <span class="hljs-variable">output</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ObjectOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;file.txt&quot;</span>));
+<span class="hljs-type">Person</span> <span class="hljs-variable">person</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Person</span>(<span class="hljs-string">&quot;Guide哥&quot;</span>, <span class="hljs-string">&quot;JavaGuide作者&quot;</span>);
+output.writeObject(person);
+</code></pre>
+<h2 id="字符流" tabindex="-1">字符流</h2>
+<p>不管是文件读写还是网络发送接收，信息的最小存储单元都是字节。 <strong>那为什么 I/O 流操作要分为字节流操作和字符流操作呢？</strong></p>
+<p>个人认为主要有两点原因：</p>
+<ul>
+<li>字符流是由 Java 虚拟机将字节转换得到的，这个过程还算是比较耗时。</li>
+<li>如果我们不知道编码类型就很容易出现乱码问题。</li>
+</ul>
+<p>乱码问题这个很容易就可以复现，我们只需要将上面提到的 <code>FileInputStream</code> 代码示例中的 <code>input.txt</code> 文件内容改为中文即可，原代码不需要改动。</p>
+<p><img src="/img/image-20220419154632551-899aad23.png" alt="" loading="lazy"></p>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">Number of remaining bytes:<span class="hljs-number">9</span>
+The actual number of bytes skipped:<span class="hljs-number">2</span>
+The content read from file:§å®¶å¥½
+</code></pre>
+<p>可以很明显地看到读取出来的内容已经变成了乱码。</p>
+<p>因此，I/O 流就干脆提供了一个直接操作字符的接口，方便我们平时对字符进行流操作。如果音频文件、图片等媒体文件用字节流比较好，如果涉及到字符的话使用字符流比较好。</p>
+<p><code>Reader</code> 和 <code>Writer</code> 用于操作字符；在字节流和字符流之间转换时，需要通过 <code>Charset</code> 指定编码。未显式指定编码的转换类会使用 JVM 的默认字符集。</p>
+<p>Unicode 本身只是一种字符集，它为每个字符分配一个唯一的数字编号，并没有规定具体的存储方式。UTF-8、UTF-16、UTF-32 都是 Unicode 的编码方式，它们使用不同的字节数来表示 Unicode 字符。例如，UTF-8 :英文占 1 字节，中文占 3 字节。</p>
+<h3 id="reader字符输入流" tabindex="-1">Reader（字符输入流）</h3>
+<p><code>Reader</code> 用于从源头（通常是文件）读取数据（字符信息）到内存中，<code>java.io.Reader</code> 抽象类是所有字符输入流的父类。</p>
+<p><code>Reader</code> 用于读取文本， <code>InputStream</code> 用于读取原始字节。</p>
+<p><code>Reader</code> 常用方法：</p>
+<ul>
+<li><code>read()</code> : 从输入流读取一个字符。</li>
+<li><code>read(char[] cbuf)</code> : 从输入流中读取一些字符，并将它们存储到字符数组 <code>cbuf</code> 中，等价于 <code>read(cbuf, 0, cbuf.length)</code>。</li>
+<li><code>read(char[] cbuf, int off, int len)</code>：在 <code>read(char[] cbuf)</code> 方法的基础上增加了 <code>off</code> 参数（偏移量）和 <code>len</code> 参数（要读取的最大字符数）。</li>
+<li><code>skip(long n)</code>：忽略输入流中的 n 个字符 ,返回实际忽略的字符数。</li>
+<li><code>close()</code> : 关闭输入流并释放相关的系统资源。</li>
+</ul>
+<p><code>InputStreamReader</code> 是字节流转换为字符流的桥梁，其子类 <code>FileReader</code> 是基于该基础上的封装，可以直接操作字符文件。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 字节流转换为字符流的桥梁</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">InputStreamReader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Reader</span> {
+}
+<span class="hljs-comment">// 用于读取字符文件</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FileReader</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">InputStreamReader</span> {
+}
+</code></pre>
+<p><code>FileReader</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">FileReader</span> <span class="hljs-variable">fileReader</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileReader</span>(<span class="hljs-string">&quot;input.txt&quot;</span>);) {
+    <span class="hljs-type">int</span> content;
+    <span class="hljs-type">long</span> <span class="hljs-variable">skip</span> <span class="hljs-operator">=</span> fileReader.skip(<span class="hljs-number">3</span>);
+    System.out.println(<span class="hljs-string">&quot;The actual number of characters skipped:&quot;</span> + skip);
+    System.out.print(<span class="hljs-string">&quot;The content read from file:&quot;</span>);
+    <span class="hljs-keyword">while</span> ((content = fileReader.read()) != -<span class="hljs-number">1</span>) {
+        System.out.print((<span class="hljs-type">char</span>) content);
+    }
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p><code>input.txt</code> 文件内容：</p>
+<p><img src="/img/image-20220419154632551-899aad23.png" alt="" loading="lazy"></p>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">The actual <span class="hljs-built_in">number</span> <span class="hljs-keyword">of</span> <span class="hljs-built_in">characters</span> skipped:<span class="hljs-number">3</span>
+The content <span class="hljs-built_in">read</span> <span class="hljs-keyword">from</span> <span class="hljs-built_in">file</span>:我是Guide。
+</code></pre>
+<h3 id="writer字符输出流" tabindex="-1">Writer（字符输出流）</h3>
+<p><code>Writer</code> 用于将数据（字符信息）写入到目的地（通常是文件），<code>java.io.Writer</code> 抽象类是所有字符输出流的父类。</p>
+<p><code>Writer</code> 常用方法：</p>
+<ul>
+<li><code>write(int c)</code> : 写入单个字符。</li>
+<li><code>write(char[] cbuf)</code>：写入字符数组 <code>cbuf</code>，等价于 <code>write(cbuf, 0, cbuf.length)</code>。</li>
+<li><code>write(char[] cbuf, int off, int len)</code>：在 <code>write(char[] cbuf)</code> 方法的基础上增加了 <code>off</code> 参数（偏移量）和 <code>len</code> 参数（要读取的最大字符数）。</li>
+<li><code>write(String str)</code>：写入字符串，等价于 <code>write(str, 0, str.length())</code>。</li>
+<li><code>write(String str, int off, int len)</code>：在 <code>write(String str)</code> 方法的基础上增加了 <code>off</code> 参数（偏移量）和 <code>len</code> 参数（要读取的最大字符数）。</li>
+<li><code>append(CharSequence csq)</code>：将指定的字符序列附加到指定的 <code>Writer</code> 对象并返回该 <code>Writer</code> 对象。</li>
+<li><code>append(char c)</code>：将指定的字符附加到指定的 <code>Writer</code> 对象并返回该 <code>Writer</code> 对象。</li>
+<li><code>flush()</code>：刷新此输出流并强制写出所有缓冲的输出字符。</li>
+<li><code>close()</code>:关闭输出流释放相关的系统资源。</li>
+</ul>
+<p><code>OutputStreamWriter</code> 是字符流转换为字节流的桥梁，其子类 <code>FileWriter</code> 是基于该基础上的封装，可以直接将字符写入到文件。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 字符流转换为字节流的桥梁</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">OutputStreamWriter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Writer</span> {
+}
+<span class="hljs-comment">// 用于写入字符到文件</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">FileWriter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">OutputStreamWriter</span> {
+}
+</code></pre>
+<p><code>FileWriter</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">Writer</span> <span class="hljs-variable">output</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileWriter</span>(<span class="hljs-string">&quot;output.txt&quot;</span>)) {
+    output.write(<span class="hljs-string">&quot;你好，我是Guide。&quot;</span>);
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p>输出结果：</p>
+<p><img src="/img/image-20220419155802288-5d051886.png" alt="" loading="lazy"></p>
+<h2 id="字节缓冲流" tabindex="-1">字节缓冲流</h2>
+<p>IO 操作是很消耗性能的，缓冲流将数据加载至缓冲区，一次性读取/写入多个字节，从而避免频繁的 IO 操作，提高流的传输效率。</p>
+<p>字节缓冲流这里采用了装饰器模式来增强 <code>InputStream</code> 和 <code>OutputStream</code> 子类对象的功能。</p>
+<p>举个例子，我们可以通过 <code>BufferedInputStream</code>（字节缓冲输入流）来增强 <code>FileInputStream</code> 的功能。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 新建一个 BufferedInputStream 对象</span>
+<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bufferedInputStream</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;input.txt&quot;</span>));
+</code></pre>
+<p>字节流和字节缓冲流的性能差别主要体现在我们使用两者的时候都是调用 <code>write(int b)</code> 和 <code>read()</code> 这两个一次只读取一个字节的方法的时候。由于字节缓冲流内部有缓冲区（字节数组），因此，字节缓冲流会先将读取到的字节存放在缓存区，大幅减少 IO 次数，提高读取效率。</p>
+<p>我使用 <code>write(int b)</code> 和 <code>read()</code> 方法，分别通过字节流和字节缓冲流复制一个 <code>524.9 mb</code> 的 PDF 文件耗时对比如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-section">使用缓冲流复制PDF文件总耗时:15428 毫秒</span>
+<span class="hljs-section">使用普通字节流复制PDF文件总耗时:2555062 毫秒</span>
+</code></pre>
+<p>两者耗时差别非常大，缓冲流耗费的时间是字节流的 1/165。</p>
+<p>测试代码如下:</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Test</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">copy_pdf_to_another_pdf_buffer_stream</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">// 记录开始时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统.pdf&quot;</span>));
+         <span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统-副本.pdf&quot;</span>))) {
+        <span class="hljs-type">int</span> content;
+        <span class="hljs-keyword">while</span> ((content = bis.read()) != -<span class="hljs-number">1</span>) {
+            bos.write(content);
+        }
+    } <span class="hljs-keyword">catch</span> (IOException e) {
+        e.printStackTrace();
+    }
+    <span class="hljs-comment">// 记录结束时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    System.out.println(<span class="hljs-string">&quot;使用缓冲流复制PDF文件总耗时:&quot;</span> + (end - start) + <span class="hljs-string">&quot; 毫秒&quot;</span>);
+}
+
+<span class="hljs-meta">@Test</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">copy_pdf_to_another_pdf_stream</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">// 记录开始时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">FileInputStream</span> <span class="hljs-variable">fis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统.pdf&quot;</span>);
+         <span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">fos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统-副本.pdf&quot;</span>)) {
+        <span class="hljs-type">int</span> content;
+        <span class="hljs-keyword">while</span> ((content = fis.read()) != -<span class="hljs-number">1</span>) {
+            fos.write(content);
+        }
+    } <span class="hljs-keyword">catch</span> (IOException e) {
+        e.printStackTrace();
+    }
+    <span class="hljs-comment">// 记录结束时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    System.out.println(<span class="hljs-string">&quot;使用普通流复制PDF文件总耗时:&quot;</span> + (end - start) + <span class="hljs-string">&quot; 毫秒&quot;</span>);
+}
+</code></pre>
+<p>如果是调用 <code>read(byte b[])</code> 和 <code>write(byte b[], int off, int len)</code> 这两个写入一个字节数组的方法的话，只要字节数组的大小合适，两者的性能差距其实不大，基本可以忽略。</p>
+<p>这次我们使用 <code>read(byte b[])</code> 和 <code>write(byte b[], int off, int len)</code> 方法，分别通过字节流和字节缓冲流复制一个 524.9 mb 的 PDF 文件耗时对比如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-section">使用缓冲流复制PDF文件总耗时:695 毫秒</span>
+<span class="hljs-section">使用普通字节流复制PDF文件总耗时:989 毫秒</span>
+</code></pre>
+<p>两者耗时差别不是很大，缓冲流的性能要略微好一点点。</p>
+<p>测试代码如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@Test</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">copy_pdf_to_another_pdf_with_byte_array_buffer_stream</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">// 记录开始时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">BufferedInputStream</span> <span class="hljs-variable">bis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedInputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统.pdf&quot;</span>));
+         <span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统-副本.pdf&quot;</span>))) {
+        <span class="hljs-type">int</span> len;
+        <span class="hljs-type">byte</span>[] <span class="hljs-variable">bytes</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[<span class="hljs-number">4</span> * <span class="hljs-number">1024</span>];
+        <span class="hljs-keyword">while</span> ((len = bis.read(bytes)) != -<span class="hljs-number">1</span>) {
+            bos.write(bytes, <span class="hljs-number">0</span>, len);
+        }
+    } <span class="hljs-keyword">catch</span> (IOException e) {
+        e.printStackTrace();
+    }
+    <span class="hljs-comment">// 记录结束时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    System.out.println(<span class="hljs-string">&quot;使用缓冲流复制PDF文件总耗时:&quot;</span> + (end - start) + <span class="hljs-string">&quot; 毫秒&quot;</span>);
+}
+
+<span class="hljs-meta">@Test</span>
+<span class="hljs-type">void</span> <span class="hljs-title function_">copy_pdf_to_another_pdf_with_byte_array_stream</span><span class="hljs-params">()</span> {
+    <span class="hljs-comment">// 记录开始时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">FileInputStream</span> <span class="hljs-variable">fis</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileInputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统.pdf&quot;</span>);
+         <span class="hljs-type">FileOutputStream</span> <span class="hljs-variable">fos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;深入理解计算机操作系统-副本.pdf&quot;</span>)) {
+        <span class="hljs-type">int</span> len;
+        <span class="hljs-type">byte</span>[] <span class="hljs-variable">bytes</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[<span class="hljs-number">4</span> * <span class="hljs-number">1024</span>];
+        <span class="hljs-keyword">while</span> ((len = fis.read(bytes)) != -<span class="hljs-number">1</span>) {
+            fos.write(bytes, <span class="hljs-number">0</span>, len);
+        }
+    } <span class="hljs-keyword">catch</span> (IOException e) {
+        e.printStackTrace();
+    }
+    <span class="hljs-comment">// 记录结束时间</span>
+    <span class="hljs-type">long</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+    System.out.println(<span class="hljs-string">&quot;使用普通流复制PDF文件总耗时:&quot;</span> + (end - start) + <span class="hljs-string">&quot; 毫秒&quot;</span>);
+}
+</code></pre>
+<h3 id="bufferedinputstream字节缓冲输入流" tabindex="-1">BufferedInputStream（字节缓冲输入流）</h3>
+<p><code>BufferedInputStream</code> 从源头（通常是文件）读取数据（字节信息）到内存的过程中不会一个字节一个字节的读取，而是会先将读取到的字节存放在缓存区，并从内部缓冲区中单独读取字节。这样大幅减少了 IO 次数，提高了读取效率。</p>
+<p><code>BufferedInputStream</code> 内部维护了一个缓冲区，这个缓冲区实际就是一个字节数组，通过阅读 <code>BufferedInputStream</code> 源码即可得到这个结论。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">BufferedInputStream</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FilterInputStream</span> {
+    <span class="hljs-comment">// 内部缓冲区数组</span>
+    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">volatile</span> <span class="hljs-type">byte</span> buf[];
+    <span class="hljs-comment">// 缓冲区的默认大小</span>
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-type">int</span> <span class="hljs-variable">DEFAULT_BUFFER_SIZE</span> <span class="hljs-operator">=</span> <span class="hljs-number">8192</span>;
+    <span class="hljs-comment">// 使用默认的缓冲区大小</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">BufferedInputStream</span><span class="hljs-params">(InputStream in)</span> {
+        <span class="hljs-built_in">this</span>(in, DEFAULT_BUFFER_SIZE);
+    }
+    <span class="hljs-comment">// 自定义缓冲区大小</span>
+    <span class="hljs-type">public</span> <span class="hljs-title function_">BufferedInputStream</span><span class="hljs-params">(InputStream in, <span class="hljs-type">int</span> size)</span> {
+        <span class="hljs-built_in">super</span>(in);
+        <span class="hljs-keyword">if</span> (size &lt;= <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalArgumentException</span>(<span class="hljs-string">&quot;Buffer size &lt;= 0&quot;</span>);
+        }
+        buf = <span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[size];
+    }
+}
+</code></pre>
+<p>缓冲区的大小默认为 <strong>8192</strong> 字节，当然了，你也可以通过 <code>BufferedInputStream(InputStream in, int size)</code> 这个构造方法来指定缓冲区的大小。</p>
+<h3 id="bufferedoutputstream字节缓冲输出流" tabindex="-1">BufferedOutputStream（字节缓冲输出流）</h3>
+<p><code>BufferedOutputStream</code> 将数据（字节信息）写入到目的地（通常是文件）的过程中不会一个字节一个字节的写入，而是会先将要写入的字节存放在缓存区，并从内部缓冲区中单独写入字节。这样大幅减少了 IO 次数，提高了效率</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">try</span> (<span class="hljs-type">BufferedOutputStream</span> <span class="hljs-variable">bos</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BufferedOutputStream</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">FileOutputStream</span>(<span class="hljs-string">&quot;output.txt&quot;</span>))) {
+    <span class="hljs-type">byte</span>[] <span class="hljs-variable">array</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;JavaGuide&quot;</span>.getBytes();
+    bos.write(array);
+} <span class="hljs-keyword">catch</span> (IOException e) {
+    e.printStackTrace();
+}
+</code></pre>
+<p>类似于 <code>BufferedInputStream</code>，<code>BufferedOutputStream</code> 内部也维护了一个缓冲区，并且，这个缓存区的大小也是 <strong>8192</strong> 字节。</p>
+<h2 id="字符缓冲流" tabindex="-1">字符缓冲流</h2>
+<p><code>BufferedReader</code>（字符缓冲输入流）和 <code>BufferedWriter</code>（字符缓冲输出流）类似于 <code>BufferedInputStream</code>（字节缓冲输入流）和 <code>BufferedOutputStream</code>（字节缓冲输出流），不过前者内部维护的是字符缓冲区，用来操作字符信息。</p>
+<h2 id="打印流" tabindex="-1">打印流</h2>
+<p>下面这段代码大家经常使用吧？</p>
+<pre class="md-pre"><code class="hljs">System.out.print(<span class="hljs-string">&quot;Hello！&quot;</span>);
+System.out.println(<span class="hljs-string">&quot;Hello！&quot;</span>);
+</code></pre>
+<p><code>System.out</code> 实际是用于获取一个 <code>PrintStream</code> 对象，<code>print</code> 方法实际调用的是 <code>PrintStream</code> 对象的 <code>write</code> 方法。</p>
+<p><code>PrintStream</code> 属于字节打印流，与之对应的是 <code>PrintWriter</code>（字符打印流）。<code>PrintStream</code> 是 <code>OutputStream</code> 的子类，<code>PrintWriter</code> 是 <code>Writer</code> 的子类。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PrintStream</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">FilterOutputStream</span>
+    <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Appendable</span>, Closeable {
+}
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">PrintWriter</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Writer</span> {
+}
+</code></pre>
+<h2 id="随机访问流" tabindex="-1">随机访问流</h2>
+<p>这里要介绍的随机访问流指的是支持随意跳转到文件的任意位置进行读写的 <code>RandomAccessFile</code>。</p>
+<p><code>RandomAccessFile</code> 的构造方法如下，我们可以指定 <code>mode</code>（读写模式）。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// openAndDelete 参数默认为 false 表示打开文件并且这个文件不会被删除</span>
+<span class="hljs-type">public</span> <span class="hljs-title function_">RandomAccessFile</span><span class="hljs-params">(File file, String mode)</span>
+    <span class="hljs-keyword">throws</span> FileNotFoundException {
+    <span class="hljs-built_in">this</span>(file, mode, <span class="hljs-literal">false</span>);
+}
+<span class="hljs-comment">// 私有方法</span>
+<span class="hljs-type">private</span> <span class="hljs-title function_">RandomAccessFile</span><span class="hljs-params">(File file, String mode, <span class="hljs-type">boolean</span> openAndDelete)</span>  <span class="hljs-keyword">throws</span> FileNotFoundException{
+  <span class="hljs-comment">// 省略大部分代码</span>
+}
+</code></pre>
+<p>读写模式主要有下面四种：</p>
+<ul>
+<li><code>r</code> : 只读模式。</li>
+<li><code>rw</code>: 读写模式</li>
+<li><code>rws</code>: 相对于 <code>rw</code>，<code>rws</code> 同步更新对“文件的内容”或“元数据”的修改到外部存储设备。</li>
+<li><code>rwd</code> : 相对于 <code>rw</code>，<code>rwd</code> 同步更新对“文件的内容”的修改到外部存储设备。</li>
+</ul>
+<p>文件内容指的是文件中实际保存的数据，元数据则是用来描述文件属性比如文件的大小信息、创建和修改时间。</p>
+<p><code>RandomAccessFile</code> 中有一个文件指针用来表示下一个将要被写入或者读取的字节所处的位置。我们可以通过 <code>RandomAccessFile</code> 的 <code>seek(long pos)</code> 方法来设置文件指针的偏移量（距文件开头 <code>pos</code> 个字节处）。如果想要获取文件指针当前的位置的话，可以使用 <code>getFilePointer()</code> 方法。</p>
+<p><code>RandomAccessFile</code> 代码示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">RandomAccessFile</span> <span class="hljs-variable">randomAccessFile</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RandomAccessFile</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;input.txt&quot;</span>), <span class="hljs-string">&quot;rw&quot;</span>);
+System.out.println(<span class="hljs-string">&quot;读取之前的偏移量：&quot;</span> + randomAccessFile.getFilePointer() + <span class="hljs-string">&quot;,当前读取到的字符&quot;</span> + (<span class="hljs-type">char</span>) randomAccessFile.read() + <span class="hljs-string">&quot;，读取之后的偏移量：&quot;</span> + randomAccessFile.getFilePointer());
+<span class="hljs-comment">// 指针当前偏移量为 6</span>
+randomAccessFile.seek(<span class="hljs-number">6</span>);
+System.out.println(<span class="hljs-string">&quot;读取之前的偏移量：&quot;</span> + randomAccessFile.getFilePointer() + <span class="hljs-string">&quot;,当前读取到的字符&quot;</span> + (<span class="hljs-type">char</span>) randomAccessFile.read() + <span class="hljs-string">&quot;，读取之后的偏移量：&quot;</span> + randomAccessFile.getFilePointer());
+<span class="hljs-comment">// 从偏移量 7 的位置开始往后写入字节数据</span>
+randomAccessFile.write(<span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[]{<span class="hljs-string">&#x27;H&#x27;</span>, <span class="hljs-string">&#x27;I&#x27;</span>, <span class="hljs-string">&#x27;J&#x27;</span>, <span class="hljs-string">&#x27;K&#x27;</span>});
+<span class="hljs-comment">// 指针当前偏移量为 0，回到起始位置</span>
+randomAccessFile.seek(<span class="hljs-number">0</span>);
+System.out.println(<span class="hljs-string">&quot;读取之前的偏移量：&quot;</span> + randomAccessFile.getFilePointer() + <span class="hljs-string">&quot;,当前读取到的字符&quot;</span> + (<span class="hljs-type">char</span>) randomAccessFile.read() + <span class="hljs-string">&quot;，读取之后的偏移量：&quot;</span> + randomAccessFile.getFilePointer());
+</code></pre>
+<p><code>input.txt</code> 文件内容：</p>
+<p><img src="/img/image-20220421162050158-c3687e7b.png" alt="" loading="lazy"></p>
+<p>输出：</p>
+<pre class="md-pre"><code class="hljs">读取之前的偏移量：<span class="hljs-number">0</span>,当前读取到的字符<span class="hljs-selector-tag">A</span>，读取之后的偏移量：<span class="hljs-number">1</span>
+读取之前的偏移量：<span class="hljs-number">6</span>,当前读取到的字符<span class="hljs-selector-tag">G</span>，读取之后的偏移量：<span class="hljs-number">7</span>
+读取之前的偏移量：<span class="hljs-number">0</span>,当前读取到的字符<span class="hljs-selector-tag">A</span>，读取之后的偏移量：<span class="hljs-number">1</span>
+</code></pre>
+<p><code>input.txt</code> 文件内容变为 <code>ABCDEFGHIJK</code>。</p>
+<p><code>RandomAccessFile</code> 的 <code>write</code> 方法在写入对象的时候如果对应的位置已经有数据的话，会将其覆盖掉。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">RandomAccessFile</span> <span class="hljs-variable">randomAccessFile</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RandomAccessFile</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">File</span>(<span class="hljs-string">&quot;input.txt&quot;</span>), <span class="hljs-string">&quot;rw&quot;</span>);
+randomAccessFile.write(<span class="hljs-keyword">new</span> <span class="hljs-title class_">byte</span>[]{<span class="hljs-string">&#x27;H&#x27;</span>, <span class="hljs-string">&#x27;I&#x27;</span>, <span class="hljs-string">&#x27;J&#x27;</span>, <span class="hljs-string">&#x27;K&#x27;</span>});
+</code></pre>
+<p>假设运行上面这段程序之前 <code>input.txt</code> 文件内容变为 <code>ABCD</code>，运行之后则变为 <code>HIJK</code>。</p>
+<p><code>RandomAccessFile</code> 比较常见的一个应用就是实现大文件的 <strong>断点续传</strong>。何谓断点续传？简单来说就是上传文件中途暂停或失败（比如遇到网络问题）之后，不需要重新上传，只需要上传那些未成功上传的文件分片即可。分片（先将文件切分成多个文件分片）上传是断点续传的基础。</p>
+<p><code>RandomAccessFile</code> 可以帮助我们合并文件分片，示例代码如下：</p>
+<p><img src="/img/20210609164749122-8ae39c40.png" alt="" loading="lazy"></p>
+<p>我在<a href="/read/zhuanlan/java-mian-shi-zhi-bei.html">《Java 面试指北》</a>中详细介绍了大文件的上传问题。</p>
+<p><img src="/img/image-20220428104115362-df6e2e92.png" alt="" loading="lazy"></p>
+<p><code>RandomAccessFile</code> 的实现依赖于 <code>FileDescriptor</code>（文件描述符） 和 <code>FileChannel</code>（内存映射文件）。</p>
+<!-- @include: @article-footer.snippet.md -->

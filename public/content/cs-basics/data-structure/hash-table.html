@@ -1,0 +1,229 @@
+<p>哈希表（Hash Table，也叫散列表）的面试价值很高，因为它一头连着算法题里的快速查找和计数，另一头连着 Java <code>HashMap</code>、缓存、去重和分布式系统里的分片路由。</p>
+<p>这个问题问的是：如何把一个 key 快速映射到数组下标，并在冲突、扩容和极端数据下仍然保持可接受的查询效率。</p>
+<p>文章内容概览：</p>
+<ol>
+<li>什么是哈希表？</li>
+<li>哈希表怎么从 key 定位到数组下标？</li>
+<li>哈希冲突、负载因子和扩容分别解决什么问题？</li>
+<li>Java <code>HashMap</code> 和普通哈希表有什么关系？</li>
+<li>哈希表在算法题和工程场景中怎么用？</li>
+</ol>
+<p><img src="/img/hash-table-8efd5f49.png" alt="" loading="lazy"></p>
+<h2 id="什么是哈希表" tabindex="-1">什么是哈希表？</h2>
+<p>哈希表是一种用来存储 key-value 映射关系的数据结构。我们平时说的 Map、Dictionary、Associative Array，本质上都可以用哈希表来实现。</p>
+<p>如果 key 是连续整数，比如学生编号刚好是 <code>0</code> 到 <code>999</code>，直接用数组就能做到 <code>students[id]</code> 这种 <code>O(1)</code> 访问。但真实业务里的 key 通常不是这么规整：可能是字符串、用户 ID、订单号、URL，也可能是自定义对象。哈希表要做的事情，就是先把这些不同类型、不同长度的 key 通过哈希函数转换成一个整数，再把这个整数映射到数组下标。</p>
+<p>可以把哈希表拆成三层来看：</p>
+<ol>
+<li><strong>数组</strong>：真正存放数据的位置，也常被称为桶（bucket）。</li>
+<li><strong>哈希函数</strong>：负责把 key 转换成哈希值。</li>
+<li><strong>冲突解决策略</strong>：当多个 key 落到同一个桶时，决定这些 key 怎么继续存。</li>
+</ol>
+<p>所以，哈希表不是“完全没有查找过程”，而是通过哈希函数把查找范围大幅缩小：理想情况下，一次定位就能找到目标桶；发生冲突时，再在桶内部做少量比较。</p>
+<h2 id="为什么需要哈希表" tabindex="-1">为什么需要哈希表？</h2>
+<p>假设要判断一个 URL 是否已经爬取过，最直接的方式是把爬过的 URL 放到列表里，每来一个新 URL 就从头扫一遍。数据量很小时问题不大，但如果已经爬了几百万个 URL，每次都线性扫描，性能很快就扛不住。</p>
+<p>哈希表的思路是用空间换时间：多开一块数组空间，把 URL 通过哈希函数分散到不同桶里。查询时不再从头遍历所有 URL，而是先计算哈希值，直接跳到对应桶附近查找。</p>
+<p>这也是哈希表适合做查找、计数、去重、缓存索引的原因。它不关心元素之间的大小关系，也不保证有序；它关心的是“给定 key，能不能尽快找到对应的 value”。</p>
+<h2 id="哈希函数要解决什么问题" tabindex="-1">哈希函数要解决什么问题？</h2>
+<p>哈希函数的目标不是把 key 变得神秘，而是尽量把 key 均匀地分散到数组里。一个好的哈希函数通常要满足三个要求：</p>
+<table>
+<thead>
+<tr>
+<th>要求</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>稳定</td>
+<td>同一个 key 多次计算得到的哈希值应该一致</td>
+</tr>
+<tr>
+<td>计算快</td>
+<td>哈希函数本身不能太慢，否则会抵消哈希表的性能优势</td>
+</tr>
+<tr>
+<td>分布尽量散</td>
+<td>不同 key 尽量落到不同位置，减少哈希冲突</td>
+</tr>
+</tbody>
+</table>
+<p>需要注意的是，普通哈希表里的哈希函数和密码学哈希不是一回事。哈希表更关注速度和分布质量；密码学哈希更关注抗碰撞、抗篡改等安全性质。</p>
+<p>在 Java 里，自定义对象作为 <code>HashMap</code> 的 key 时，<code>hashCode()</code> 和 <code>equals()</code> 必须配合好：如果两个对象通过 <code>equals()</code> 判断相等，它们的 <code>hashCode()</code> 也必须相同；但两个对象的 <code>hashCode()</code> 相同，不代表它们一定相等。这一点正是哈希冲突会存在的根源之一。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>哈希函数负责把 key 映射成数组下标。</li>
+<li>哈希冲突无法完全避免，只能设计策略处理。</li>
+<li>哈希表平均查询、插入、删除是 <code>O(1)</code>，最坏情况可能退化。</li>
+<li>Java <code>HashMap</code> 使用数组 + 链表 + 红黑树，JDK 8 后链表过长会树化。</li>
+<li>哈希表常用于快速查找、计数、去重、缓存索引。</li>
+</ul>
+<h2 id="哈希表怎么工作" tabindex="-1">哈希表怎么工作？</h2>
+<p>以插入一个 key-value 为例，哈希表通常会做这几步：</p>
+<ol>
+<li>对 key 计算哈希值。</li>
+<li>根据数组长度把哈希值映射成下标。</li>
+<li>如果该位置为空，直接放入。</li>
+<li>如果发生冲突，按冲突解决策略继续处理。</li>
+</ol>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-variable">index</span> <span class="hljs-operator">=</span> hash(key) &amp; (table.length - <span class="hljs-number">1</span>);
+</code></pre>
+<p><code>HashMap</code> 的容量是 2 的幂时，可以用位运算替代取模。位运算更快，也方便扩容后重新分布。</p>
+<p>这里的 <code>hash(key)</code> 通常不是直接使用对象原始的 <code>hashCode()</code>，还会做一次扰动，让高位信息也参与到低位下标计算中。原因也很好理解：当数组长度是 2 的幂时，<code>length - 1</code> 的二进制低位全是 1，直接 <code>&amp;</code> 会更依赖哈希值低位。如果低位分布不好，冲突就会更集中。</p>
+<h2 id="哈希冲突怎么解决" tabindex="-1">哈希冲突怎么解决？</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>思路</th>
+<th>典型应用</th>
+<th>注意点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>拉链法</td>
+<td>数组位置上挂链表或树</td>
+<td>Java <code>HashMap</code></td>
+<td>链表过长会影响查询</td>
+</tr>
+<tr>
+<td>开放寻址法</td>
+<td>冲突后继续探测下一个位置</td>
+<td>一些高性能哈希表</td>
+<td>删除和负载因子处理更复杂</td>
+</tr>
+<tr>
+<td>再哈希</td>
+<td>冲突后换一个哈希函数</td>
+<td>理论方案较常见</td>
+<td>实现成本更高</td>
+</tr>
+</tbody>
+</table>
+<p>Java <code>HashMap</code> 主要使用拉链法。JDK 8 开始，当链表长度达到阈值并且数组容量足够大时，会把链表转换成红黑树，降低极端冲突下的查询成本。</p>
+<p>拉链法的优点是实现直观，删除也比较容易。数组中的每个桶不只放一个元素，而是挂一条链表，冲突的元素追加到这条链上。查询时先通过哈希定位桶，再在桶里的链表或树中比较 key。</p>
+<p>开放寻址法则不额外挂链表，所有元素都放在数组内部。发生冲突后，它会按照某种探测规则继续找下一个可用位置，比如线性探测、二次探测、双重哈希。它的好处是内存局部性通常更好，但删除元素、控制负载因子和处理连续聚集会更麻烦。</p>
+<h2 id="负载因子和扩容" tabindex="-1">负载因子和扩容</h2>
+<p>负载因子表示哈希表使用程度：</p>
+<pre class="md-pre"><code class="hljs">负载因子 = 元素数量 / 数组容量
+</code></pre>
+<p><code>HashMap</code> 默认负载因子是 <code>0.75</code>。当元素数量超过 <code>capacity * loadFactor</code> 时触发扩容，容量通常变为原来的 2 倍。</p>
+<p>扩容会带来一次 rehash 成本。面试里可以这样回答：哈希表单次插入平均是 <code>O(1)</code>，但触发扩容的那次会搬迁元素；从摊还角度看，多次插入仍然可以看作平均 <code>O(1)</code>。</p>
+<p>负载因子不能只看“空间利用率”。负载因子越高，数组越满，空间越省，但冲突概率也会上升；负载因子越低，冲突少一些，但会浪费更多桶位。<code>0.75</code> 是 Java <code>HashMap</code> 在时间和空间之间做的一个经验折中。</p>
+<h2 id="哈希表为什么平均是-o1" tabindex="-1">哈希表为什么平均是 O(1)？</h2>
+<p>哈希表的 <code>O(1)</code> 说的是平均情况或者期望情况，不是所有输入下的绝对保证。</p>
+<p>在哈希函数分布比较均匀、负载因子控制得当时，元素会比较分散，每个桶里的元素数量很少。因此查询时的主要成本就是：计算哈希值、定位数组下标、在桶里做少量比较，这些操作可以看作常数级。</p>
+<p>但如果大量 key 落到同一个桶，哈希表就会退化。使用拉链法时，桶内链表太长，查询会接近 <code>O(n)</code>；JDK 8 之后的 <code>HashMap</code> 会在满足条件时树化，把极端冲突下的桶内查询成本降到 <code>O(logn)</code> 级别，但这不代表哈希表永远不会受冲突影响。</p>
+<h2 id="和-java-hashmap-的关系" tabindex="-1">和 Java HashMap 的关系</h2>
+<p><code>HashMap</code> 常见追问：</p>
+<ul>
+<li>初始容量为什么建议设置成 2 的幂？</li>
+<li>默认负载因子为什么是 <code>0.75</code>？</li>
+<li>JDK 8 为什么引入红黑树？</li>
+<li><code>HashMap</code> 为什么线程不安全？</li>
+<li><code>HashMap</code> 和 <code>ConcurrentHashMap</code> 有什么区别？</li>
+</ul>
+<p>这些问题已经超出纯数据结构，但底层仍然是哈希表：数组负责定位，链表或红黑树负责处理冲突，扩容负责控制负载。</p>
+<h2 id="常见算法题模板" tabindex="-1">常见算法题模板</h2>
+<p>两数之和：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-title function_">twoSum</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">Map</span>&lt;Integer, Integer&gt; <span class="hljs-variable">map</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; nums.length; i++) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">need</span> <span class="hljs-operator">=</span> target - nums[i];
+        <span class="hljs-keyword">if</span> (map.containsKey(need)) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {map.get(need), i};
+        }
+        map.put(nums[i], i);
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {-<span class="hljs-number">1</span>, -<span class="hljs-number">1</span>};
+}
+</code></pre>
+<p>这段代码体现了哈希表最常见的用法：用空间换时间，把一次查找从 <code>O(n)</code> 降到平均 <code>O(1)</code>。</p>
+<h2 id="代表题精讲和为-k-的子数组" tabindex="-1">代表题精讲：和为 K 的子数组</h2>
+<p><a href="https://leetcode.cn/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">560. 和为 K 的子数组</a> 很适合用来理解“前缀和 + 哈希表”。题目要求统计连续子数组和等于 <code>k</code> 的个数。</p>
+<p>如果只枚举左右端点，复杂度是 <code>O(n^2)</code>。换个角度看，假设当前前缀和是 <code>sum</code>，想找到一个之前的前缀和 <code>prev</code>，使得：</p>
+<pre class="md-pre"><code class="hljs">sum - prev = k
+</code></pre>
+<p>也就是 <code>prev = sum - k</code>。所以只要用哈希表记录每个前缀和出现过几次，就能在遍历到当前位置时立刻知道有多少个子数组以当前位置结尾、和为 <code>k</code>。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">subarraySum</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> k)</span> {
+    <span class="hljs-type">Map</span>&lt;Integer, Integer&gt; <span class="hljs-variable">count</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+    count.put(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>);
+
+    <span class="hljs-type">int</span> <span class="hljs-variable">sum</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">ans</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> num : nums) {
+        sum += num;
+        ans += count.getOrDefault(sum - k, <span class="hljs-number">0</span>);
+        count.put(sum, count.getOrDefault(sum, <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
+    }
+    <span class="hljs-keyword">return</span> ans;
+}
+</code></pre>
+<p>这里 <code>count.put(0, 1)</code> 很重要，它表示空前缀出现过一次。这样当从数组开头到当前位置的和刚好等于 <code>k</code> 时，也能被统计到。</p>
+<p>另一个易错点是“先查再加”。如果先把当前 <code>sum</code> 加进哈希表，再查 <code>sum - k</code>，在 <code>k = 0</code> 时可能把当前前缀自己算进去，导致答案偏大。</p>
+<p>比如 <code>nums = [1]</code>、<code>k = 0</code>。正确的“先查再加”不会找到和为 0 的非空子数组；如果先把当前前缀和 <code>1</code> 加进去，再查 <code>sum - k = 1</code>，就会把当前前缀和自己配对，错误地多算 1 次。</p>
+<h2 id="java-hashmap-面试追问" tabindex="-1">Java HashMap 面试追问</h2>
+<p>哈希表文章只讲概念还不够，Java 后端面试里经常会继续追问 <code>HashMap</code>。可以按下面的层次准备：</p>
+<table>
+<thead>
+<tr>
+<th>追问</th>
+<th>回答重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么容量通常是 2 的幂？</td>
+<td>方便用 <code>hash &amp; (length - 1)</code> 定位，同时扩容后元素迁移更容易</td>
+</tr>
+<tr>
+<td>为什么默认负载因子是 <code>0.75</code>？</td>
+<td>在空间利用率和冲突概率之间取折中，太小浪费空间，太大冲突增多</td>
+</tr>
+<tr>
+<td>为什么 JDK 8 引入红黑树？</td>
+<td>极端冲突时链表查询会退化，树化后能把查询成本从链表长度级别降下来</td>
+</tr>
+<tr>
+<td>为什么 <code>HashMap</code> 线程不安全？</td>
+<td>多线程并发修改会破坏结构一致性，读写也没有可见性和互斥保证</td>
+</tr>
+<tr>
+<td>自定义 key 要注意什么？</td>
+<td><code>equals()</code> 和 <code>hashCode()</code> 要一致，参与计算的字段不要在放入后再被修改</td>
+</tr>
+</tbody>
+</table>
+<p>面试里不用把源码细节全部背下来，但要讲清楚一条主线：数组定位、冲突处理、扩容迁移、极端冲突优化，这四件事共同决定了 <code>HashMap</code> 的性能表现。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>哈希表平均 <code>O(1)</code> 不等于任何情况下都是 <code>O(1)</code>。</li>
+<li>自定义对象作为 key 时，要正确重写 <code>equals()</code> 和 <code>hashCode()</code>。</li>
+<li>可变对象不适合直接作为哈希表 key。</li>
+<li>统计频率时，数组计数比 <code>HashMap</code> 更适合字符集很小的场景。</li>
+<li>哈希表能加速查找，但会带来额外空间。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>哈希表为什么平均查询是 <code>O(1)</code>？什么情况下会退化？</li>
+<li>拉链法和开放寻址法有什么区别？</li>
+<li><code>HashMap</code> 为什么需要扩容？扩容成本怎么理解？</li>
+<li>为什么自定义对象作为 key 时要同时重写 <code>equals()</code> 和 <code>hashCode()</code>？</li>
+<li>前缀和 + 哈希表为什么要“先查再加”？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/two-sum/" target="_blank" rel="noopener">1. 两数之和</a></li>
+<li><a href="https://leetcode.cn/problems/valid-anagram/" target="_blank" rel="noopener">242. 有效的字母异位词</a></li>
+<li><a href="https://leetcode.cn/problems/group-anagrams/" target="_blank" rel="noopener">49. 字母异位词分组</a></li>
+<li><a href="https://leetcode.cn/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">560. 和为 K 的子数组</a></li>
+<li><a href="https://leetcode.cn/problems/lru-cache/" target="_blank" rel="noopener">146. LRU 缓存</a></li>
+</ul>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://algs4.cs.princeton.edu/34hash/" target="_blank" rel="noopener">Algorithms, 4th Edition：Hash Tables</a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html" target="_blank" rel="noopener">Java SE 21 API：HashMap</a></li>
+<li><a href="https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/util/HashMap.java" target="_blank" rel="noopener">OpenJDK：HashMap 源码</a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#hashCode%28%29" target="_blank" rel="noopener">Java SE 21 API：Object#hashCode</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

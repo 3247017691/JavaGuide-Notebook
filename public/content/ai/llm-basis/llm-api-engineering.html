@@ -1,0 +1,985 @@
+<p>本地调通一个大模型 API 只说明网络和参数基本可用。接进真实业务后，首字延迟、半截 JSON、429、取消和重复执行都要处理：</p>
+<ul>
+<li>用户等了 8 秒还看不到第一个字，以为系统卡死，直接刷新页面。</li>
+<li>模型返回了一半 JSON，前端解析失败，后端日志里只有一串残缺的 <code>{&quot;answer&quot;: &quot;根因是</code>。</li>
+<li>供应商偶发 429，你的服务开始疯狂重试，越重试越被限流。</li>
+<li>用户点了取消，浏览器断开了，但后端还在消耗 Token。</li>
+<li>同一个业务请求因为重试执行了两次，落库、扣费、发通知全重复了。</li>
+</ul>
+<p>发送 HTTP 请求只是调用链的一小段。业务入口、Prompt 组装、模型路由、流式响应、状态落库和观测需要一起设计，尤其要处理取消、重试、配额和半成品输出。</p>
+<p>上文默认你理解 Token、上下文窗口、Temperature、Top-p 等基础概念。如果还有疑问，建议先看<a href="/read/ai/llm-basis/llm-operation-mechanism.html">《LLM 运行机制：Token、上下文窗口与采样参数怎么影响输出》</a>和<a href="/read/ai/agent/prompt-engineering.html">《大模型提示词工程（Prompt Engineering）是什么？提示词技巧有哪些？》</a>。</p>
+<p>说明：OpenAI、Anthropic、Gemini 等供应商能力和参数变化较快，生产系统应从控制台、响应头或配置中心动态管理，而非依赖文档里的静态数字。</p>
+<h2 id="一次生产级-llm-调用包含哪些阶段" tabindex="-1">一次生产级 LLM 调用包含哪些阶段？</h2>
+<p>只盯着供应商返回了什么，很难查清一次大模型调用的问题。请求会跨过业务系统、上下文系统、模型网关、外部供应商和前端展示层，任何一段缺少状态与错误处理，最后都可能表现成“模型不稳定”。</p>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart LR
+    User[&quot;用户请求&quot;]:::client
+    App[&quot;业务服务&quot;]:::business
+    Prompt[&quot;Prompt 组装&quot;]:::business
+    Gateway[&quot;模型网关&quot;]:::gateway
+    Provider[&quot;供应商 API&quot;]:::external
+    Stream[&quot;流式事件&quot;]:::infra
+    Parser[&quot;增量解析&quot;]:::infra
+    Sink[&quot;前端/落库/观测&quot;]:::success
+
+    User --&gt; App --&gt; Prompt --&gt; Gateway --&gt; Provider --&gt; Stream --&gt; Parser --&gt; Sink
+
+    classDef client fill:#00838F,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef business fill:#E99151,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef gateway fill:#7B68EE,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef external fill:#607D8B,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef infra fill:#9B59B6,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef success fill:#4CA497,color:#FFFFFF,stroke:none,rx:10,ry:10
+
+    linkStyle default stroke-width:2px,stroke:#333333,opacity:0.8
+</pre></div>
+<p>拆开看，一次请求通常包含 8 个阶段：</p>
+<ol>
+<li><strong>业务请求进入</strong>：校验用户身份、租户、套餐、功能权限、请求大小。</li>
+<li><strong>上下文组装</strong>：拼 System Prompt、用户输入、历史消息、RAG 证据、工具 Schema、输出格式约束。</li>
+<li><strong>Token 预算预估</strong>：估算输入 Token，预留输出 Token，决定是否裁剪历史、压缩上下文或换小模型。</li>
+<li><strong>模型网关路由</strong>：选择模型、供应商、区域、超时参数、重试策略、限流桶。</li>
+<li><strong>供应商 API 调用</strong>：同步返回或流式返回，可能经过 SSE、WebSocket 或普通 HTTP 响应体。</li>
+<li><strong>响应解析</strong>：处理 delta、finish reason、tool call、usage、拒答、结构化 JSON、异常中断。</li>
+<li><strong>状态回写</strong>：保存完整回答、增量片段、Token 用量、调用成本、失败原因和业务状态。</li>
+<li><strong>观测与告警</strong>：记录 traceId、providerRequestId、TTFT、总耗时、重试次数、429 次数、解析失败率。</li>
+</ol>
+<p>模型调用最好收口到统一的 <code>LLMGateway</code> 或共享客户端层，由它处理 API Key、超时、重试、限流、日志和供应商切换。否则每个业务模块都会形成一套略有差异的失败语义，排查时很难复现。</p>
+<p><img src="/img/llm-gateway-overview-cd018e58.png" alt="" loading="lazy"></p>
+<h2 id="同步返回和流式返回有什么区别" tabindex="-1">同步返回和流式返回有什么区别？</h2>
+<p>同步调用要等模型生成完全部内容，再一次性返回完整结果。流式输出则是边生成边返回：模型每产生一段文本或一个事件，供应商就通过长连接把增量推给调用方。OpenAI 官方文档把 HTTP streaming 放在 SSE 场景下描述；Anthropic Messages API 也支持通过 SSE 增量返回事件；Gemini API 同样提供标准、流式和实时相关接口。具体字段和模型能力会变，<strong>以官方文档最新展示为准</strong>。</p>
+<p><strong>为什么 Streaming 能降低 TTFT？</strong></p>
+<p>TTFT（Time To First Token）指从请求发出到收到第一个可展示 Token 的时间。同步返回时，用户要等模型生成完整答案；例如模型要生成 800 个 Token，后端必须等这 800 个 Token 都完成才把结果返回。流式返回只需等到第一个片段，用户就能看到内容逐步出现。</p>
+<p>流式输出没有让模型少算 Token，也不会天然省钱。它缩短的是首字等待时间，并不一定缩短整次生成的耗时。</p>
+<table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>同步返回</th>
+<th>流式返回</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>首字延迟</td>
+<td>高，需要等完整结果</td>
+<td>低，收到第一个片段即可展示</td>
+</tr>
+<tr>
+<td>端到端总耗时</td>
+<td>取决于完整生成时间</td>
+<td>通常仍取决于完整生成时间</td>
+</tr>
+<tr>
+<td>前端体验</td>
+<td>像提交表单后等待结果</td>
+<td>像聊天软件逐字出现</td>
+</tr>
+<tr>
+<td>后端实现</td>
+<td>简单，拿到完整字符串再处理</td>
+<td>复杂，需要处理增量事件、取消、断流</td>
+</tr>
+<tr>
+<td>结构化解析</td>
+<td>简单，完整 JSON 一次解析</td>
+<td>需要缓存完整内容，或使用增量解析器</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>短文本、后台任务、严格事务</td>
+<td>聊天、写作、报告生成、长回答</td>
+</tr>
+<tr>
+<td>不适合场景</td>
+<td>用户强交互的长回答</td>
+<td>强事务、必须一次性校验完整结果的链路</td>
+</tr>
+</tbody>
+</table>
+<p>面向用户展示的长文本通常优先流式返回；后台批处理和必须拿到完整对象才能提交的任务更适合同步返回。</p>
+<h2 id="ssewebsocket-和-http-chunked-这三种流式协议怎么选" tabindex="-1">SSE、WebSocket 和 HTTP chunked 这三种流式协议怎么选</h2>
+<p>流式输出有几种常见承载方式，别把它们混成一个东西。</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>核心特点</th>
+<th>适合场景</th>
+<th>边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SSE</td>
+<td>浏览器原生 <code>EventSource</code>，服务端到客户端单向推送，格式是 <code>text/event-stream</code></td>
+<td>文本聊天、模型增量输出、状态通知</td>
+<td>单向通信；复杂双向控制需要额外 HTTP 请求</td>
+</tr>
+<tr>
+<td>WebSocket</td>
+<td>双向长连接，客户端和服务端都能随时发消息</td>
+<td>实时语音、多人协作、需要频繁取消或插话</td>
+<td>连接管理更复杂，网关、鉴权、心跳都要自己管好</td>
+</tr>
+<tr>
+<td>HTTP chunked</td>
+<td>HTTP/1.1 的分块传输机制，响应体分块发送</td>
+<td>后端到后端流式代理、低层传输</td>
+<td>它是传输机制，不是应用事件协议；HTTP/2 之后有自己的流式机制</td>
+</tr>
+</tbody>
+</table>
+<p><img src="/img/llm-api-engineering-streaming-protocols-510615f6.webp" alt="" loading="lazy"></p>
+<p>SSE 的优势是简单。浏览器端几行代码就能接收事件，服务端按 <code>data:</code> 一段段写出去即可。MDN 对 EventSource 的描述也强调了它和 WebSocket 的区别：SSE 是服务端到客户端的单向数据流。</p>
+<p>WebSocket 适合更实时、更复杂的交互。比如语音 Agent 里，客户端要不断上传音频，服务端要不断返回 ASR、LLM、TTS 状态，还要支持用户中途打断。这种场景用 WebSocket 更自然。</p>
+<p>HTTP chunked 更底层。很多服务端框架在没有 <code>Content-Length</code> 的情况下会用分块响应，它能实现“边写边发”，但不会帮你定义事件类型、重连语义、消息边界。业务层仍然要自己设计协议。</p>
+<h3 id="sse-协议的事件边界" tabindex="-1">SSE 协议的事件边界</h3>
+<p>SSE 通常通过 HTTP 响应承载，媒体类型是 <code>text/event-stream</code>，消息格式是一份 UTF-8 文本事件流。每个事件由若干行字段组成，事件之间用<strong>空行</strong>分隔；实际换行可以是 <code>\n</code> 或 <code>\r\n</code>，所以事件分隔常见写法是 <code>\n\n</code> 或 <code>\r\n\r\n</code>。</p>
+<p>常用字段如下：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data</code></td>
+<td>业务载荷；允许多行 <code>data:</code>，客户端会按规范拼接</td>
+</tr>
+<tr>
+<td><code>event</code></td>
+<td>自定义事件名；浏览器默认事件类型是 <code>message</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>事件序号；配合浏览器重连语义可做断点提示</td>
+</tr>
+<tr>
+<td><code>retry</code></td>
+<td>建议的重连间隔（毫秒）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>空行才是事件分隔符</strong>。单个换行只是结束当前字段行，不会直接结束事件。服务端手写 <code>data:</code> 时如果没有给正文每一行加字段前缀，客户端可能丢掉后续行；额外写入空行还会提前结束事件。Markdown 列表和代码块很容易触发这些情况。</p>
+<p>小 G 在<a href="/read/zhuanlan/interview-guide.html">《SpringAI 智能面试平台+RAG 知识库》</a>的知识库问答里用的就是 SSE：模型一边生成，浏览器一边打字机展示；链路不长，但协议细节一个不落下。</p>
+<h3 id="spring-boot-spring-ai-的-sse-写法" tabindex="-1">Spring Boot + Spring AI 的 SSE 写法</h3>
+<p>Java 侧常见做法是 <strong><code>Content-Type: text/event-stream</code></strong>，再用响应式流往外推。Spring 提供了 <code>ServerSentEvent&lt;T&gt;</code>，避免手写 <code>data:</code> 和 <code>\n\n</code> 拼串出错：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">@GetMapping(value = &quot;/chat/stream&quot;, produces = MediaType.TEXT_EVENT_STREAM_VALUE)</span>
+<span class="hljs-keyword">public</span> <span class="hljs-type">Flux</span>&lt;ServerSentEvent&lt;String&gt;&gt; <span class="hljs-title function_">stream</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> Flux.interval(Duration.ofMillis(<span class="hljs-number">500</span>))
+        .map(seq -&gt; ServerSentEvent.&lt;String&gt;builder()
+            .id(Long.toString(seq))
+            .event(<span class="hljs-string">&quot;token&quot;</span>)
+            .data(<span class="hljs-string">&quot;片段-&quot;</span> + seq)
+            .retry(Duration.ofSeconds(<span class="hljs-number">3</span>))
+            .build());
+}
+</code></pre>
+<p>和大模型对接时，增量源头通常是 SDK 或框架暴露的流式接口。以 Spring AI 为例，<code>ChatClient</code> 侧启用流式后拿到 <code>Flux&lt;String&gt;</code>，再映射成 SSE 推给前端：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">Flux</span>&lt;String&gt; <span class="hljs-variable">tokens</span> <span class="hljs-operator">=</span> chatClient.prompt()
+    .system(systemPrompt)
+    .user(userPrompt)
+    .stream()
+    .content();
+</code></pre>
+<p>工程上要心里有数：WebMVC + <code>Flux</code> 只是在 Controller 出口用了响应式类型做 SSE，底层仍是 Servlet 容器。线程池、连接数和超时仍要按「长请求」来治理；Java 21 虚拟线程可以把「占着一个平台线程傻等」的成本降下来，这对动辄数十秒的生成链路很实用。</p>
+<h3 id="模型正文包含换行时怎么处理" tabindex="-1">模型正文包含换行时怎么处理</h3>
+<p>手写原始 SSE 文本时，每一行正文都要带 <code>data:</code> 前缀，空行才表示一个事件结束。浏览器会把同一事件的多行 <code>data:</code> 用换行拼起来。</p>
+<p>使用 Spring <code>ServerSentEvent</code> 和对应的消息编码器时，不要先把正文里的 <code>\n</code> 替换成字面量 <code>\\n</code>。手工替换会改变业务文本，还要求前端再做一轮容易冲突的反转义。把原始字符串交给编码器即可：</p>
+<pre class="md-pre"><code class="hljs">.map(chunk -&gt; ServerSentEvent.&lt;String&gt;builder()
+    .event(<span class="hljs-string">&quot;token&quot;</span>)
+    .data(chunk)
+    .build())
+</code></pre>
+<p>如果链路中间要经过自研网关或非 SSE 客户端，可以把每个增量封装成 JSON，例如 <code>{&quot;sequence&quot;:12,&quot;delta&quot;:&quot;第一行\n第二行&quot;}</code>，再由 JSON 编码器处理转义。两种方案都要测试 LF、CRLF、空行、代码块以及断流时的半个事件。</p>
+<h3 id="nginx-与网关的流式配置" tabindex="-1">Nginx 与网关的流式配置</h3>
+<p>只要前面挂了 Nginx 或其它响应缓冲型网关，<code>text/event-stream</code> 可能被攒够一整块才下发，用户侧的 TTFT 体感瞬间回到同步接口。</p>
+<p>最小改动通常是：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-section">location</span> /api/ {
+    <span class="hljs-attribute">proxy_pass</span> http://backend;
+    <span class="hljs-attribute">proxy_buffering</span> <span class="hljs-literal">off</span>;
+    <span class="hljs-attribute">proxy_cache</span> <span class="hljs-literal">off</span>;
+    <span class="hljs-attribute">proxy_read_timeout</span> <span class="hljs-number">300s</span>;
+    <span class="hljs-attribute">proxy_set_header</span> Connection <span class="hljs-string">&quot;&quot;</span>;
+    <span class="hljs-attribute">add_header</span> Cache-Control <span class="hljs-literal">no</span>-cache;
+}
+</code></pre>
+<p>再配合 <code>proxy_read_timeout</code>（或等价配置）把「长生成」守住，否则链路会在沉默超时处被中间件切断。</p>
+<h3 id="流式异常的四类场景" tabindex="-1">流式异常的四类场景</h3>
+<p>流式链路的结束状态需要单独设计。取消、超时、断流和重连不能共用一个“失败”状态。</p>
+<p><img src="/img/llm-api-engineering-streaming-exceptions-dd357375.webp" alt="" loading="lazy"></p>
+<p><strong>用户取消。</strong></p>
+<p>用户关闭页面、点击停止生成、切换会话，都应该触发取消。后端要同时取消：</p>
+<ul>
+<li>到供应商 API 的请求。</li>
+<li>正在解析的响应流。</li>
+<li>后续 TTS、工具调用、落库任务。</li>
+<li>还没提交的增量缓存。</li>
+</ul>
+<p>不能只在前端停止展示。前端停了而供应商请求仍在生成，Token 仍会继续消耗。</p>
+<p><strong>超时。</strong></p>
+<p>超时至少分三层：</p>
+<ul>
+<li>连接超时：连不上供应商。</li>
+<li>TTFT 超时：连接上了，但迟迟没有第一个事件。</li>
+<li>总时长超时：一直有输出，但超过业务可接受时间。</li>
+</ul>
+<p>三者要分开记录。TTFT 超时通常指向模型排队、上下文过长或供应商抖动；总时长超时可能只是用户让模型写太长。</p>
+<p><strong>断流。</strong></p>
+<p>断流时不要轻易把半截内容当成成功。正确做法是记录 <code>finish_reason</code> 或最后事件状态，如果没有正常结束标记，就把本次调用标记为 <code>INTERRUPTED</code>，前端展示“已中断，可重新生成”，而不是悄悄落成完整答案。</p>
+<p><strong>重连。</strong></p>
+<p>SSE 的 <code>EventSource</code> 有自动重连能力，但大模型输出不是普通新闻推送。重连后是否能从断点续传，取决于你的服务端是否保存了事件序号、增量片段和供应商调用状态。多数情况下，供应商侧流已经断掉，无法真正从 Token 级别续上。</p>
+<p>更稳的做法是：</p>
+<ul>
+<li>服务端为每个流式响应生成 <code>messageId</code> 和递增 <code>sequence</code>。</li>
+<li>已发送片段写入短期缓存。</li>
+<li>前端重连时先补发已缓存片段。</li>
+<li>如果供应商流已结束或失效，提示用户重新生成，而不是假装无缝续写。</li>
+</ul>
+<h2 id="哪些错误能重试哪些不能重试" tabindex="-1">哪些错误能重试，哪些不能重试？</h2>
+<p>重试是后端工程师最熟悉也最容易滥用的能力。</p>
+<p>大模型 API 的重试有两个特殊点：</p>
+<ol>
+<li><strong>请求贵</strong>：失败请求也可能消耗配额，甚至已经消耗了部分 Token。</li>
+<li><strong>输出非确定</strong>：即使 Prompt 一样，第二次返回也可能和第一次不同。</li>
+</ol>
+<p><img src="/img/llm-api-engineering-retry-idempotency-329ec34c.webp" alt="" loading="lazy"></p>
+<h3 id="错误类型对照表" tabindex="-1">错误类型对照表</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>示例</th>
+<th>是否建议重试</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>网络瞬断</td>
+<td>连接重置、DNS 抖动、读超时</td>
+<td>可以</td>
+<td>指数退避 + 抖动，限制最大次数</td>
+</tr>
+<tr>
+<td>供应商 5xx</td>
+<td>500、502、503、504</td>
+<td>可以</td>
+<td>短暂重试，超过阈值切换模型或降级</td>
+</tr>
+<tr>
+<td>供应商过载</td>
+<td>Anthropic 529、类似 overloaded 错误</td>
+<td>可以</td>
+<td>慢重试，必要时熔断该供应商</td>
+</tr>
+<tr>
+<td>429 限流</td>
+<td>RPM、TPM、RPD、并发限制超出</td>
+<td>谨慎</td>
+<td>优先看 <code>Retry-After</code> 和限流头，排队或降级</td>
+</tr>
+<tr>
+<td>流式中断</td>
+<td>未收到正常结束事件</td>
+<td>视场景</td>
+<td>用户可见任务不自动重试，后台任务可幂等重试</td>
+</tr>
+<tr>
+<td>400 参数错误</td>
+<td>Schema 不合法、字段缺失、上下文超限</td>
+<td>不建议</td>
+<td>修请求，不要重试同一 payload</td>
+</tr>
+<tr>
+<td>401/403 鉴权错误</td>
+<td>API Key 无效、权限不足</td>
+<td>不建议</td>
+<td>告警并停用对应 Key</td>
+</tr>
+<tr>
+<td>安全拒答</td>
+<td>内容策略拒绝</td>
+<td>不建议</td>
+<td>进入业务拒答流程</td>
+</tr>
+<tr>
+<td>解析失败</td>
+<td>JSON 不完整、字段类型错误</td>
+<td>可有限重试</td>
+<td>带失败原因二次修复，最多 1-2 次</td>
+</tr>
+</tbody>
+</table>
+<p>OpenAI 官方限流文档建议对 rate limit error 使用随机指数退避，同时提醒失败请求也会计入每分钟限制；Anthropic 官方错误文档中明确列出了 429 rate limit、500 api error、504 timeout、529 overloaded 等错误类型。接入其他供应商时也需要按其错误码区分可重试、不可重试和过载状态。</p>
+<h3 id="指数退避和抖动" tabindex="-1">指数退避和抖动</h3>
+<p>指数退避会随着失败次数增加等待时间，直到达到最大等待时间或最大重试次数。抖动（Jitter）再给等待时间加一段随机量，避免所有请求同时重试，把刚恢复的系统再次打进限流。</p>
+<p>一个实用公式：</p>
+<pre class="md-pre"><code class="hljs">sleep = min(maxDelay, baseDelay * 2^retryCount) + random(0, jitter)
+</code></pre>
+<p>生产里别忘了加两条硬约束：</p>
+<ul>
+<li><strong>最大重试次数</strong>：通常 2-3 次足够，别无限重试。</li>
+<li><strong>总体截止时间</strong>：用户请求有整体 SLA，例如 15 秒，到点就失败，不要因为重试拖成 1 分钟。</li>
+</ul>
+<h3 id="幂等-key-和去重机制" tabindex="-1">幂等 Key 和去重机制</h3>
+<p>只要有重试，就必须讨论幂等。</p>
+<p>幂等 Key 可以由业务生成，例如：</p>
+<pre class="md-pre"><code class="hljs">tenantId:userId:conversationId:messageId:attemptGroup
+</code></pre>
+<p>服务端拿到请求后，先查这个 Key 是否已经存在：</p>
+<ul>
+<li>如果已经成功，直接返回历史结果。</li>
+<li>如果正在生成，返回同一个流式任务的订阅地址。</li>
+<li>如果失败且允许重试，创建新的 attempt，但仍然挂在同一个业务消息下。</li>
+<li>如果失败但不可重试，直接返回失败原因。</li>
+</ul>
+<p>这能避免两个坑：</p>
+<ol>
+<li>用户狂点“重新发送”，后端创建多个模型调用。</li>
+<li>网关超时后自动重试，第一次其实已经成功落库，第二次又写了一条重复消息。</li>
+</ol>
+<h3 id="响应重复的处理" tabindex="-1">响应重复的处理</h3>
+<p>重试后的响应可能重复、冲突或部分重叠。</p>
+<p>对聊天类应用，建议把一次用户消息下的多次模型调用区分为：</p>
+<ul>
+<li><code>message_id</code>：业务消息 ID，对用户可见。</li>
+<li><code>attempt_id</code>：模型调用尝试 ID，对系统可见。</li>
+<li><code>provider_request_id</code>：供应商请求 ID，用于排查。</li>
+<li><code>stream_sequence</code>：增量片段序号，用于去重和补发。</li>
+</ul>
+<p>落库时，只允许一个 attempt 成为 <code>final</code>。其他 attempt 保留为诊断记录，不参与用户上下文。这样既能排查问题，又不会污染下一轮 Prompt。</p>
+<h2 id="为什么要限流如何限流" tabindex="-1">为什么要限流？如何限流？</h2>
+<p>很多团队的限流意识，是从收到第一个 429 开始的。</p>
+<p>收到供应商 429 才开始限流，说明系统缺少自己的容量管理。429 只能作为外部保护信号，不能代替应用侧的预算、排队和并发控制。</p>
+<h3 id="限流的四层架构" tabindex="-1">限流的四层架构</h3>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>限制对象</th>
+<th>核心目的</th>
+<th>常见策略</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用户级</td>
+<td>单个用户或账号</td>
+<td>防止滥用、误操作、脚本刷接口</td>
+<td>每分钟请求数、每日 Token 上限</td>
+</tr>
+<tr>
+<td>租户级</td>
+<td>企业、团队、项目</td>
+<td>控制套餐成本和公平性</td>
+<td>月度配额、并发上限、优先级队列</td>
+</tr>
+<tr>
+<td>模型级</td>
+<td>某个模型或模型族</td>
+<td>避免热门模型被打满</td>
+<td>模型维度令牌桶、降级到备用模型</td>
+</tr>
+<tr>
+<td>供应商级</td>
+<td>OpenAI、Anthropic、Gemini 等</td>
+<td>保护外部依赖和 API Key</td>
+<td>全局 RPM、TPM、并发、熔断</td>
+</tr>
+</tbody>
+</table>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart TB
+    subgraph User[&quot;用户层&quot;]
+        U1[&quot;单用户/账号&quot;]:::client
+        U2[&quot;每分钟请求数&quot;]:::info
+        U3[&quot;每日 Token 上限&quot;]:::info
+    end
+
+    subgraph Tenant[&quot;租户层&quot;]
+        T1[&quot;企业/团队/项目&quot;]:::business
+        T2[&quot;月度配额&quot;]:::info
+        T3[&quot;并发上限&quot;]:::info
+    end
+
+    subgraph Model[&quot;模型层&quot;]
+        M1[&quot;指定模型/模型族&quot;]:::gateway
+        M2[&quot;令牌桶&quot;]:::info
+        M3[&quot;降级备用模型&quot;]:::info
+    end
+
+    subgraph Provider[&quot;供应商层&quot;]
+        P1[&quot;OpenAI/Anthropic\n/Gemini&quot;]:::external
+        P2[&quot;全局 RPM/TPM&quot;]:::info
+        P3[&quot;熔断器&quot;]:::info
+    end
+
+    User --&gt; Tenant --&gt; Model --&gt; Provider
+
+    classDef client fill:#00838F,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef business fill:#E99151,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef gateway fill:#7B68EE,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef external fill:#607D8B,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef success fill:#4CA497,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef info fill:#95A5A6,color:#FFFFFF,stroke:none,rx:10,ry:10
+
+    style User fill:#F5F7FA,stroke:#005D7B,stroke-width:2px,rx:10,ry:10
+    style Tenant fill:#F5F7FA,stroke:#005D7B,stroke-width:2px,rx:10,ry:10
+    style Model fill:#F5F7FA,stroke:#005D7B,stroke-width:2px,rx:10,ry:10
+    style Provider fill:#F5F7FA,stroke:#005D7B,stroke-width:2px,rx:10,ry:10
+
+    linkStyle default stroke-width:2px,stroke:#333333,opacity:0.8
+</pre></div>
+<p>Gemini 官方限流文档把限流维度拆成 RPM、输入 TPM、RPD，并说明限制按项目而不是单个 API Key 应用；OpenAI 官方文档也展示了请求数、Token 数、剩余额度等 rate limit header。具体数值和模型关系变化很快，生产系统不要把文档里的静态数字写死，要从控制台、响应头或配置中心动态管理。</p>
+<h3 id="为什么-token-预算比请求数更重要" tabindex="-1">为什么 Token 预算比请求数更重要</h3>
+<p>传统 API 限流通常按 QPS。大模型 API 只按 QPS 不够。</p>
+<p>两个请求的成本可能差很多：</p>
+<ul>
+<li>请求 A：输入 500 Token，输出 100 Token。</li>
+<li>请求 B：输入 80K Token，输出 8K Token。</li>
+</ul>
+<p>它们都是 1 次请求，但对模型推理、供应商配额和账单的压力完全不是一个量级。</p>
+<p>所以限流至少要同时看：</p>
+<ul>
+<li><strong>RPM</strong>：每分钟请求数。</li>
+<li><strong>TPM</strong>：每分钟 Token 数。</li>
+<li><strong>并发数</strong>：正在生成的请求数量。</li>
+<li><strong>上下文大小</strong>：单请求输入 Token。</li>
+<li><strong>最大输出</strong>：<code>max_tokens</code> 或类似参数。</li>
+<li><strong>日/月预算</strong>：租户或用户总成本。</li>
+</ul>
+<p>请求应先扣预算，再发给供应商。</p>
+<p>请求进入网关后，先估算 <code>input_tokens + reserved_output_tokens</code>，在用户、租户、模型、供应商几个桶里尝试扣减。扣不到就不要发给供应商，直接排队、降级或拒绝。</p>
+<h3 id="常见限流策略对比" tabindex="-1">常见限流策略对比</h3>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>适合场景</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固定窗口</td>
+<td>简单后台任务、管理接口</td>
+<td>实现简单，容易统计</td>
+<td>窗口边界容易突刺</td>
+</tr>
+<tr>
+<td>滑动窗口</td>
+<td>用户级请求限制</td>
+<td>边界更平滑</td>
+<td>实现和存储成本更高</td>
+</tr>
+<tr>
+<td>令牌桶</td>
+<td>模型调用、Token 预算</td>
+<td>支持一定突发，工程上常用</td>
+<td>参数需要调优</td>
+</tr>
+<tr>
+<td>漏桶</td>
+<td>严格平滑出流量</td>
+<td>输出稳定，适合保护供应商</td>
+<td>突发体验差</td>
+</tr>
+<tr>
+<td>并发信号量</td>
+<td>流式生成、长任务</td>
+<td>能限制同时占用连接</td>
+<td>不控制单个请求 Token 成本</td>
+</tr>
+<tr>
+<td>优先级队列</td>
+<td>多租户、多套餐</td>
+<td>能保护高优先级请求</td>
+<td>需要处理饥饿和超时</td>
+</tr>
+</tbody>
+</table>
+<p>生产系统通常会组合这些策略：</p>
+<ul>
+<li>用户级：滑动窗口 + 日 Token 上限。</li>
+<li>租户级：令牌桶 + 月度预算</li>
+<li>模型级：令牌桶 + 并发信号量</li>
+<li>供应商级：全局令牌桶 + 熔断器</li>
+<li>流式请求：并发信号量 + 总时长限制</li>
+</ul>
+<p>关于限流算法的详细介绍，可以参考这篇文章：<a href="/read/high-availability/limit-request.html">服务限流详解</a>。</p>
+<h3 id="收到-429-应该怎么处理" tabindex="-1">收到 429 应该怎么处理</h3>
+<p>HTTP 429 表示请求过多。后端处理 429 时，建议按这个顺序：</p>
+<ol>
+<li><strong>读取 <code>Retry-After</code> 或供应商 rate limit header</strong>：有明确恢复时间就尊重它。</li>
+<li><strong>标记限流维度</strong>：是请求数打满，还是 Token 打满，还是日配额耗尽。</li>
+<li><strong>短请求可排队</strong>：例如后台摘要任务可以进延迟队列。</li>
+<li><strong>用户交互请求少重试</strong>：用户等不起时，直接提示稍后再试或切换轻量模型。</li>
+<li><strong>供应商连续 429 时熔断</strong>：不要让所有请求继续撞墙。</li>
+</ol>
+<p>一个典型降级链路：</p>
+<pre class="md-pre"><code class="hljs">优先模型可用 -&gt; 正常调用
+优先模型 429 -&gt; 切备用同级模型
+备用模型也限流 -&gt; 切轻量模型并缩短输出
+仍不可用 -&gt; 排队或返回&quot;当前请求繁忙&quot;
+</code></pre>
+<p>这里要避免一个误区：降级不是偷偷变差。如果轻量模型会影响答案质量，要在业务层明确标记，例如“当前为快速模式，复杂问题建议稍后重试”。</p>
+<h2 id="为什么要结构化返回" tabindex="-1">为什么要结构化返回？</h2>
+<p>很多业务一开始这样写 Prompt：</p>
+<pre class="md-pre"><code class="hljs">请分析用户问题，输出 JSON，字段包括 intent、confidence、answer。
+</code></pre>
+<p>然后后端直接 <code>JSON.parse()</code>。</p>
+<p>这在 Demo 阶段很常见，但生产环境会遇到各种边缘情况：</p>
+<ul>
+<li>模型在 JSON 前加了一句“好的，以下是结果”。</li>
+<li>字段缺失。</li>
+<li>枚举值乱写。</li>
+<li>数字返回成字符串。</li>
+<li>流式返回时只拿到半个对象。</li>
+<li>安全拒答时压根不是业务 Schema。</li>
+</ul>
+<p>结构化返回要解决的是程序能否稳定消费模型输出，而不只是结果看起来像 JSON。</p>
+<h3 id="json-modejson-schema-和-structured-output-的区别" tabindex="-1">JSON Mode、JSON Schema 和 Structured Output 的区别</h3>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>约束强度</th>
+<th>工程价值</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通自然语言</td>
+<td>几乎没有</td>
+<td>适合展示型回答</td>
+<td>不适合程序解析</td>
+</tr>
+<tr>
+<td>Prompt 要求 JSON</td>
+<td>弱</td>
+<td>简单、跨模型</td>
+<td>容易混入解释文本或缺字段</td>
+</tr>
+<tr>
+<td>JSON Mode</td>
+<td>中</td>
+<td>通常能保证语法是 JSON</td>
+<td>不一定符合业务字段 Schema</td>
+</tr>
+<tr>
+<td>JSON Schema</td>
+<td>强</td>
+<td>明确字段、类型、必填、枚举</td>
+<td>不同供应商支持子集不同</td>
+</tr>
+<tr>
+<td>Structured Outputs</td>
+<td>更强</td>
+<td>供应商在解码或 SDK 层增强约束</td>
+<td>受模型、SDK、Schema 子集限制</td>
+</tr>
+<tr>
+<td>Function Calling / Tool Use</td>
+<td>面向动作</td>
+<td>适合让模型选择工具和参数</td>
+<td>不是最终自然语言答案的万能替代</td>
+</tr>
+</tbody>
+</table>
+<p><img src="/img/structured-output-function-calling-three-layer-c-985e2251.png" alt="" loading="lazy"></p>
+<p>OpenAI 官方 Structured Outputs 文档强调可以让输出遵循开发者提供的 JSON Schema，并提供 <code>strict</code> 相关配置；Gemini 官方文档说明 structured output 使用 <code>response_format</code> 和 JSON Schema，且支持的是 JSON Schema 的子集；Anthropic 官方文档也提供 Structured Outputs 和 Strict tool use，二者解决的问题并不完全一样。具体模型、字段、Schema 子集变化较快，仍然以官方文档最新展示为准。</p>
+<h3 id="普通-json-和结构化输出的工程差异" tabindex="-1">普通 JSON 和结构化输出的工程差异</h3>
+<p>普通自然语言返回像“人写给人看的说明”，结构化返回像“服务写给服务的接口”。</p>
+<p>举个意图识别场景：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;intent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;refund_request&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;confidence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.86</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;entities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;order_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;202605080001&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;商品破损&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;need_human_review&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>有了 Schema，后端可以做这些事：</p>
+<ul>
+<li><code>intent</code> 只能是有限枚举。</li>
+<li><code>confidence</code> 必须是数字。</li>
+<li><code>order_id</code> 可以为空，但类型必须稳定。</li>
+<li><code>need_human_review</code> 必须存在。</li>
+<li>解析失败时可以进入修复或人工兜底流程。</li>
+</ul>
+<p>Schema 把模型生成的 JSON 变成了可校验的数据契约。</p>
+<h3 id="结构化输出失败后如何兜底" tabindex="-1">结构化输出失败后如何兜底</h3>
+<p>结构化输出仍然可能失败。失败不一定是供应商能力问题，也可能是 Schema 太复杂、上下文冲突、输出被截断、安全策略拒答。</p>
+<p>建议兜底分四级：</p>
+<ol>
+<li><strong>本地校验</strong>：用 JSON Schema、Jackson、Bean Validation 校验字段和类型。</li>
+<li><strong>轻量修复</strong>：只让模型修复格式，不重新生成业务内容。</li>
+<li><strong>降级 Schema</strong>：复杂对象拆成多个小对象，或先分类再抽取字段。</li>
+<li><strong>人工或规则兜底</strong>：高价值订单、金融、医疗、法务场景不要完全依赖自动修复。</li>
+</ol>
+<div class="md-mermaid"><pre class="mermaid-src">flowchart TB
+    Start([结构化输出失败]):::client
+    L1[&quot;第一级：本地校验&quot;]:::business
+    L1A[&quot;JSON Schema\nJackson\nBean Validation&quot;]:::info
+
+    L2[&quot;第二级：轻量修复&quot;]:::business
+    L2A[&quot;只修格式\n不重新生成业务内容&quot;]:::info
+
+    L3[&quot;第三级：降级 Schema&quot;]:::business
+    L3A[&quot;拆成多个小对象\n先分类再抽取字段&quot;]:::info
+
+    L4[&quot;第四级：人工兜底&quot;]:::danger
+    L4A[&quot;高价值订单\n金融/医疗/法务&quot;]:::info
+
+    Success([完成]):::success
+    Fail([标记异常\n人工处理]):::danger
+
+    Start --&gt; L1
+    L1 --&gt; L1A
+    L1A --&gt;|校验通过| Success
+    L1A --&gt;|校验失败| L2
+    L2 --&gt; L2A
+    L2A --&gt;|修复成功| Success
+    L2A --&gt;|修复失败| L3
+    L3 --&gt; L3A
+    L3A --&gt;|降级成功| Success
+    L3A --&gt;|降级失败| L4
+    L4 --&gt; L4A --&gt; Fail
+
+    classDef client fill:#00838F,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef business fill:#E99151,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef success fill:#4CA497,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef danger fill:#C44545,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef warning fill:#F39C12,color:#FFFFFF,stroke:none,rx:10,ry:10
+    classDef info fill:#95A5A6,color:#FFFFFF,stroke:none,rx:10,ry:10
+
+    linkStyle default stroke-width:2px,stroke:#333333,opacity:0.8
+    linkStyle 2,4,6,8 stroke:#4CA497,stroke-width:2px
+    linkStyle 9 stroke:#C44545,stroke-width:2px,stroke-dasharray:5 5
+</pre></div>
+<p>一个实用原则：结构化返回失败时，不要把原始自然语言硬塞给下游系统。能展示给用户，不代表能被程序执行。</p>
+<h2 id="java-后端怎么落地-llm-调用" tabindex="-1">Java 后端怎么落地 LLM 调用？</h2>
+<p>这段 Java 伪代码不绑定具体 SDK。Token 预算、限流、重试、流式解析、幂等和观测都收口在同一个网关中：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">LLMClient</span> {
+    <span class="hljs-type">LLMResponse</span> <span class="hljs-title function_">chat</span><span class="hljs-params">(LLMRequest request)</span>;
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">stream</span><span class="hljs-params">(LLMRequest request, StreamHandler handler)</span>;
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">interface</span> <span class="hljs-title class_">StreamHandler</span> {
+    <span class="hljs-type">void</span> <span class="hljs-title function_">onStart</span><span class="hljs-params">(String messageId)</span>;
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">onDelta</span><span class="hljs-params">(String messageId, <span class="hljs-type">long</span> sequence, String delta)</span>;
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">onComplete</span><span class="hljs-params">(String messageId, LLMUsage usage)</span>;
+
+    <span class="hljs-type">void</span> <span class="hljs-title function_">onError</span><span class="hljs-params">(String messageId, Throwable error)</span>;
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">LLMGateway</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> LLMClient client;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> RateLimiter rateLimiter;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> IdempotencyStore idempotencyStore;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> TokenEstimator tokenEstimator;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Observation observation;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">LLMGateway</span><span class="hljs-params">(
+            LLMClient client,
+            RateLimiter rateLimiter,
+            IdempotencyStore idempotencyStore,
+            TokenEstimator tokenEstimator,
+            Observation observation)</span> {
+        <span class="hljs-built_in">this</span>.client = client;
+        <span class="hljs-built_in">this</span>.rateLimiter = rateLimiter;
+        <span class="hljs-built_in">this</span>.idempotencyStore = idempotencyStore;
+        <span class="hljs-built_in">this</span>.tokenEstimator = tokenEstimator;
+        <span class="hljs-built_in">this</span>.observation = observation;
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">LLMResponse</span> <span class="hljs-title function_">chatWithRetry</span><span class="hljs-params">(BusinessCommand command)</span> {
+        <span class="hljs-type">String</span> <span class="hljs-variable">idemKey</span> <span class="hljs-operator">=</span> command.idempotencyKey();
+        <span class="hljs-type">LLMRequest</span> <span class="hljs-variable">request</span> <span class="hljs-operator">=</span> buildRequest(command);
+        <span class="hljs-type">String</span> <span class="hljs-variable">requestFingerprint</span> <span class="hljs-operator">=</span> command.requestFingerprint();
+        <span class="hljs-type">IdempotencyClaim</span> <span class="hljs-variable">claim</span> <span class="hljs-operator">=</span> idempotencyStore.claim(idemKey, requestFingerprint);
+
+        <span class="hljs-keyword">if</span> (claim.isCompleted()) {
+            <span class="hljs-keyword">return</span> claim.toResponse();
+        }
+        <span class="hljs-keyword">if</span> (!claim.isOwner()) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LLMException</span>(<span class="hljs-string">&quot;Request with the same idempotency key is already running&quot;</span>);
+        }
+
+        <span class="hljs-type">TokenBudget</span> <span class="hljs-variable">budget</span> <span class="hljs-operator">=</span> tokenEstimator.estimate(request);
+        <span class="hljs-keyword">try</span> {
+            rateLimiter.acquire(command.tenantId(), request.model(), budget);
+        } <span class="hljs-keyword">catch</span> (RuntimeException ex) {
+            idempotencyStore.releaseClaim(idemKey, requestFingerprint);
+            <span class="hljs-keyword">throw</span> ex;
+        }
+
+        <span class="hljs-type">RetryPolicy</span> <span class="hljs-variable">retryPolicy</span> <span class="hljs-operator">=</span> RetryPolicy.defaultPolicy();
+        <span class="hljs-type">Throwable</span> <span class="hljs-variable">lastError</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">attempt</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; attempt &lt;= retryPolicy.maxRetries(); attempt++) {
+            <span class="hljs-type">String</span> <span class="hljs-variable">attemptId</span> <span class="hljs-operator">=</span> idemKey + <span class="hljs-string">&quot;:attempt:&quot;</span> + attempt;
+            <span class="hljs-type">long</span> <span class="hljs-variable">startNanos</span> <span class="hljs-operator">=</span> System.nanoTime();
+
+            <span class="hljs-keyword">try</span> {
+                idempotencyStore.startAttempt(idemKey, requestFingerprint, attemptId);
+                <span class="hljs-type">LLMResponse</span> <span class="hljs-variable">response</span> <span class="hljs-operator">=</span> client.chat(request.withAttemptId(attemptId));
+
+                <span class="hljs-type">ParsedAnswer</span> <span class="hljs-variable">parsed</span> <span class="hljs-operator">=</span> parseAndValidate(response.content(), command.schema());
+                idempotencyStore.markSuccess(idemKey, attemptId, response, parsed);
+                observation.recordSuccess(request, response.usage(), startNanos, attempt);
+                <span class="hljs-keyword">return</span> response;
+            } <span class="hljs-keyword">catch</span> (LLMException ex) {
+                lastError = ex;
+                observation.recordFailure(request, ex, startNanos, attempt);
+
+                <span class="hljs-keyword">if</span> (!retryPolicy.canRetry(ex, attempt)) {
+                    idempotencyStore.markFailed(idemKey, attemptId, ex);
+                    <span class="hljs-keyword">throw</span> ex;
+                }
+
+                sleep(retryPolicy.nextDelay(ex, attempt));
+            }
+        }
+
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LLMException</span>(<span class="hljs-string">&quot;LLM request failed after retries&quot;</span>, lastError);
+    }
+
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">stream</span><span class="hljs-params">(BusinessCommand command, StreamHandler downstream)</span> {
+        <span class="hljs-type">String</span> <span class="hljs-variable">idemKey</span> <span class="hljs-operator">=</span> command.idempotencyKey();
+        <span class="hljs-type">LLMRequest</span> <span class="hljs-variable">request</span> <span class="hljs-operator">=</span> buildRequest(command).enableStream();
+        <span class="hljs-type">String</span> <span class="hljs-variable">messageId</span> <span class="hljs-operator">=</span> command.messageId();
+        <span class="hljs-type">String</span> <span class="hljs-variable">requestFingerprint</span> <span class="hljs-operator">=</span> command.requestFingerprint();
+        <span class="hljs-type">IdempotencyClaim</span> <span class="hljs-variable">claim</span> <span class="hljs-operator">=</span> idempotencyStore.claim(idemKey, requestFingerprint);
+        <span class="hljs-keyword">if</span> (!claim.isOwner()) {
+            downstream.onError(messageId,
+                    <span class="hljs-keyword">new</span> <span class="hljs-title class_">LLMException</span>(<span class="hljs-string">&quot;Duplicate or conflicting idempotency key&quot;</span>));
+            <span class="hljs-keyword">return</span>;
+        }
+
+        <span class="hljs-type">TokenBudget</span> <span class="hljs-variable">budget</span> <span class="hljs-operator">=</span> tokenEstimator.estimate(request);
+        <span class="hljs-keyword">try</span> {
+            rateLimiter.acquire(command.tenantId(), request.model(), budget);
+        } <span class="hljs-keyword">catch</span> (RuntimeException ex) {
+            idempotencyStore.releaseClaim(idemKey, requestFingerprint);
+            downstream.onError(messageId, ex);
+            <span class="hljs-keyword">return</span>;
+        }
+
+        <span class="hljs-type">StreamBuffer</span> <span class="hljs-variable">buffer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StreamBuffer</span>(messageId);
+        idempotencyStore.startAttempt(idemKey, requestFingerprint, messageId);
+
+        client.stream(request, <span class="hljs-keyword">new</span> <span class="hljs-title class_">StreamHandler</span>() {
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">onStart</span><span class="hljs-params">(String ignored)</span> {
+                downstream.onStart(messageId);
+            }
+
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">onDelta</span><span class="hljs-params">(String ignored, <span class="hljs-type">long</span> sequence, String delta)</span> {
+                <span class="hljs-keyword">if</span> (buffer.seen(sequence)) {
+                    <span class="hljs-keyword">return</span>;
+                }
+                buffer.append(sequence, delta);
+                idempotencyStore.appendDelta(messageId, sequence, delta);
+                downstream.onDelta(messageId, sequence, delta);
+            }
+
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">onComplete</span><span class="hljs-params">(String ignored, LLMUsage usage)</span> {
+                <span class="hljs-type">String</span> <span class="hljs-variable">fullText</span> <span class="hljs-operator">=</span> buffer.fullText();
+                <span class="hljs-keyword">try</span> {
+                    <span class="hljs-type">ParsedAnswer</span> <span class="hljs-variable">parsed</span> <span class="hljs-operator">=</span> parseAndValidate(fullText, command.schema());
+                    idempotencyStore.markSuccess(idemKey, messageId, fullText, parsed, usage);
+                } <span class="hljs-keyword">catch</span> (Exception ex) {
+                    idempotencyStore.markFailed(idemKey, messageId, ex);
+                    downstream.onError(messageId, ex);
+                    <span class="hljs-keyword">return</span>;
+                }
+                downstream.onComplete(messageId, usage);
+            }
+
+            <span class="hljs-meta">@Override</span>
+            <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">onError</span><span class="hljs-params">(String ignored, Throwable error)</span> {
+                idempotencyStore.markInterrupted(idemKey, messageId, buffer.fullText(), error);
+                downstream.onError(messageId, error);
+            }
+        });
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">LLMRequest</span> <span class="hljs-title function_">buildRequest</span><span class="hljs-params">(BusinessCommand command)</span> {
+        <span class="hljs-keyword">return</span> LLMRequest.builder()
+                .model(command.model())
+                .systemPrompt(command.systemPrompt())
+                .userPrompt(command.userPrompt())
+                .context(command.context())
+                .responseSchema(command.schema())
+                .timeout(command.timeout())
+                .metadata(<span class="hljs-string">&quot;tenantId&quot;</span>, command.tenantId())
+                .metadata(<span class="hljs-string">&quot;messageId&quot;</span>, command.messageId())
+                .build();
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">ParsedAnswer</span> <span class="hljs-title function_">parseAndValidate</span><span class="hljs-params">(String content, JsonSchema schema)</span> {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">return</span> ParsedAnswer.fromJson(content, schema);
+        } <span class="hljs-keyword">catch</span> (Exception ex) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NonRetryableLLMException</span>(<span class="hljs-string">&quot;Structured output validation failed&quot;</span>, ex);
+        }
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">void</span> <span class="hljs-title function_">sleep</span><span class="hljs-params">(Duration duration)</span> {
+        <span class="hljs-keyword">try</span> {
+            Thread.sleep(duration.toMillis());
+        } <span class="hljs-keyword">catch</span> (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LLMException</span>(<span class="hljs-string">&quot;Retry sleep interrupted&quot;</span>, ex);
+        }
+    }
+}
+</code></pre>
+<p>这段代码省略了存储接口和并发控制实现，<code>claim</code> 必须落到 Redis <code>SET NX</code>、数据库唯一约束或带条件的原子更新，不能用“先查询、再写入”代替。幂等键还要绑定请求指纹；同一个键对应不同请求时应返回冲突，而不是历史结果。</p>
+<p>其余几个关键点：</p>
+<ul>
+<li><strong>业务入口不直接调用供应商 SDK</strong>，统一走 <code>LLMGateway</code>。</li>
+<li><strong>先估算 Token 并扣限流桶</strong>，避免发出去才发现没额度。</li>
+<li><strong>幂等记录包住整次业务消息</strong>，attempt 只是系统内部重试。</li>
+<li><strong>同步和流式分开处理</strong>，流式要记录 <code>sequence</code>，避免重连补发时重复。</li>
+<li><strong>结构化解析在落库前做</strong>，失败就进入失败状态，而不是污染业务数据。</li>
+</ul>
+<p>真实项目里还要补充：</p>
+<ul>
+<li>API Key 池和供应商路由。</li>
+<li>模型优先级和降级策略。</li>
+<li>Prompt 版本号。</li>
+<li>响应内容安全审查。</li>
+<li>usage 成本计算。</li>
+<li>traceId 和 providerRequestId 对齐。</li>
+<li>流式取消信号向供应商请求传播。</li>
+<li>SSE 出站契约：换行与事件边界的处理方式要与前端一致，网关关闭缓冲并放宽读超时。</li>
+</ul>
+<h2 id="没有指标就没有稳定性" tabindex="-1">没有指标就没有稳定性</h2>
+<p>AI 应用的观测不能只记录“调用成功/失败”。</p>
+<p>至少要记录这些指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TTFT</td>
+<td>首个 Token 返回时间</td>
+<td>判断排队、上下文过长、供应商抖动</td>
+</tr>
+<tr>
+<td>E2E Latency</td>
+<td>端到端完成时间</td>
+<td>判断用户体验和 SLA</td>
+</tr>
+<tr>
+<td>Input Tokens</td>
+<td>输入 Token</td>
+<td>成本分析、上下文膨胀排查</td>
+</tr>
+<tr>
+<td>Output Tokens</td>
+<td>输出 Token</td>
+<td>成本分析、异常长回答排查</td>
+</tr>
+<tr>
+<td>Retry Count</td>
+<td>重试次数</td>
+<td>识别供应商不稳定或策略过激</td>
+</tr>
+<tr>
+<td>429 Rate</td>
+<td>限流比例</td>
+<td>判断配额和限流桶是否合理</td>
+</tr>
+<tr>
+<td>Parse Failure Rate</td>
+<td>结构化解析失败率</td>
+<td>判断 Schema、Prompt、模型适配问题</td>
+</tr>
+<tr>
+<td>Cancel Rate</td>
+<td>用户取消比例</td>
+<td>判断响应太慢或生成太长</td>
+</tr>
+<tr>
+<td>Provider Error Rate</td>
+<td>供应商错误率</td>
+<td>路由、降级、熔断依据</td>
+</tr>
+</tbody>
+</table>
+<p>日志里建议带上这些字段：</p>
+<pre class="md-pre"><code class="hljs">trace_id
+tenant_id
+user_id
+conversation_id
+message_id
+attempt_id
+model
+provider
+prompt_version
+input_tokens
+output_tokens
+ttft_ms
+latency_ms
+retry_count
+finish_reason
+error_type
+provider_request_id
+</code></pre>
+<p>没有这些字段，线上排查会非常痛苦。用户说“刚才 AI 没返回”，你连是哪家供应商、哪个模型、哪次 attempt、有没有收到第一个 delta 都查不到。</p>
+<h2 id="面试问题" tabindex="-1">面试问题</h2>
+<h3 id="1-大模型-api-调用的完整链路是什么" tabindex="-1">1. 大模型 API 调用的完整链路是什么</h3>
+<p>一次调用从业务请求进入开始，先做用户、租户、权限和参数校验；然后组装 System Prompt、用户输入、历史消息、RAG 证据、工具定义和输出 Schema；接着估算 Token 预算，经过模型网关做路由、限流、超时、重试和供应商选择；供应商返回同步结果或流式事件后，后端解析增量、校验结构化输出、落库状态和 usage；最后把 TTFT、总耗时、错误码、重试次数、Token 成本写入观测系统。</p>
+<p>因此，LLM 调用要按一条完整的生产链路治理，不能只封装成一个 HTTP 请求。</p>
+<h3 id="2-streaming-为什么能改善体验" tabindex="-1">2. Streaming 为什么能改善体验</h3>
+<p>Streaming 让模型边生成边返回，用户可以更早看到第一个 Token，因此降低 TTFT。它不保证总生成时间变短，也不天然减少 Token 成本。后端需要额外处理取消、超时、断流、重连、半成品 JSON 和增量落库。</p>
+<h3 id="3-sse-和-websocket-怎么选" tabindex="-1">3. SSE 和 WebSocket 怎么选</h3>
+<p>如果只是服务端向浏览器推模型文本，SSE 更简单，天然适合单向增量输出；落地时别忘了 <strong><code>text/event-stream</code> 对换行与事件边界敏感</strong>，以及反向代理缓冲会把「流式」攒成「批量」。如果客户端也要频繁向服务端发数据，例如语音流、实时控制、多人协作、插话打断，WebSocket 更适合。HTTP chunked 更偏底层传输机制，业务层仍要自己定义消息边界和事件类型。</p>
+<h3 id="4-哪些大模型-api-错误可以重试" tabindex="-1">4. 哪些大模型 API 错误可以重试</h3>
+<p>网络瞬断、连接重置、部分 5xx、504、供应商过载通常可以有限重试；429 要结合 <code>Retry-After</code>、限流头、排队和降级处理；400 参数错误、401/403 鉴权错误、内容安全拒答通常不能重试。结构化解析失败可以做 1-2 次格式修复，但不要无限重试。</p>
+<h3 id="5-哪些大模型调用需要做幂等" tabindex="-1">5. 哪些大模型调用需要做幂等</h3>
+<p>纯文本生成不一定要求业务幂等，但重试仍可能产生重复费用和多个候选结果。涉及落库、扣费、发通知或工具写操作时，必须防止同一业务请求被执行多次。可以用业务消息 ID 生成幂等 Key，并绑定请求指纹；多次模型调用 attempt 挂在同一条业务消息下，只允许一个 attempt 成为最终结果。</p>
+<h3 id="6-限流为什么不能只按-qps" tabindex="-1">6. 限流为什么不能只按 QPS</h3>
+<p>因为大模型 API 的成本和压力主要由 Token 决定。一个 500 Token 请求和一个 80K Token 请求都是 1 次请求，但资源消耗差异很大。生产限流要同时看 RPM、TPM、并发数、上下文大小、最大输出和租户预算。</p>
+<h3 id="7-json-mode-和-structured-outputs-有什么区别" tabindex="-1">7. JSON Mode 和 Structured Outputs 有什么区别</h3>
+<p>JSON Mode 更关注“输出是合法 JSON”，但不一定符合你的业务 Schema。Structured Outputs 或 JSON Schema 约束更强，可以要求字段、类型、必填项、枚举等结构。Function Calling 或 Tool Use 更适合让模型产出工具调用参数。不同供应商支持的 Schema 子集不同，落地前要查官方文档并写兼容层。</p>
+<h3 id="8-流式结构化返回怎么处理" tabindex="-1">8. 流式结构化返回怎么处理</h3>
+<p>不要一边收到 delta 一边直接 <code>JSON.parse()</code> 完整对象。更稳的做法是：增量阶段只展示文本或记录片段，等收到正常结束事件后拼成完整内容，再做 Schema 校验。若供应商支持结构化流式事件或 SDK accumulator，可以使用官方累积器；否则自己维护 buffer、sequence 和结束状态。</p>
+<h2 id="上线前检查" tabindex="-1">上线前检查</h2>
+<p>上线门禁至少覆盖四条失败链路：客户端取消能否传到供应商；可重试错误是否受总截止时间和原子幂等记录约束；RPM、TPM、并发与租户预算是否同时生效；结构化输出解析失败后是否进入明确失败状态。</p>
+<p>观测记录要能串起 <code>messageId</code>、<code>attemptId</code> 和 <code>providerRequestId</code>，并保存 TTFT、总耗时、usage、结束原因与解析结果。缺少其中任一段，断流、重复执行和账单异常都会变得难以复现。</p>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://developers.openai.com/api/docs/guides/streaming-responses" target="_blank" rel="noopener">OpenAI Streaming API responses</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/structured-outputs" target="_blank" rel="noopener">OpenAI Structured model outputs</a></li>
+<li><a href="https://developers.openai.com/api/docs/guides/rate-limits" target="_blank" rel="noopener">OpenAI Rate limits</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/streaming" target="_blank" rel="noopener">Anthropic Streaming Messages</a></li>
+<li><a href="https://platform.claude.com/docs/en/api/errors" target="_blank" rel="noopener">Anthropic Errors</a></li>
+<li><a href="https://platform.claude.com/docs/en/build-with-claude/structured-outputs" target="_blank" rel="noopener">Anthropic Structured outputs</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/structured-output" target="_blank" rel="noopener">Gemini Structured outputs</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener">Gemini Rate limits</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events" target="_blank" rel="noopener">MDN Using server-sent events</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/EventSource" target="_blank" rel="noopener">MDN EventSource</a></li>
+<li><a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/codec/ServerSentEvent.html" target="_blank" rel="noopener">Spring <code>ServerSentEvent</code> Javadoc</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429" target="_blank" rel="noopener">MDN 429 Too Many Requests</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Transfer-Encoding" target="_blank" rel="noopener">MDN Transfer-Encoding</a></li>
+</ul>

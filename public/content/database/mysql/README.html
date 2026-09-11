@@ -1,0 +1,80 @@
+<p>MySQL 是后端开发最常用的关系型数据库之一，也是数据库面试中最容易追问到底的专题。学习 MySQL 时，建议围绕“索引怎么让查询变快、事务怎么保证一致性、日志怎么保证恢复和复制、数据怎么同步到搜索等异构系统、执行计划怎么定位慢 SQL”这几条主线展开。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统学习 MySQL 原理和性能优化的后端开发者。</li>
+<li>准备 MySQL 索引、事务、MVCC、日志、执行计划相关面试题的同学。</li>
+<li>已经能写常规 SQL，但对慢 SQL 分析、索引设计和事务问题不够熟的读者。</li>
+<li>需要在项目中处理 MySQL 性能、数据一致性、异构数据同步和字段设计问题的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>B+ 树索引、聚簇索引、二级索引、覆盖索引和回表分别是什么？</li>
+<li>哪些 SQL 写法会导致索引失效，如何通过执行计划验证？</li>
+<li>MySQL 事务隔离级别如何影响脏读、不可重复读和幻读？</li>
+<li>InnoDB 如何通过 MVCC、undo log 和 Read View 实现快照读？</li>
+<li>binlog、redo log、undo log 分别解决复制、崩溃恢复和事务回滚中的哪些问题？</li>
+<li>MySQL 如何通过全量备份、binlog 和 PITR 恢复到指定时间点？</li>
+<li>MySQL 数据同步到 Elasticsearch 有哪些方案？如何处理全量、增量、乱序和数据对账？</li>
+<li>慢 SQL 优化应该如何从建表、索引、SQL 写法和执行计划逐层定位？</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/database/mysql/mysql-questions-01.html">MySQL 常见面试题总结</a>：先建立 MySQL 高频问题清单。</li>
+<li><a href="/read/database/mysql/mysql-index.html">MySQL 索引详解</a>、<a href="/read/database/mysql/mysql-index-invalidation.html">MySQL 索引失效场景总结</a>：理解索引原理和常见失效场景。</li>
+<li><a href="/read/database/mysql/transaction-isolation-level.html">MySQL 事务隔离级别详解</a>、<a href="/read/database/mysql/innodb-implementation-of-mvcc.html">InnoDB 存储引擎对 MVCC 的实现</a>：掌握事务和一致性读。</li>
+<li><a href="/read/database/mysql/mysql-logs.html">MySQL 三大日志详解</a>、<a href="/read/database/mysql/mysql-backup-and-restore.html">MySQL备份与恢复详解</a>、<a href="/read/database/mysql/mysql-to-elasticsearch-sync.html">MySQL 数据同步到 Elasticsearch 详解</a>：理解 binlog 在提交、恢复、复制和异构数据同步中的作用。</li>
+<li><a href="/read/database/mysql/how-sql-executed-in-mysql.html">SQL 语句在 MySQL 中的执行过程</a>：理解连接器、分析器、优化器、执行器和存储引擎如何协作。</li>
+<li><a href="/read/database/mysql/mysql-query-execution-plan.html">MySQL 执行计划分析</a>、<a href="/read/database/mysql/mysql-high-performance-optimization-specification-recommendations.html">MySQL 高性能优化规范建议总结</a>：把原理落到慢 SQL 和工程规范上。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="总览与规范" tabindex="-1">总览与规范</h3>
+<ul>
+<li><a href="/read/database/mysql/mysql-questions-01.html">MySQL 常见面试题总结</a>：串联索引、事务、锁、日志、存储引擎和 SQL 优化等高频考点。</li>
+<li><a href="/read/database/mysql/mysql-high-performance-optimization-specification-recommendations.html">MySQL 高性能优化规范建议总结</a>：从建表、字段、索引、SQL、事务和开发规范角度总结优化建议。</li>
+<li><a href="/read/database/mysql/a-thousand-lines-of-mysql-study-notes.html">一千行 MySQL 学习笔记</a>：适合用来查漏补缺，快速回顾 MySQL 常见知识点。</li>
+</ul>
+<h3 id="索引与执行计划" tabindex="-1">索引与执行计划</h3>
+<ul>
+<li><a href="/read/database/mysql/mysql-index.html">MySQL 索引详解</a>：理解索引数据结构、聚簇索引、二级索引、覆盖索引、最左前缀和索引设计。</li>
+<li><a href="/read/database/mysql/mysql-index-invalidation.html">MySQL 索引失效场景总结</a>：整理常见索引失效写法和排查思路。</li>
+<li><a href="/read/database/mysql/index-invalidation-caused-by-implicit-conversion.html">MySQL 隐式转换造成索引失效</a>：聚焦隐式类型转换导致的索引失效问题。</li>
+<li><a href="/read/database/mysql/mysql-query-execution-plan.html">MySQL 执行计划分析</a>：掌握 EXPLAIN 的 type、key、rows、Extra 等关键字段。</li>
+</ul>
+<h3 id="事务mvcc日志与数据同步" tabindex="-1">事务、MVCC、日志与数据同步</h3>
+<ul>
+<li><a href="/read/database/mysql/transaction-isolation-level.html">MySQL 事务隔离级别详解</a>：理解读未提交、读已提交、可重复读、串行化以及并发读异常。</li>
+<li><a href="/read/database/mysql/innodb-implementation-of-mvcc.html">InnoDB 存储引擎对 MVCC 的实现</a>：理解隐藏字段、undo log、Read View 和可见性判断。</li>
+<li><a href="/read/database/mysql/mysql-logs.html">MySQL 三大日志详解</a>：理解 binlog、redo log、undo log 的作用、写入时机和两阶段提交。</li>
+<li><a href="/read/database/mysql/mysql-backup-and-restore.html">MySQL备份与恢复详解</a>：理解 mysqldump、XtraBackup、binlog、PITR、RTO/RPO 和恢复演练。</li>
+<li><a href="/read/database/mysql/mysql-to-elasticsearch-sync.html">MySQL 数据同步到 Elasticsearch 详解</a>：对比应用层双写、定时同步、Canal、Debezium 和 Flink CDC，并理解全量、增量与最终一致性问题。</li>
+</ul>
+<h3 id="执行过程与工程细节" tabindex="-1">执行过程与工程细节</h3>
+<ul>
+<li><a href="/read/database/mysql/how-sql-executed-in-mysql.html">SQL 语句在 MySQL 中的执行过程</a>：理解连接器、查询缓存、分析器、优化器、执行器和存储引擎的协作。</li>
+<li><a href="/read/database/mysql/mysql-query-cache.html">MySQL 查询缓存详解</a>：理解查询缓存的工作方式、失效原因和被移除的背景。</li>
+<li><a href="/read/database/mysql/mysql-auto-increment-primary-key-continuous.html">MySQL 自增主键一定是连续的吗？</a>：理解自增值分配、回滚、批量插入和主键连续性的关系。</li>
+<li><a href="/read/database/mysql/some-thoughts-on-database-storage-time.html">MySQL 日期类型选择建议</a>：对比 DATE、DATETIME、TIMESTAMP 等类型的适用场景。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>MySQL 为什么推荐使用 B+ 树索引？</li>
+<li>聚簇索引和二级索引有什么区别？什么是回表和覆盖索引？</li>
+<li>最左前缀原则是什么？哪些场景会导致索引失效？</li>
+<li>如何通过 EXPLAIN 判断一条 SQL 是否走了合适的索引？</li>
+<li>MySQL 的四种事务隔离级别分别解决什么问题？</li>
+<li>MVCC 是如何实现的？Read View 里有哪些关键字段？</li>
+<li>binlog、redo log、undo log 有什么区别？两阶段提交解决什么问题？</li>
+<li>MySQL 如何通过全量备份和 binlog 做按时间点恢复？</li>
+<li>MySQL 数据同步到 Elasticsearch 有哪些方案？如何保证幂等并处理消息乱序？</li>
+<li>慢 SQL 优化应该从哪些维度入手？</li>
+<li>自增主键为什么不一定连续？</li>
+<li>DATETIME 和 TIMESTAMP 应该如何选择？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/database/README.html">数据库知识体系</a></li>
+<li><a href="/read/database/sql/README.html">SQL 专题</a></li>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统知识体系</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

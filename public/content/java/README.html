@@ -1,0 +1,93 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>这份 <strong>Java 知识体系</strong> 面向 Java 后端学习和面试复习，按“基础语法 -&gt; 集合容器 -&gt; 并发编程 -&gt; IO/NIO -&gt; JVM -&gt; 新特性”的顺序整理本站 Java 相关文章。</p>
+<p>如果你时间有限，建议先看 Java 基础、集合、并发和 JVM 的面试题总结，快速建立高频问题清单；如果你想系统补基础，可以按下面的专题顺序阅读。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在系统学习 Java 的后端开发者。</li>
+<li>准备校招、社招、中大厂 Java 后端面试的同学。</li>
+<li>想把 Java 基础、集合、并发、JVM、IO 和新特性串起来复习的读者。</li>
+<li>已经写过 Java 项目，但对底层原理、源码设计和工程实践理解不够系统的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Java 基础语法、面向对象、异常、泛型、反射、代理、序列化等核心机制。</li>
+<li>List、Map、Queue、并发容器的使用边界、源码实现和常见面试题。</li>
+<li>Java 线程、锁、JMM、CAS、AQS、线程池、CompletableFuture 和虚拟线程。</li>
+<li>JVM 内存区域、类加载、垃圾回收、参数配置、监控工具和线上问题排查。</li>
+<li>BIO、NIO、AIO、IO 模型，以及装饰器、适配器等 IO 相关设计模式。</li>
+<li>Java 8 到 Java 26 的重要新特性，以及哪些特性真正影响日常开发。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/java/basis/README.html">Java 基础专题</a>：先掌握语法、面向对象、泛型、反射、代理、序列化等基础能力。</li>
+<li><a href="/read/java/collection/README.html">Java 集合专题</a>：理解 ArrayList、LinkedList、HashMap、ConcurrentHashMap 等常用容器的使用和源码。</li>
+<li><a href="/read/java/concurrent/README.html">Java 并发编程专题</a>：系统学习线程、锁、JMM、CAS、AQS、线程池和并发工具类。</li>
+<li><a href="/read/java/jvm/README.html">JVM 专题</a>：理解内存区域、类加载、垃圾回收、JVM 参数和线上排查。</li>
+<li><a href="/read/java/io/README.html">Java IO 专题</a>：补齐 BIO、NIO、AIO、Reactor、多路复用和 IO 设计模式。</li>
+<li><a href="/read/java/new-features/README.html">Java 新特性专题</a>：按版本梳理 Lambda、Stream、模块化、var、Record、虚拟线程等关键特性。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="java-基础" tabindex="-1">Java 基础</h3>
+<ul>
+<li><a href="/read/java/basis/README.html">Java 基础专题</a>：从基础语法讲到核心机制和常见 Java 面试题。</li>
+<li><a href="/read/java/basis/java-basic-questions-01.html">Java基础常见面试题总结(上)</a>：覆盖 Java 语言特点、基础语法、面向对象和常用类。</li>
+<li><a href="/read/java/basis/java-basic-questions-02.html">Java基础常见面试题总结(中)</a>：继续梳理异常、泛型、反射、注解和常见细节。</li>
+<li><a href="/read/java/basis/java-basic-questions-03.html">Java基础常见面试题总结(下)</a>：补齐高级基础知识和常见易错点。</li>
+<li><a href="/read/java/basis/why-there-only-value-passing-in-java.html">Java 值传递详解</a>：厘清值传递、引用变量和对象修改之间的关系。</li>
+<li><a href="/read/java/basis/serialization.html">Java 序列化详解</a>：理解序列化机制、serialVersionUID、安全风险和替代方案。</li>
+<li><a href="/read/java/basis/reflection.html">Java 反射机制详解</a> 和 <a href="/read/java/basis/proxy.html">Java 代理模式详解</a>：掌握框架底层常见机制。</li>
+</ul>
+<h3 id="java-集合" tabindex="-1">Java 集合</h3>
+<ul>
+<li><a href="/read/java/collection/README.html">Java 集合专题</a>：串联集合框架、使用注意事项和常见源码分析。</li>
+<li><a href="/read/java/collection/java-collection-questions-01.html">Java集合常见面试题总结(上)</a> 和 <a href="/read/java/collection/java-collection-questions-02.html">Java集合常见面试题总结(下)</a>：覆盖 List、Set、Map、Queue 和并发集合高频问题。</li>
+<li><a href="/read/java/collection/java-collection-precautions-for-use.html">Java集合使用注意事项总结</a>：总结集合判空、遍历、扩容、线程安全和性能相关注意点。</li>
+<li><a href="/read/java/collection/arraylist-source-code.html">ArrayList 源码分析</a>、<a href="/read/java/collection/hashmap-source-code.html">HashMap 源码分析</a>、<a href="/read/java/collection/concurrent-hash-map-source-code.html">ConcurrentHashMap 源码分析</a>：从源码理解常用容器的设计取舍。</li>
+</ul>
+<h3 id="java-并发" tabindex="-1">Java 并发</h3>
+<ul>
+<li><a href="/read/java/concurrent/README.html">Java 并发编程专题</a>：围绕线程、锁、内存模型、线程池和并发工具展开。</li>
+<li><a href="/read/java/concurrent/java-concurrent-questions-01.html">Java并发常见面试题总结（上）</a>、<a href="/read/java/concurrent/java-concurrent-questions-02.html">Java并发常见面试题总结（中）</a>、<a href="/read/java/concurrent/java-concurrent-questions-03.html">Java并发常见面试题总结（下）</a>：建立并发面试问题清单。</li>
+<li><a href="/read/java/concurrent/jmm.html">JMM（Java 内存模型）详解</a>：理解可见性、原子性、有序性和 happens-before。</li>
+<li><a href="/read/java/concurrent/cas.html">CAS 详解</a>、<a href="/read/java/concurrent/aqs.html">AQS 详解</a>、<a href="/read/java/concurrent/java-thread-pool-summary.html">Java 线程池详解</a>：掌握并发底层高频考点。</li>
+<li><a href="/read/java/concurrent/virtual-thread.html">虚拟线程常见问题总结</a>：理解 Project Loom 对并发模型的影响。</li>
+</ul>
+<h3 id="jvm-与-io" tabindex="-1">JVM 与 IO</h3>
+<ul>
+<li><a href="/read/java/jvm/README.html">JVM 专题</a>：围绕内存、类加载、GC、参数、工具和线上排查展开。</li>
+<li><a href="/read/java/jvm/memory-area.html">Java内存区域详解（重点）</a>：理解程序计数器、虚拟机栈、本地方法栈、堆和方法区。</li>
+<li><a href="/read/java/jvm/jvm-garbage-collection.html">JVM垃圾回收详解（重点）</a>：理解对象存活判断、垃圾收集算法和主流垃圾收集器。</li>
+<li><a href="/read/java/jvm/class-loading-process.html">类加载过程详解</a> 和 <a href="/read/java/jvm/classloader.html">类加载器详解（重点）</a>：掌握类生命周期和双亲委派模型。</li>
+<li><a href="/read/java/io/README.html">Java IO 专题</a>：从 BIO、NIO、AIO 讲到 IO 模型和 IO 设计模式。</li>
+<li><a href="/read/java/io/io-basis.html">Java IO 基础知识总结</a>、<a href="/read/java/io/nio-basis.html">Java NIO 核心知识总结</a>、<a href="/read/java/io/io-model.html">Java IO 模型详解</a>：补齐网络编程和中间件学习前置知识。</li>
+</ul>
+<h3 id="java-新特性" tabindex="-1">Java 新特性</h3>
+<ul>
+<li><a href="/read/java/new-features/README.html">Java 新特性专题</a>：按版本梳理 Java 8 之后的重要语言、标准库和 JVM 特性。</li>
+<li><a href="/read/java/new-features/java8-common-new-features.html">Java8 新特性实战</a>：掌握 Lambda、Stream、Optional、接口默认方法和新日期 API。</li>
+<li><a href="/read/java/new-features/java11.html">Java 11 新特性概览（重要）</a>、<a href="/read/java/new-features/java17.html">Java 17 新特性概览（重要）</a>、<a href="/read/java/new-features/java21.html">Java 21 新特性概览(重要)</a>：优先关注 LTS 版本中的长期可用特性。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Java 为什么是值传递？对象引用作为参数传递时到底发生了什么？</li>
+<li><code>String</code>、<code>StringBuilder</code>、<code>StringBuffer</code> 有什么区别？</li>
+<li><code>equals()</code> 和 <code>hashCode()</code> 有什么关系？</li>
+<li><code>ArrayList</code> 和 <code>LinkedList</code> 如何选择？<code>HashMap</code> 为什么线程不安全？</li>
+<li><code>ConcurrentHashMap</code> 在 JDK 7 和 JDK 8 中有什么变化？</li>
+<li><code>synchronized</code> 和 <code>ReentrantLock</code> 有什么区别？</li>
+<li>JMM 如何保证可见性、有序性和原子性？</li>
+<li>线程池核心参数如何配置？为什么不建议直接使用 <code>Executors</code>？</li>
+<li>JVM 内存区域如何划分？哪些区域可能发生 OOM？</li>
+<li>G1、ZGC、Shenandoah 分别适合什么场景？</li>
+<li>BIO、NIO、AIO 有什么区别？Reactor 模型解决什么问题？</li>
+<li>Java 8、11、17、21 中哪些新特性最值得掌握？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/cs-basics/README.html">计算机基础</a></li>
+<li><a href="/read/system-design/README.html">系统设计</a></li>
+<li><a href="/read/database/README.html">数据库</a></li>
+<li><a href="/read/distributed-system/README.html">分布式系统知识体系</a></li>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

@@ -1,0 +1,320 @@
+<p>新开一个 Claude Code 会话，它居然知道这个项目怎么跑测试、代码风格是什么、哪些目录不要乱动，甚至还记得你之前纠正过一句：“集成测试别用 H2，要连真实 MySQL”。</p>
+<p>难道说模型把上次聊天都记住了？</p>
+<p>大概率不是。LLM 每次推理看到的还是本轮输入。Claude Code 能跨会话接上，靠的是模型外面那套文件和加载逻辑：哪些规则常驻，哪些经验先放索引里，哪些内容等任务相关时再读进来。</p>
+<p>本文和 <a href="/read/ai/agent/agent-memory.html">《AI Agent 记忆系统》</a> 这篇互为补充。那篇讲通用 Agent 记忆：短期记忆、长期记忆和记忆演化机制。放到 Claude Code 里，问题就更具体了：<code>CLAUDE.md</code> 到底放什么？Auto Memory 记下来的又是什么？<code>.claude/rules/</code> 和第三方的 <code>claude-mem</code>、<code>memsearch</code> 该怎么分工？</p>
+<p><img src="/img/agent-memory-arch-3b774c14.png" alt="" loading="lazy"></p>
+<h2 id="llm-自己不保存跨会话状态" tabindex="-1">LLM 自己不保存跨会话状态</h2>
+<p>先把这个点说清楚：模型本身不会在两次请求之间偷偷保存状态。</p>
+<p>一次调用里，客户端把系统提示词、历史对话、工具返回、用户新问题拼到一起，模型根据这些内容生成下一段输出。下一轮还能想起来，只是应用层又把相关内容带回来了。</p>
+<p>普通聊天不太容易暴露这个问题。你连续聊几十轮，客户端把前文带上，模型自然能接话。Agent 场景就麻烦多了：它会读文件、跑命令、调用工具、拿日志，每一步返回都在吃上下文。几轮下来，窗口里塞满临时材料，长期规则反而混在里面。</p>
+<p><img src="/img/llm-no-cross-session-state-b1e56133.webp" alt="" loading="lazy"></p>
+<p>如果打个工程类比，Context Engineering 有点像给 LLM 做“内存管理”：上下文窗口容量有限，真正要管的是哪些信息常驻、哪些按需读取、哪些过期后淘汰。Token 紧张时，摘要、压缩、检索、优先级取舍，本质上都在处理同一个问题：<strong>别让低价值内容挤掉当前任务真正需要的上下文。</strong></p>
+<p>上下文该怎么组织、什么时候按需加载、什么时候压缩，我在 <a href="/read/ai/agent/context-engineering.html">《上下文工程(Context Engineering) 是什么？和 Prompt Engineering 有什么区别？》</a> 里单独讲过，篇幅问题这里就不重复介绍了。</p>
+<p>回到 Claude Code，长期记忆要先回答这几个问题：</p>
+<ol>
+<li>哪些信息值得长期保存？</li>
+<li>保存到哪里，谁能看见？</li>
+<li>启动时加载多少，任务中再怎么补？</li>
+<li>记忆过期、冲突或者被代码库推翻时，怎么发现和清理？</li>
+</ol>
+<p>很多问题都卡在第一项：<strong>到底什么值得写入</strong>。</p>
+<p><img src="/img/claude-code-memory-layers-2ecaa4a7.webp" alt="" loading="lazy"></p>
+<h2 id="规则和经验别搞混了" tabindex="-1">规则和经验别搞混了</h2>
+<p>Claude Code 的长期上下文可以先分成两类：<strong>人写给 Claude 的规则，以及 Claude 工作时自己攒下来的经验。</strong></p>
+<p><code>CLAUDE.md</code> 是第一类。它更像会话开始前的工作说明书：编码规范、常用命令、目录约束、团队流程、不要碰的区域，都应该写在这里。官方文档把它归到 instructions and rules。</p>
+<p><img src="/img/claude-agents-md-34bac2a9.png" alt="" loading="lazy"></p>
+<p>Auto Memory 是第二类。它记录的是 Claude 在项目里遇到的模式，比如 build 命令、调试经验、用户偏好、一些反复出现的坑。官方文档把它归到 learnings and patterns。</p>
+<p>两者都会进入会话，但职责不一样：</p>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>谁写</th>
+<th>适合存什么</th>
+<th>默认加载方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLAUDE.md</code></td>
+<td>人</td>
+<td>稳定规则、项目约定、协作流程</td>
+<td>每次会话加载</td>
+</tr>
+<tr>
+<td>Auto Memory</td>
+<td>Claude</td>
+<td>工作中发现的经验、偏好、模式</td>
+<td>每次会话加载 <code>MEMORY.md</code> 前 200 行或 25KB</td>
+</tr>
+</tbody>
+</table>
+<p>这两类最好分清楚。规则尽量由人维护，因为它更接近团队约定；经验可以让 Claude 记，但使用前最好回到当前代码里核对一下。</p>
+<h3 id="claudemd放每次都要看的规则" tabindex="-1"><code>CLAUDE.md</code>：放每次都要看的规则</h3>
+<p><code>CLAUDE.md</code> 的具体写法，我之前在 <a href="/read/ai-coding/practices/claude-md-best-practices.html">《CLAUDE.md 最佳实践：该写什么、不该写什么、项目变大后怎么拆》</a> 里已经单独讲过。这篇不重复模板和示例，只看它在 memory 体系里的位置。</p>
+<p>官方文档里这些位置分散在不同段落里看，我更建议直接按五层来记：</p>
+<p><img src="/img/claude-md-best-practices-file-hierarchy-8abb6c01.png" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>路径</th>
+<th>适合内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>组织级</td>
+<td>macOS: <code>/Library/Application Support/ClaudeCode/CLAUDE.md</code>；Linux/WSL: <code>/etc/claude-code/CLAUDE.md</code>；Windows: <code>C:\Program Files\ClaudeCode\CLAUDE.md</code></td>
+<td>IT/DevOps 统一下发的编码规范、安全策略、合规要求</td>
+</tr>
+<tr>
+<td>用户级</td>
+<td><code>~/.claude/CLAUDE.md</code></td>
+<td>个人所有项目通用的偏好和工具习惯</td>
+</tr>
+<tr>
+<td>项目级</td>
+<td><code>./CLAUDE.md</code> 或 <code>./.claude/CLAUDE.md</code></td>
+<td>团队共享的项目架构、命令、代码标准</td>
+</tr>
+<tr>
+<td>本地级</td>
+<td><code>./CLAUDE.local.md</code></td>
+<td>当前项目里的个人配置，例如沙箱 URL、测试数据偏好</td>
+</tr>
+<tr>
+<td>子目录级</td>
+<td><code>./subdir/CLAUDE.md</code>，以及同目录下的 <code>CLAUDE.local.md</code></td>
+<td>某个模块或子目录的规则，Claude 读取该目录文件时才会按需加载</td>
+</tr>
+</tbody>
+</table>
+<p>这些文件不是谁覆盖谁。Claude 会把启动路径上能看到的 <code>CLAUDE.md</code> 和 <code>CLAUDE.local.md</code> 拼进上下文，范围越大越先加载，越靠近当前目录越后加载；子目录里的文件不在启动时加载，要等 Claude 读到那个目录下的文件才会补进来。组织级 managed policy 不能被个人配置排除。</p>
+<p>每份 <code>CLAUDE.md</code> 最好控制在 200 行以内。文件一长，模型就容易只记住一部分。</p>
+<p><img src="/img/claudemd-claude-docs-95f47141.png" alt="" loading="lazy"></p>
+<p>这就是我们常说的上下文腐化（Context Rot）问题。<strong>上下文越长，信息越杂，模型利用上下文的稳定性就越可能变差。</strong></p>
+<p><img src="/img/context-rot-diagram-455c3d66.png" alt="" loading="lazy"></p>
+<p><code>CLAUDE.md</code> 很容易被误用，尤其是下面这几种情况。</p>
+<ol>
+<li><code>CLAUDE.md</code> 不是强制配置。</li>
+</ol>
+<p><code>CLAUDE.md</code> 会作为 user message 注入到系统提示词之后。它很有用，但规则写得模糊、过期，或者不同文件之间互相冲突，模型照样可能选错。</p>
+<ol>
+<li>块级 HTML 注释只是在注入上下文前被剥离。</li>
+</ol>
+<p>你可以在 <code>CLAUDE.md</code> 里写维护说明：</p>
+<pre class="md-pre"><code class="hljs">&lt;!-- 这段给维护者看，注入上下文时会被剥离 --&gt;
+</code></pre>
+<p>但如果 Claude 用文件读取工具直接打开它，注释仍然可见。</p>
+<ol>
+<li><code>@path/to/file</code> 能引入外部文件，但不会省 token。</li>
+</ol>
+<p>被引用文件会在启动时展开进上下文，递归最多四跳，首次引用外部文件还可能需要审批。大段规则不要指望靠 <code>@</code> 拆文件来“省窗口”。</p>
+<p>真正适合按需加载规则的，是 <code>.claude/rules/</code>。</p>
+<p><img src="/img/claude-md-best-practices-rule-files-relationship-66d1a6af.png" alt="" loading="lazy"></p>
+<h3 id="clauderules放按文件触发的规则" tabindex="-1"><code>.claude/rules/</code>：放按文件触发的规则</h3>
+<p>假设你有一份前端规则，只在处理 <code>src/**/*.tsx</code> 时才需要。后端任务每次都把它加载进来，就是在浪费上下文。</p>
+<p><code>.claude/rules/</code> 适合放这类条件规则。每条规则是一个 Markdown 文件，可以在 frontmatter 里写 <code>paths</code>：</p>
+<pre class="md-pre"><code class="hljs">---
+paths:
+<span class="hljs-bullet">  -</span> &quot;src/<span class="hljs-strong">**/<span class="hljs-emphasis">*.{ts,tsx}&quot;
+  - &quot;tests/*</span><span class="hljs-emphasis">*/*</span>.test.ts&quot;
+---
+
+# TypeScript Rules
+
+- API 入参必须做校验。
+- 测试文件优先复用已有 fixture。
+</span></code></pre>
+<p>带 <code>paths</code> 的规则不会在启动时全量塞进去。Claude 读取匹配 glob 的文件时，才会触发对应规则。这样一来，那些长期有效、但只在某类任务里有用的内容，就不用全塞进 <code>CLAUDE.md</code>。</p>
+<p>放到项目里时，我一般按用途拆开：</p>
+<ul>
+<li>每次会话都要看到的规则，放 <code>CLAUDE.md</code>；</li>
+<li>只在某类文件或目录下才有用的规则，放 <code>.claude/rules/</code>；</li>
+<li>多步骤、可复用的操作流程，做成 skill，按需触发；</li>
+<li>必须硬拦的行为，用 hook 或权限配置，不要只写在 Markdown 里。</li>
+</ul>
+<p>“禁止执行 <code>rm -rf</code>”“提交前必须跑某个脚本”这类要求，写在 <code>CLAUDE.md</code> 里只能算提醒。真要拦住工具调用，还是得靠 hook、permissions 或外层 CI。</p>
+<h3 id="auto-memory放-claude-工作中记下的经验" tabindex="-1">Auto Memory：放 Claude 工作中记下的经验</h3>
+<p>Auto Memory 是 Claude Code 官方提供的自动记忆机制。它的自动，主要体现在 Claude 会在工作中自己写 notes：比如构建命令、调试经验、架构信息、代码风格偏好和工作习惯。</p>
+<p>不过，它不是每轮会话都写，而是由 Claude 判断哪些内容以后还会用到。你可以用 <code>/memory</code> 直接打开对应的文件夹。</p>
+<p><img src="/img/claudecode-memory-command-51dac2f1.png" alt="" loading="lazy"></p>
+<p>按官方文档，Auto Memory 从 Claude Code v2.1.59 开始可用，并且默认开启。它会把项目记忆放到 <code>~/.claude/projects/&lt;project&gt;/memory/</code>，启动时先读 <code>MEMORY.md</code> 的前 200 行或 25KB。更细的内容不会一次性全塞进来，而是放在 topic files 里，需要时再打开；<code>/memory</code> 可以查看和编辑。</p>
+<p><img src="/img/claude-code-auto-memory-437c2c64.png" alt="" loading="lazy"></p>
+<p>也可以直接关掉它：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;autoMemoryEnabled&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>或者用环境变量：</p>
+<pre class="md-pre"><code class="hljs">CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
+</code></pre>
+<p>默认存储目录是：</p>
+<pre class="md-pre"><code class="hljs">~/.claude/projects/&lt;project&gt;/memory/
+</code></pre>
+<p>官方文档给出的典型结构是：</p>
+<pre class="md-pre"><code class="hljs">~/.claude/projects/&lt;project&gt;/memory/
+├── MEMORY.md
+├── debugging.md
+├── api-conventions.md
+└── ...
+</code></pre>
+<p><code>MEMORY.md</code> 只做入口索引，启动时自动加载前 200 行或 25KB，哪个先到就停。更细的说明放在 topic files 里，Claude 需要时再读。</p>
+<p>这个设计很像我前面写过的 Skill 渐进式披露：先让模型知道“有什么”，别一上来就把“全部内容”塞满上下文。</p>
+<p><img src="/img/agent-skills-progressive-disclosure-a73e1cfe.webp" alt="" loading="lazy"></p>
+<p>官方文档没有要求 topic file 一定使用某个 schema，也没有公开承诺“记忆类型必须是 user / feedback / project / reference”。</p>
+<p>下面这四类是根据之前的源码泄露分析得出的：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>适合保存</th>
+<th>不适合保存</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user</code></td>
+<td>用户长期偏好、技术背景、沟通习惯</td>
+<td>用户刚才说的一次性临时想法</td>
+</tr>
+<tr>
+<td><code>feedback</code></td>
+<td>用户明确纠正过的做法</td>
+<td>Agent 自己猜出来的偏好</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td>项目阶段、决策原因、短期冻结规则</td>
+<td>当前代码结构、文件行号这类会变的事实</td>
+</tr>
+<tr>
+<td><code>reference</code></td>
+<td>信息去哪查、哪个文档是权威来源</td>
+<td>大段复制的文档正文</td>
+</tr>
+</tbody>
+</table>
+<p>Auto Memory 会自动写 notes，但不等于可以完全不管。你让 Claude “记住某件事”、事后用 <code>/memory</code> 审核自动写入的内容，或者自己做类似系统时，都要有一套筛选标准。我的原则是宁可少记几条，也不要堆无用的内容。</p>
+<p>重点关注这三点：</p>
+<ol>
+<li>下次做决定会不会用到？</li>
+<li>是不是用户明确确认过？</li>
+<li>过期了有没有人能发现？</li>
+</ol>
+<p>答不上来，就让它留在当前会话里，没必要写进长期记忆。</p>
+<p>真要保留下来，也不要只在 topic file 里塞一句结论。至少把事实、当时这么定的原因、记录时间/失效时间、用之前是否要核对都写上。以后 Agent 再读到这条记忆，看到的就不是一条死规则，而是一条有边界的记录。</p>
+<p><img src="/img/claude-code-memory-write-governance-3368db83.webp" alt="" loading="lazy"></p>
+<p>例如：</p>
+<pre class="md-pre"><code class="hljs">---
+type: feedback
+created<span class="hljs-emphasis">_at: 2026-06-17
+updated_</span>at: 2026-06-17
+---
+
+<span class="hljs-section"># 集成测试连接真实 MySQL</span>
+
+集成测试只要验证数据库行为，就连接真实 MySQL，不使用 H2 内存库替代。
+
+原因：之前有用例在 H2 上通过，但上线后因为 MySQL 的事务和 SQL 方言差异暴露问题。
+
+适用范围：参数校验、纯分支逻辑测试可以继续使用更轻的替代方案；涉及事务、索引、SQL 方言和并发行为时，必须回到 MySQL。
+</code></pre>
+<p>只写“集成测试不用 H2”当然也能起作用，但 Agent 很容易机械执行。补上原因和适用范围，后面遇到参数校验、纯分支逻辑这类场景，它才有机会做出正确取舍。</p>
+<h2 id="哪些东西别放进长期记忆" tabindex="-1">哪些东西别放进长期记忆</h2>
+<p>前面说的是哪些值得记。反过来，还有一些内容最好只留在本轮会话里。</p>
+<p>下面这些我一般不会建议放进 Auto Memory：</p>
+<ul>
+<li>某个文件现在有多少行、某个函数现在在哪；</li>
+<li>本轮命令输出、临时日志、一次性报错和排查中间状态；</li>
+<li>Git 里能查到的修改历史，README、接口文档里已有的稳定内容；</li>
+<li>Agent 自己推出来、但用户没有确认过的偏好或判断。</li>
+</ul>
+<p>它们放在当前上下文里很有用，放进 memory 里就没任何意义了，反而会影响 Agent 的判断。</p>
+<p>时间最好也落到具体日期。用户说“月底前别动订单模块”，如果这句话要进 memory，就写成“2026-06-30 前不要修改订单模块”。“月底”“下周”“昨天”这种说法只在当场成立，隔几天再读，Claude 很难知道它指的是哪一天。</p>
+<p>一条 memory 写进去以后，成本就不只是几十个 token。它还要被复查、改掉或删除；没人管时，Agent 可能会拿着这条旧前提继续做决定。</p>
+<h2 id="auto-memory-怎么读回来不要写死" tabindex="-1">Auto Memory 怎么读回来，不要写死</h2>
+<p>官方文档中只提到了 <code>MEMORY.md</code> 和 topic files 这一层：启动时先加载索引，更细的内容按需读取。</p>
+<p>再往里，Auto Memory 到底用 grep、LLM picker、向量检索，还是别的策略，官方并没有展开。</p>
+<p><img src="/img/claude-code-memory-recall-flow-e436c3ca.webp" alt="" loading="lazy"></p>
+<p>根据网上流出的源码片段和反编译分析来看：Claude 可能会先读 <code>MEMORY.md</code> 和各文件摘要，再按当前任务挑相关文件；也有人认为它更偏关键词匹配。</p>
+<p>实际落地时，先抓住几条就够了：索引短一点，正文拆出去，同一轮已经注入过的记忆不要重复塞。读回来也不是越多越好，错塞一条过期记忆，比少塞一条更容易把 Agent 带偏。</p>
+<h2 id="读到-memory-后先判断它是哪类信息" tabindex="-1">读到 memory 后，先判断它是哪类信息</h2>
+<p>Auto Memory 被读回上下文后，先按带时间戳的线索处理：它能告诉你以前为什么这么做、可以从哪里开始查，但不能证明现在仍然如此。</p>
+<p>比如 memory 里写“订单超时任务在 <code>order-job</code> 模块”。这条记录在写入当天可能是对的；后来代码拆了模块，任务可能已经搬家，也可能改了名字。如果 Agent 直接按旧记忆去改文件，大概率会偏。更稳的顺序是：先用 memory 找方向，再回到当前仓库、当前文档或命令输出里确认。</p>
+<p>读到不同类型的 memory，信任方式也不一样。</p>
+<p>用户长期偏好可以优先采用，但本轮明确指令永远更近。历史决策原因可以参考，不过它解释的是当时为什么这么选，不代表现在还必须这么做。文件路径、模块位置、命令参数这类内容，只能当线索，用之前一定要回到当前仓库核对。项目冻结、上线窗口、排期要看绝对日期，过期了就更新或删除。第三方文档结论也一样，最后还是要回到当前官方文档或实际版本确认。</p>
+<p>Auto Memory 的价值是减少重复解释，让 Agent 少从零开始摸索。真正动手前，当前代码、当前文档和当前命令输出的优先级仍然最高。</p>
+<h2 id="subagent-memory-和-agent-teams-分别解决什么问题" tabindex="-1">Subagent Memory 和 Agent Teams 分别解决什么问题</h2>
+<p>多 Agent 相关文档里，Subagent Memory 和 Agent Teams 很容易被放到一起看。前者管某个 subagent 自己的长期经验，后者管多个 Claude Code session 在一次任务里怎么配合。</p>
+<p>Subagent Memory 仍然是文件式长期记忆，只是记忆主体从主会话换成了某个 subagent。官方 subagent 文档里的 <code>memory</code> 字段支持 <code>user</code>、<code>project</code>、<code>local</code> 三种 scope。</p>
+<p>按 scope 不同，Claude Code 会使用下面这些目录：</p>
+<pre class="md-pre"><code class="hljs">~/.claude/agent-memory/&lt;agent-name&gt;/
+.claude/agent-memory/&lt;agent-name&gt;/
+.claude/agent-memory-local/&lt;agent-name&gt;/
+</code></pre>
+<p>这些目录按需创建或使用。没有给 subagent 配 <code>memory</code> 时，在 <code>~/.claude/</code> 里看不到 <code>agent-memory/</code> 很正常。</p>
+<p>启用后，subagent 启动时会读取对应目录里 <code>MEMORY.md</code> 的前 200 行或 25KB，哪个先到就停。它也会拿到读写 memory 目录所需的文件工具，用来维护自己的经验。</p>
+<p>这类 memory 适合放专用 worker 的经验。比如一个只负责数据库迁移的 subagent，可以沉淀迁移脚本规范、常见失败原因、项目里的历史取舍。下次处理同类任务，它至少知道先查哪里、哪些坑别重复踩。</p>
+<p>Agent Teams 走的是协作调度路线。官方文档里提到的 team lead、teammates、shared task list、mailbox，解决的是多个独立 Claude Code session 如何分工、通信、同步任务状态，和共享长期记忆不是一回事。</p>
+<p>Agent Teams 可以引用某个 subagent definition 来生成 teammate，但这只说明 teammate 会复用 definition 里的部分配置。官方明确写到的是 <code>tools</code>、<code>model</code> 会被使用，正文会追加到 teammate 的 system prompt；<code>skills</code>、<code>mcpServers</code> 不会沿这条路径生效。<code>memory</code> 在 teammate 场景下怎么处理，最好按当前版本单独验证，别顺手外推成团队共享长期记忆。</p>
+<p>所以我会把两者分开用：Subagent Memory 用来沉淀专用 worker 的长期经验；Agent Teams 用来做一次任务里的并行协作。真要让团队角色带上长期经验，先验证它启动时加载什么、写到哪里、能不能跨 session 保留，再放进正式流程。</p>
+<h2 id="第三方记忆插件解决了什么问题" tabindex="-1">第三方记忆插件解决了什么问题</h2>
+<p>内置 Auto Memory 让 Claude Code 在本地文件里记住以后还可能用到的偏好、命令和项目经验。它省心，但没有打算把每次会话过程完整存下来，也没有把多台机器、多名开发者、多种 Agent 的历史统一到一个搜索入口。</p>
+<p>第三方插件主要解决的就是这两个问题。</p>
+<p><strong><a href="https://github.com/thedotmack/claude-mem" target="_blank" rel="noopener"><code>claude-mem</code></a> 关心的是会话过程。</strong> 它通过 Lifecycle Hooks 记录会话和工具观察，再交给本地 Worker 处理。</p>
+<p>它有几个关键组件：默认端口 <code>37777</code> 的 Worker Service、SQLite 里的 sessions / observations / summaries、Chroma 向量库、<code>mem-search</code> skill 和 MCP Tools。</p>
+<p>这种方案适合回看历史过程，比如：上次为什么暂停支付模块合入？、之前哪个命令查过慢查询？。</p>
+<p>代价也跟着上来：worker、数据库、索引、权限都要维护。</p>
+<p><strong><a href="https://github.com/zilliztech/memsearch" target="_blank" rel="noopener"><code>memsearch</code></a> 更像外置 Memory Store。</strong> 它用每日 Markdown 保存原始内容，Milvus 做向量索引缓存，检索时结合语义向量、BM25 和 RRF。</p>
+<p>它适合多工具、多成员、长周期项目，比如 Claude Code、OpenClaw、OpenCode、Codex CLI 共用一套记忆。</p>
+<p>这类方案比本地 Markdown 重得多。索引、嵌入模型、Milvus Lite 或云端 Zilliz、同步策略、数据权限，都要有人负责。记忆还只有几十条时，通常没必要上到这一层。</p>
+<p><strong>如何选择呢？</strong></p>
+<p>单人项目想让 Claude 记住测试命令、提交习惯和项目偏好，先用 <code>CLAUDE.md</code> 加 Auto Memory。团队共享稳定规则，就放进仓库里的 <code>CLAUDE.md</code>、<code>.claude/rules/</code> 或正式文档，让改动走 review。</p>
+<p>需要自动保存会话过程，再看 <code>claude-mem</code> 这类 Hooks 加本地数据库的方案。</p>
+<p>多个 Agent、多台机器、多名开发者共享长期记忆，才考虑 <code>memsearch</code>、Mem0 或自建数据库。</p>
+<p>至于 BM25、向量检索和 reranker，更适合几万条文档、工单、Wiki 混在一起查的场景。</p>
+<h2 id="如何做一套轻量级记忆系统" tabindex="-1">如何做一套轻量级记忆系统</h2>
+<p>如果你想给团队做一套轻量记忆系统，可以先定文件结构和写入规则。</p>
+<p><code>CLAUDE.md</code> 只放每次会话都必须知道的内容，比如测试命令、提交规范、禁改目录。目录或文件类型相关的规则，不要继续往这个文件里塞，放进 <code>.claude/rules/</code>，再用 <code>paths</code> 控制加载范围。</p>
+<p>长期记忆单独放到 <code>memory/</code> 目录。刚开始别分太细，四类够用：<code>user</code> 放用户长期偏好，<code>feedback</code> 放用户明确纠正过的做法，<code>project</code> 放阶段性决策和短期冻结规则，<code>reference</code> 放资料入口。每个 topic file 里写 <code>created_at</code>、<code>updated_at</code>、记录原因和适用范围；依赖当前代码状态的内容，打开以后先核对再用。</p>
+<p><img src="/img/claude-code-lightweight-memory-system-a72a6152.webp" alt="" loading="lazy"></p>
+<p>这个版本可以先手工维护。它不酷，但脏数据少，团队能审阅，删错了也能从 Git 里找回来。等人工索引真的开始拖慢使用，再加自动摘要、全文检索或向量检索也不迟。</p>
+<p>目录不用一开始就设计得很复杂。先让索引、用户偏好、明确反馈、项目决策和资料入口各有位置就够了：</p>
+<pre class="md-pre"><code class="hljs">memory/
+├── MEMORY.md
+├── feedback/
+│   └── integration-test-real-mysql.md
+├── project/
+│   └── payment-freeze-before-2026-06-30.md
+├── reference/
+│   └── slow-query-wiki.md
+└── user/
+    └── backend-preferences.md
+</code></pre>
+<p><code>MEMORY.md</code> 不负责解释来龙去脉，只做入口。它告诉 Claude 现在有哪些记忆，以及需要细看时该打开哪个文件：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-section"># Memory Index</span>
+
+<span class="hljs-bullet">-</span> [<span class="hljs-string">Integration tests use real MySQL</span>](<span class="hljs-link">feedback/integration-test-real-mysql.md</span>): 数据库行为相关集成测试必须连接真实 MySQL。
+<span class="hljs-bullet">-</span> [<span class="hljs-string">Payment freeze before 2026-06-30</span>](<span class="hljs-link">project/payment-freeze-before-2026-06-30.md</span>): 2026-06-30 前支付模块暂停合入新需求。
+<span class="hljs-bullet">-</span> [<span class="hljs-string">Slow query wiki</span>](<span class="hljs-link">reference/slow-query-wiki.md</span>): 线上慢查询排查入口在内部 Wiki 的 db-slow-log 页面。
+</code></pre>
+<p>解释、背景和适用范围放到 topic file 里。这样 <code>MEMORY.md</code> 可以一直很短，适合常驻；后面要改、要删、要 review，也能直接看对应文件的 diff。</p>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>Claude Code 的记忆靠外部文件、索引和加载规则起作用，不是模型自己把历史存在脑子里。</p>
+<p><code>CLAUDE.md</code> 适合写稳定规则，<code>.claude/rules/</code> 适合写按路径触发的规则，Auto Memory 适合留下 Claude 工作中发现的偏好和经验。<code>MEMORY.md</code> 别写成小作文，做索引就够了；原因、适用范围、过期时间这些细节，放到 topic file 里。</p>
+<p>比起怎么搜得更准，我更在意什么东西别写进去。临时日志、当前文件行数、一次性报错、Agent 自己猜出来的偏好，留在本轮上下文里就行。长期记忆一旦写进去，后面就要有人核对、更新和删除。</p>
+<p>第三方工具按需求再加，千万别为了用而用，能保持简单就是最好的。想保存会话过程，<code>claude-mem</code> 更贴近；想让多工具、多成员共用一套记忆，再看 <code>memsearch</code>、Mem0 或自建库。记忆只有几十条时，先别急着上向量库，文件索引通常已经够用。</p>
+<p>我的建议很简单：先把 <code>CLAUDE.md</code> 和 <code>.claude/rules/</code> 写清楚，再让 Auto Memory 或手工 <code>memory/</code> 只留下少量高价值经验。等记忆真的多到人工索引拖不动、协作角色也变复杂了，再考虑数据库、BM25、向量检索和 reranker。</p>
+<p>让 Agent 记住一切没什么意义。更可靠的做法，是让它知道下一步该去哪里核对。</p>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li>Claude Code 官方文档：<a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener">How Claude remembers your project</a></li>
+<li>Claude Code 官方文档：<a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener">Subagents</a></li>
+<li>Claude Code 官方文档：<a href="https://code.claude.com/docs/en/agent-teams" target="_blank" rel="noopener">Agent Teams</a></li>
+<li>Claude Code 官方文档：<a href="https://code.claude.com/docs/en/hooks-guide" target="_blank" rel="noopener">Hooks guide</a></li>
+<li>GitHub：<a href="https://github.com/thedotmack/claude-mem" target="_blank" rel="noopener">thedotmack/claude-mem</a></li>
+<li>MindStudio：<a href="https://www.mindstudio.ai/blog/claude-code-memory-systems-compared" target="_blank" rel="noopener">Claude Code Memory Systems Explained</a></li>
+<li>Milvus：<a href="https://milvus.io/zh/blog/claude-code-memory-memsearch.md" target="_blank" rel="noopener">Claude Code Memory System Explained: 4 Layers, 5 Limits, and a Fix</a></li>
+</ul>

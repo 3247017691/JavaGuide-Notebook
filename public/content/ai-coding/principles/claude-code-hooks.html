@@ -1,0 +1,592 @@
+<p>用 Claude Code/ Codex 写代码到一定阶段之后，很多人会遇到同一个问题。</p>
+<p>问题通常不在模型能力上。</p>
+<p>恰恰相反，是它太能干了。它能改文件、跑命令、查项目结构、生成脚本，也能一口气处理一串很长的任务。于是你会很自然地开始把更多动作交给它。</p>
+<p>然后问题就来了：改完文件，它这次会不会忘了格式化？准备跑 Bash 命令时，它会不会不小心带上 <code>rm -rf</code>？它会不会顺手改到 <code>.env</code>、<code>.git/</code> 或生产配置？它卡在权限弹窗时，我能不能不用一直盯着终端？......</p>
+<p>它们都不适合只靠提示词解决，因为提示词约束不够，无法完全保证。</p>
+<p>这个时候就需要用到了 Hooks 了，它解决的就是这些问题，自动触发执行。</p>
+<p>这两者的差别，可以先用一张图概括：</p>
+<p><img src="/img/hooks-vs-prompts-guarantee-f27a3775.webp" alt="" loading="lazy"></p>
+<p>我更愿意把 Hooks 理解成 Claude Code 工作流里的固定卡点。会话开始、用户提交 Prompt、工具调用前后、上下文压缩前后，都可以挂上对应的处理动作。</p>
+<h2 id="hooks-到底是什么" tabindex="-1">Hooks 到底是什么</h2>
+<p>Hook 配置主要看事件和 handler。事件决定什么时候触发，handler 接收当时的输入并完成具体动作。</p>
+<p>比如把一个 <code>command</code> handler 挂到 <code>PostToolUse</code>：Claude 成功修改文件后，Claude Code 会把这次工具调用的 JSON 交给脚本，脚本再决定是否运行 formatter。整个过程不需要 Claude 回头读提示词，也可以把脚本拿出来单独测试。</p>
+<p>handler 也不限于 shell command，官方还支持 HTTP endpoint、MCP 工具和 LLM prompt 等形式（见官方文档 <a href="https://code.claude.com/docs/en/hooks" target="_blank" rel="noopener">Hooks reference</a> 中 &quot;Hook handler fields&quot; 一节）。</p>
+<p><img src="/img/hooks-handler-types-official-docs-cf27f8fc.png" alt="" loading="lazy"></p>
+<p>下图标出了常用触发点：</p>
+<p><img src="/img/claude-code-hooks-lifecycle-map-4584bd5a.webp" alt="" loading="lazy"></p>
+<p>Hook handler 主要有五类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>做什么</th>
+<th>适合场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>command</code></td>
+<td>执行 shell command</td>
+<td>格式化、日志、安全拦截、通知</td>
+</tr>
+<tr>
+<td><code>http</code></td>
+<td>把事件 JSON POST 到一个 URL</td>
+<td>团队审计服务、远程通知、集中化策略</td>
+</tr>
+<tr>
+<td><code>mcp_tool</code></td>
+<td>调用已连接 MCP server 上的工具</td>
+<td>复用现有 MCP 能力</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>用一次模型判断返回 yes/no 风格 JSON</td>
+<td>轻量判断，比如 Stop 前检查任务是否完成</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td>启动带工具访问能力的 subagent 做验证</td>
+<td>需要读文件、搜代码、跑命令的验证</td>
+</tr>
+</tbody>
+</table>
+<p>不过，这五类 handler 不是每个事件都能用：</p>
+<ul>
+<li><code>PreToolUse</code>、<code>PostToolUse</code>、<code>PermissionRequest</code>、<code>Stop</code> 等事件支持全部五种类型；</li>
+<li><code>Notification</code>、<code>PreCompact</code>、<code>ConfigChange</code> 等事件不支持 <code>prompt</code> 和 <code>agent</code>；</li>
+<li><code>SessionStart</code>、<code>Setup</code> 只支持 <code>command</code> 和 <code>mcp_tool</code>。</li>
+</ul>
+<p>准备使用非 command handler 时，最好先查一下对应事件的兼容范围。</p>
+<p>这一步直接交给 AI 去做就好，你只需要提供我写的这篇文章给你使用的 Coding Agent 或者直接发一下官方的文档链接给它。</p>
+<p>能确定性地写成脚本的规则，优先交给 <code>command</code>。脚本可以脱离 Claude Code 单独运行，失败原因也更容易复现。</p>
+<p>只有验证过程需要读代码、运行测试并综合判断时，才需要考虑 <code>prompt</code> 或 <code>agent</code>。其中 <code>agent</code> hooks 在官方文档里仍标注为 experimental，接入前要把额外的调试成本算进去。</p>
+<p>五类 handler 的关系如下：</p>
+<p><img src="/img/hook-handler-types-1c039791.webp" alt="" loading="lazy"></p>
+<h2 id="hooks-到底解决了什么问题" tabindex="-1">Hooks 到底解决了什么问题</h2>
+<p>假设 <code>CLAUDE.md</code> 里写着“改完代码请运行 Prettier”。这条说明会进入上下文，Claude 通常会照做；任务变长、期间插入新要求后，它也可能漏掉。项目规则还没整理清楚时，可以先看 <a href="/read/ai-coding/practices/claude-md-best-practices.html">CLAUDE.md 最佳实践</a>。</p>
+<p>“不要修改 <code>.env</code>”也有相同问题。自然语言可以说明意图，却无法在每次文件写入前强制检查路径。把规则接到 <code>PreToolUse</code> 后，脚本可以读取目标文件并在命中敏感路径时直接阻断；格式化则可以放在 <code>PostToolUse</code>，只处理刚修改的文件。</p>
+<p>这类机制和 pre-commit、CI、lint-staged、CODEOWNERS、branch protection 的作用相近：把格式化、危险命令检查、权限通知等固定动作写进流程，留下可检查的执行结果。Hooks 补上的正是 Claude Code 生命周期中的这一段。</p>
+<h2 id="hooks-最小配置" tabindex="-1">Hooks 最小配置</h2>
+<p>Hook 配在 Claude Code 的 settings 文件里。常用位置有三个：</p>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>作用范围</th>
+<th>适合放什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.claude/settings.json</code></td>
+<td>当前用户所有项目</td>
+<td>个人通知、个人习惯</td>
+</tr>
+<tr>
+<td><code>.claude/settings.json</code></td>
+<td>当前项目，可提交仓库</td>
+<td>团队共享规则、项目级安全限制</td>
+</tr>
+<tr>
+<td><code>.claude/settings.local.json</code></td>
+<td>当前项目本机私有</td>
+<td>不适合提交的个人配置</td>
+</tr>
+</tbody>
+</table>
+<p>官方还支持 managed policy、插件的 <code>hooks/hooks.json</code>，以及 skill 或 agent frontmatter 里的 hooks。</p>
+<p>日常写项目，先记住上面三个就够了。</p>
+<p>一个最小配置长这样：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;PostToolUse&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;matcher&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Edit|Write&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+          <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;command&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;jq -r &#x27;.tool_input.file_path&#x27; | xargs npx prettier --write&quot;</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>拆开看，其实就是三层：</p>
+<ul>
+<li><code>PostToolUse</code> 是事件名，表示工具调用成功之后触发。</li>
+<li><code>matcher</code> 是过滤条件。这里写 <code>Edit|Write</code>，只在 Claude Code 使用 <code>Edit</code> 或 <code>Write</code> 改文件之后触发。工具名 matcher 可以用 <code>|</code> 分隔；从 Claude Code v2.1.191 开始，也可以用 <code>,</code> 分隔并在两侧留空格。带连字符的精确 matcher 则需要 v2.1.195 或更高版本，旧版本可以用 <code>^...$</code> 限定完整匹配。</li>
+<li><code>hooks</code> 数组里是真正执行的 handler。这里是一个 <code>command</code>，会从 stdin 的 JSON 里取出刚编辑的文件路径，再交给 Prettier。</li>
+</ul>
+<p>示例为了短，把命令直接写进了 JSON。实际项目里，只要命令开始变长，或者要引用项目里的脚本，我更建议写成独立文件，再用 <code>${CLAUDE_PROJECT_DIR}</code> 指过去：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;command&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;${CLAUDE_PROJECT_DIR}/.claude/hooks/format-after-edit.sh&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>官方文档建议，引用项目路径、插件路径这类占位符时优先用 exec form。每个 <code>args</code> 元素都会作为一个独立参数传给脚本，不再经过 shell 分词，因此路径中的空格、括号或特殊字符不会被二次拆分。</p>
+<p>省略 <code>matcher</code>、填写空字符串或使用 <code>.*</code>，都会让这个 hook group 匹配对应事件的每一次触发。对格式化任务来说，这可能意味着每次工具调用后都启动 formatter；放在权限事件上，则可能把所有授权弹窗交给同一套自动处理逻辑。</p>
+<p>matcher 应该贴着实际输入写。格式化文件就匹配 <code>Edit|Write</code>，检查 shell 风险就匹配 <code>Bash</code>，减少无关调用，也便于从日志里定位是哪条规则产生了结果。</p>
+<h2 id="hook-输入输出怎么工作" tabindex="-1">Hook 输入输出怎么工作</h2>
+<p>Hook 触发时，Claude Code 会把事件上下文作为 JSON 传给 handler：</p>
+<ul>
+<li>如果是 <code>command</code> hook，这段 JSON 走 stdin。</li>
+<li>如果是 <code>http</code> hook，这段 JSON 会作为 POST body 发给服务端。</li>
+</ul>
+<p>所有事件都会有一些公共字段，比如：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session_id</code></td>
+<td>当前会话 ID</td>
+</tr>
+<tr>
+<td><code>transcript_path</code></td>
+<td>会话 JSONL 文件路径</td>
+</tr>
+<tr>
+<td><code>cwd</code></td>
+<td>触发 hook 时的工作目录</td>
+</tr>
+<tr>
+<td><code>permission_mode</code></td>
+<td>当前权限模式，部分事件才有</td>
+</tr>
+<tr>
+<td><code>hook_event_name</code></td>
+<td>触发的事件名</td>
+</tr>
+</tbody>
+</table>
+<p>工具相关事件还会带 <code>tool_name</code> 和 <code>tool_input</code>。</p>
+<p>比如 Claude Code 准备执行 <code>npm test</code> 时，<code>PreToolUse</code> 可能收到这样的输入：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;session_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;abc123&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;cwd&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/Users/example/project&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;hook_event_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PreToolUse&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tool_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bash&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tool_input&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npm test&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>所以 Hook 脚本里很常见的一段就是：</p>
+<pre class="md-pre"><code class="hljs">INPUT=<span class="hljs-string">&quot;<span class="hljs-subst">$(cat)</span>&quot;</span>
+TOOL_NAME=<span class="hljs-string">&quot;<span class="hljs-subst">$(echo <span class="hljs-string">&quot;<span class="hljs-variable">$INPUT</span>&quot;</span> | jq -r &#x27;.tool_name // empty&#x27;)</span>&quot;</span>
+COMMAND=<span class="hljs-string">&quot;<span class="hljs-subst">$(echo <span class="hljs-string">&quot;<span class="hljs-variable">$INPUT</span>&quot;</span> | jq -r &#x27;.tool_input.command // empty&#x27;)</span>&quot;</span>
+</code></pre>
+<p>这里建议用 <code>jq</code> 解析 JSON，不要自己用 grep 拼字段。</p>
+<p>这里别按普通脚本的习惯乱写。</p>
+<p>Claude Code 会在每个退出码下检查 stdout。如果去掉开头空白后第一个字符是 <code>{</code>，就会尝试按 JSON 解析。准备返回结构化决策时，推荐使用 <code>exit 0</code>，并且不要往 stdout 里塞调试日志。错误原因和调试信息写 <code>stderr</code>。想阻断，大多数事件用 <code>exit 2</code>；普通非 0 错误很多时候只是 hook 报错，流程还会继续。</p>
+<p>最容易踩的坑是 <code>exit 1</code>。</p>
+<p>在普通 shell 脚本里，<code>exit 1</code> 经常表示失败。但在 Claude Code Hooks 里，如果 stdout 为空、是普通文本，或者 JSON 没通过校验，<code>exit 1</code> 对多数 hook event 只是非阻断错误，流程会继续。如果 stdout 是符合事件 schema 的 JSON，采用标准决策模型的事件会忽略这个退出码，按 JSON 里的字段处理结果。</p>
+<p>再说 JSON 输出。</p>
+<p>如果你想更精细地控制，比如 <code>PreToolUse</code> 里返回 <code>allow</code>、<code>deny</code>、<code>ask</code>、<code>defer</code>，推荐 <code>exit 0</code>，然后 stdout 只输出一个 JSON 对象。</p>
+<p>例如拒绝一次工具调用：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hookSpecificOutput&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;hookEventName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PreToolUse&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;permissionDecision&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;deny&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;permissionDecisionReason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Database writes are not allowed&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>如果是 <code>PermissionRequest</code>，结构又不一样，重点在 <code>decision.behavior</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hookSpecificOutput&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;hookEventName&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;PermissionRequest&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;decision&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;behavior&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;allow&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>别把 stdout 当日志打。</p>
+<p>如果你要输出 JSON，stdout 就只放 JSON。调试信息写 stderr，或者写到日志文件。否则很容易遇到 <code>JSON validation failed</code>，然后盯着配置怀疑人生。</p>
+<p>如果脚本 <code>exit 2</code>，Claude Code 仍然会读取 stdout 里符合 schema 的 JSON。对支持阻断的事件来说，<code>exit 2</code> 的阻断结果不能被 JSON 覆盖；没有有效的 JSON 阻断原因时，Claude Code 才会使用 stderr。<code>PermissionRequest</code> 是个例外，它不接受 <code>exit 2</code> 阻断，批准或拒绝都要通过 <code>decision</code> 对象返回。</p>
+<p>同一个事件下，如果有多个 Hook 同时命中，Claude Code 会让它们都跑完再合并结果。一个 Hook 返回 deny，不会阻止旁边那个 Hook 写日志、发 HTTP 请求或改文件；<code>PreToolUse</code> 里多个决策合并时，会采用更严格的结果。</p>
+<p>所以，只要 Hook 会写日志、发请求、改文件，就应该自己判断要不要执行。不要假设另一个安全 Hook 会先跑、会先拦住风险。</p>
+<p>改工具输入也一样要克制。官方文档特别提醒过，<strong>如果多个 Hook 都尝试改同一个工具输入，最后生效的是最后完成的那个；但 Hook 是并行执行的，谁最后完成并不稳定。</strong></p>
+<p>另外，<code>command</code> Hook 会直接以当前用户的权限运行 shell 命令。它能访问、修改甚至删除当前用户有权限操作的文件，所以接入第三方脚本前，一定要先看懂并单独测试。</p>
+<p><img src="/img/hooks-security-warning-official-docs-578464f0.png" alt="" loading="lazy"></p>
+<h2 id="常用生命周期事件怎么理解" tabindex="-1">常用生命周期事件怎么理解</h2>
+<p>官方文档里列出的事件不少，从会话、工具、权限、子 agent、任务、配置变化、工作树，到 MCP elicitation 都有。</p>
+<p>事件名很多，但刚开始真正常用的就几类：会话开始、用户提交 Prompt、工具执行前、工具执行后、权限决定、停止响应、上下文压缩。</p>
+<table>
+<thead>
+<tr>
+<th>事件</th>
+<th>触发时机</th>
+<th>适合做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SessionStart</code></td>
+<td>会话开始或恢复时</td>
+<td>注入动态上下文、加载环境、压缩后补规则</td>
+</tr>
+<tr>
+<td><code>UserPromptSubmit</code></td>
+<td>用户提交 Prompt 后，Claude 处理前</td>
+<td>Prompt 审计、轻量拦截、补动态上下文</td>
+</tr>
+<tr>
+<td><code>PreToolUse</code></td>
+<td>工具调用执行前</td>
+<td>拦危险命令、保护敏感文件、修改工具输入</td>
+</tr>
+<tr>
+<td><code>PermissionRequest</code></td>
+<td>工具调用需要权限决定时</td>
+<td>审计权限，或非常窄地自动批准</td>
+</tr>
+<tr>
+<td><code>PostToolUse</code></td>
+<td>工具调用成功后</td>
+<td>格式化、记录日志、lint、补充上下文</td>
+</tr>
+<tr>
+<td><code>Notification</code></td>
+<td>Claude Code 发送通知时</td>
+<td>桌面通知、手机推送</td>
+</tr>
+<tr>
+<td><code>Stop</code></td>
+<td>Claude 完成一轮响应时</td>
+<td>完成通知、质量门禁、提醒继续处理</td>
+</tr>
+<tr>
+<td><code>PreCompact</code></td>
+<td>上下文压缩前</td>
+<td>备份状态、阻止不合适的压缩</td>
+</tr>
+<tr>
+<td><code>PostCompact</code></td>
+<td>上下文压缩后</td>
+<td>记录摘要、同步外部状态</td>
+</tr>
+</tbody>
+</table>
+<p>再往下，是一批进阶事件。知道有它们就行，用到时查官方 Reference或者直接问 AI。</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>会话和配置</td>
+<td><code>Setup</code>、<code>InstructionsLoaded</code>、<code>ConfigChange</code>、<code>CwdChanged</code>、<code>DirectoryAdded</code>、<code>FileChanged</code>、<code>SessionEnd</code></td>
+</tr>
+<tr>
+<td>提示词和展示</td>
+<td><code>UserPromptExpansion</code>、<code>MessageDisplay</code>、<code>TeammateIdle</code></td>
+</tr>
+<tr>
+<td>工具和权限</td>
+<td><code>PermissionDenied</code>、<code>PostToolUseFailure</code>、<code>PostToolBatch</code></td>
+</tr>
+<tr>
+<td>子 agent 和任务</td>
+<td><code>SubagentStart</code>、<code>SubagentStop</code>、<code>TaskCreated</code>、<code>TaskCompleted</code></td>
+</tr>
+<tr>
+<td>工作树和 MCP 表单</td>
+<td><code>WorktreeCreate</code>、<code>WorktreeRemove</code>、<code>Elicitation</code>、<code>ElicitationResult</code></td>
+</tr>
+<tr>
+<td>停止补充</td>
+<td><code>StopFailure</code></td>
+</tr>
+</tbody>
+</table>
+<p>几个容易混淆的事件，需要按实际触发顺序区分。</p>
+<p><code>PreToolUse</code> 发生在工具执行之前。Bash 命令检查、<code>.env</code> 保护和生产配置写入限制都应该放在这个阶段，脚本才有机会在副作用出现前返回拒绝结果。</p>
+<p><code>PostToolUse</code> 发生在工具成功之后，所以它适合收尾，不适合做第一道安全门。比如格式化可以放这里，但敏感文件保护不能只靠它，因为文件已经被改了。它仍然可以用 JSON 给 Claude 提供反馈，或者替换工具输出，只是无法撤销刚刚发生的工具调用。</p>
+<p><code>PermissionRequest</code> 在工具调用需要权限决定、Claude Code 准备请求权限时触发，可以批准或拒绝这次请求。交互模式下通常会显示权限确认框；无法显示确认框的后台非交互 subagent 仍会运行这个 Hook，如果没有 Hook 返回决定，工具调用会被拒绝。在 <code>-p</code> 非交互模式中，只有 Agent SDK 的 <code>canUseTool</code> 回调会提供这套权限请求流程；普通 <code>claude -p</code> 应该使用 <code>PreToolUse</code> 做自动权限决策。必须稳定执行的风险检查仍然要放在 <code>PreToolUse</code>，自动批准也要同时收窄 matcher 和输入条件，避免全局放行。</p>
+<p><code>Stop</code> 不等于“任务完成”，它只是 Claude 准备结束本轮响应时触发。如果你用 Stop hook 做质量门禁，要防止循环。官方提供了 <code>stop_hook_active</code> 字段帮助判断当前是否已经由 Stop hook 继续过；连续阻断达到 8 次后，Claude Code 会忽略 Hook 的阻断并结束本轮响应。</p>
+<p><code>PreCompact</code> 可以阻止压缩，<code>PostCompact</code> 不能改变已经完成的压缩结果。压缩后重新注入规则，更常见的做法是用 <code>SessionStart</code> 搭配 <code>compact</code> matcher。上下文压缩和规则补回属于 Context Engineering 的一部分，想继续展开可以看 <a href="/read/ai/agent/context-engineering.html">上下文工程实战指南</a>。</p>
+<h2 id="三个最小可用示例" tabindex="-1">三个最小可用示例</h2>
+<p>真要上手，我建议大家从三个例子开始：一个只负责通知，一个负责改完文件后的收尾，一个放在工具执行前做拦截。</p>
+<p>它们刚好覆盖低风险、自动化收益和安全底线三种场景。</p>
+<h3 id="notificationclaude-需要你时弹个通知" tabindex="-1">Notification，Claude 需要你时弹个通知</h3>
+<p>这个适合第一个配，因为它几乎不碰代码，风险最低。</p>
+<p>macOS 上可以写到 <code>~/.claude/settings.json</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;Notification&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;matcher&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;permission_prompt&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+          <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;command&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;osascript -e &#x27;display notification \&quot;Claude Code needs your attention\&quot; with title \&quot;Claude Code\&quot;&#x27;&quot;</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>这里 <code>matcher</code> 写 <code>permission_prompt</code>，表示只有 Claude 需要你批准工具调用时才通知。这个通知通常要等权限请求停留大约 6 秒后才触发，不是确认流程一开始就立即发送。如果想所有通知都触发，可以省略 matcher 或写空字符串。官方列出的 Notification matcher 还包括 <code>idle_prompt</code>、<code>auth_success</code>、<code>elicitation_dialog</code> 等。</p>
+<p>如果 macOS 没弹通知，先在终端手动跑：</p>
+<pre class="md-pre"><code class="hljs">osascript -e <span class="hljs-string">&#x27;display notification &quot;test&quot;&#x27;</span>
+</code></pre>
+<p>然后去系统设置里给 Script Editor 打开通知权限。这个坑很常见，Hook 可能已经触发，只是系统没让通知显示。</p>
+<h3 id="posttooluse改完文件自动格式化" tabindex="-1">PostToolUse，改完文件自动格式化</h3>
+<p>前端项目里，最常见的是改完 <code>Edit</code> 或 <code>Write</code> 后跑 Prettier：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;PostToolUse&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;matcher&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Edit|Write&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+          <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;command&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;jq -r &#x27;.tool_input.file_path&#x27; | xargs npx prettier --write&quot;</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>这段配置有三个关键信息。</p>
+<p><code>matcher</code> 只匹配 <code>Edit|Write</code>，所以读文件、跑 Bash、调用 MCP 工具都不会触发格式化。</p>
+<p><code>command</code> 从 stdin JSON 里拿 <code>.tool_input.file_path</code>，再交给 <code>npx prettier --write</code>。</p>
+<p>这个 Hook 在 <code>PostToolUse</code> 上，所以它是“工具执行后收尾”。formatter 失败时，你可以让错误暴露出来，也可以改成脚本，按文件后缀选择不同 formatter。</p>
+<p>比如更稳一点的脚本：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">#!/usr/bin/env bash</span>
+<span class="hljs-built_in">set</span> -euo pipefail
+
+file=<span class="hljs-string">&quot;<span class="hljs-subst">$(jq -r &#x27;.tool_input.file_path // empty&#x27;)</span>&quot;</span>
+
+<span class="hljs-keyword">case</span> <span class="hljs-string">&quot;<span class="hljs-variable">$file</span>&quot;</span> <span class="hljs-keyword">in</span>
+  *.js|*.jsx|*.ts|*.tsx|*.json|*.md)
+    npx prettier --write <span class="hljs-string">&quot;<span class="hljs-variable">$file</span>&quot;</span>
+    ;;
+<span class="hljs-keyword">esac</span>
+</code></pre>
+<p>Hook 没有魔法。如果你是 Java 项目，应该换成 <code>spotlessApply</code>、<code>google-java-format</code> 或项目里已有的格式化命令。如果你是 Python 项目，可能是 <code>ruff format</code>。先贴着项目现有工具走，不要为了写 Hook 新造一套格式化体系。</p>
+<h3 id="pretooluse阻止危险命令和敏感文件" tabindex="-1">PreToolUse，阻止危险命令和敏感文件</h3>
+<p><code>PreToolUse</code> 会在工具执行前提供 <code>tool_name</code> 和 <code>tool_input</code>。脚本可以先检查命令和文件路径，命中风险时直接拒绝这次调用。</p>
+<p>先写一个脚本，比如 <code>.claude/hooks/guard.sh</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-meta">#!/usr/bin/env bash</span>
+<span class="hljs-built_in">set</span> -euo pipefail
+
+input=<span class="hljs-string">&quot;<span class="hljs-subst">$(cat)</span>&quot;</span>
+tool=<span class="hljs-string">&quot;<span class="hljs-subst">$(jq -r &#x27;.tool_name // empty&#x27; &lt;&lt;&lt;<span class="hljs-string">&quot;<span class="hljs-variable">$input</span>&quot;</span>)</span>&quot;</span>
+<span class="hljs-built_in">command</span>=<span class="hljs-string">&quot;<span class="hljs-subst">$(jq -r &#x27;.tool_input.command // empty&#x27; &lt;&lt;&lt;<span class="hljs-string">&quot;<span class="hljs-variable">$input</span>&quot;</span>)</span>&quot;</span>
+file=<span class="hljs-string">&quot;<span class="hljs-subst">$(jq -r &#x27;.tool_input.file_path // empty&#x27; &lt;&lt;&lt;<span class="hljs-string">&quot;<span class="hljs-variable">$input</span>&quot;</span>)</span>&quot;</span>
+
+<span class="hljs-keyword">if</span> [[ <span class="hljs-string">&quot;<span class="hljs-variable">$tool</span>&quot;</span> == <span class="hljs-string">&quot;Bash&quot;</span> ]] &amp;&amp; [[ <span class="hljs-string">&quot;<span class="hljs-variable">$command</span>&quot;</span> =~ <span class="hljs-built_in">rm</span>[[:space:]]+-rf|<span class="hljs-built_in">chmod</span>[[:space:]]+-R[[:space:]]+777 ]]; <span class="hljs-keyword">then</span>
+  <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Blocked risky shell command: <span class="hljs-variable">$command</span>&quot;</span> &gt;&amp;2
+  <span class="hljs-built_in">exit</span> 2
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-keyword">if</span> [[ <span class="hljs-string">&quot;<span class="hljs-variable">$tool</span>&quot;</span> == <span class="hljs-string">&quot;Edit&quot;</span> || <span class="hljs-string">&quot;<span class="hljs-variable">$tool</span>&quot;</span> == <span class="hljs-string">&quot;Write&quot;</span> ]]; <span class="hljs-keyword">then</span>
+  <span class="hljs-keyword">case</span> <span class="hljs-string">&quot;<span class="hljs-variable">$file</span>&quot;</span> <span class="hljs-keyword">in</span>
+    *.<span class="hljs-built_in">env</span>|*.<span class="hljs-built_in">env</span>.*|*/.env|*/.git/*|*id_rsa*|*id_ed25519*)
+      <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;Blocked sensitive file edit: <span class="hljs-variable">$file</span>&quot;</span> &gt;&amp;2
+      <span class="hljs-built_in">exit</span> 2
+      ;;
+  <span class="hljs-keyword">esac</span>
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-built_in">exit</span> 0
+</code></pre>
+<p>给它执行权限：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-built_in">chmod</span> +x .claude/hooks/guard.sh
+</code></pre>
+<p>再挂到项目级 <code>.claude/settings.json</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;PreToolUse&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;matcher&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bash|Edit|Write&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;hooks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+          <span class="hljs-punctuation">{</span>
+            <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;command&quot;</span><span class="hljs-punctuation">,</span>
+            <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;\&quot;$CLAUDE_PROJECT_DIR\&quot;/.claude/hooks/guard.sh&quot;</span>
+          <span class="hljs-punctuation">}</span>
+        <span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>这段脚本放在工具执行前，并通过返回值表达处理结果。命中风险后，它把原因写到 stderr 并执行 <code>exit 2</code>；Claude Code 会阻止这次工具调用，同时把原因反馈给 Claude。</p>
+<p>实际项目里，敏感清单要按自己的情况改。生产配置、凭证文件、迁移脚本、锁文件、CI 配置，都可以逐步加进去。</p>
+<p>这里别只靠一条命令黑名单兜底。比如只拦 <code>rm *</code>，不代表能拦住 <code>/bin/rm</code>、<code>find -delete</code> 这类变体。高风险操作最好同时结合路径限制、权限配置、Hooks、Sandbox、CI 和人工 Review。</p>
+<h2 id="非-command-hook-怎么选" tabindex="-1">非 command Hook 怎么选</h2>
+<p><code>command</code> 适合本机就能完成的确定性任务，前面的格式化、通知和命令拦截都属于这一类。脚本可以独立调试，也容易纳入代码审查。</p>
+<p>团队需要集中收集审计记录或执行远程策略时，可以用 <code>http</code>。服务端返回的 JSON body 会按 command hook 的 JSON 输出格式处理。HTTP 状态码本身不负责阻断工具调用；服务端需要返回 2xx，并在 response body 中提供符合 schema 的决策字段。</p>
+<p><code>mcp_tool</code> 用于调用已经连接的 MCP server。它不会触发 OAuth，也不会替你建立连接。<code>SessionStart</code>、<code>Setup</code> 等事件发生得较早，如果 MCP server 此时尚未就绪，调用会直接失败。</p>
+<p><code>prompt</code> 根据 Hook 输入做一次模型判断，例如在 Stop 前检查任务是否完成。验证还需要读文件、搜索代码或运行命令时，可以使用 <code>agent</code>，但它目前仍是 experimental 功能。</p>
+<p>选择时先看判断依据放在哪里：规则完全由输入字段和脚本决定，用 <code>command</code>；结果需要进入团队服务，用 <code>http</code>；已经有可用的 MCP 工具，再选 <code>mcp_tool</code>；只有语义判断无法写成确定规则时，才引入 <code>prompt</code> 或 <code>agent</code>。</p>
+<h2 id="hooks-和-skills-到底怎么分" tabindex="-1">Hooks 和 Skills 到底怎么分</h2>
+<p>这俩概念也特别容易混。</p>
+<p>Skills 通过 <code>SKILL.md</code> 扩展 Coding Agent 的能力。Coding Agent 在执行任务时，会主动决定是否使用相关 skill，你也可以用 <code>/skill-name</code> 显式调用。</p>
+<p>Skill 的正文只有在使用时才加载进上下文（渐进式加载），所以很适合沉淀长流程、检查清单、项目知识、脚本和参考资料。</p>
+<p><img src="/img/agent-skills-progressive-disclosure-a73e1cfe.webp" alt="" loading="lazy"></p>
+<p>如果想系统理解 Skills 和 Prompt、MCP、Function Calling 的分工，可以看 <a href="/read/ai/agent/skills.html">Agent Skills 是什么？和 Prompt、MCP 到底差在哪？</a>。</p>
+<p><img src="/img/skill-agent-execution-link-4a51fe53.webp" alt="" loading="lazy"></p>
+<p>Hooks 在生命周期节点上自动执行动作，Skills 则把完成某类任务所需的说明、脚本和参考资料交给 Claude。两者可以按下表区分：</p>
+<p><img src="/img/hooks-vs-skills-responsibilities-6f7a35bc.webp" alt="" loading="lazy"></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Hooks</th>
+<th>Skills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>触发方式</td>
+<td>Claude Code 生命周期事件自动触发</td>
+<td>Claude 判断相关时加载，或用户手动 <code>/skill-name</code></td>
+</tr>
+<tr>
+<td>核心价值</td>
+<td>让固定动作稳定发生</td>
+<td>给 Claude 增加某类能力或流程知识</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>格式化、危险命令拦截、权限审计、通知、日志、质量门禁</td>
+<td>代码审查流程、部署 SOP、故障排查、资料检索、复杂任务处理</td>
+</tr>
+<tr>
+<td>对模型判断的依赖</td>
+<td>低，尤其是 <code>command</code> hook</td>
+<td>更高，Claude 需要理解并执行 skill 指令</td>
+</tr>
+<tr>
+<td>是否适合阻断</td>
+<td>适合，尤其是 <code>PreToolUse</code>、<code>UserPromptSubmit</code>、<code>Stop</code> 等事件</td>
+<td>不适合作为硬拦截机制</td>
+</tr>
+<tr>
+<td>常见风险</td>
+<td>matcher 写太宽、脚本慢、自动批准过度</td>
+<td>描述不清、触发不准、流程太长</td>
+</tr>
+</tbody>
+</table>
+<p>放到实际任务里就好理解了。文件刚被 <code>Edit</code> 或 <code>Write</code> 修改，可以直接把路径交给 Prettier；工具准备写入 <code>.env</code>，也可以在执行前检查路径并拒绝。这些信息都能从事件输入里拿到，脚本不需要猜。</p>
+<p>代码审查和接口超时排查就没这么固定了。Claude 要先读代码、日志和任务要求，再决定检查哪些文件、运行哪些命令，这类流程放进 Skill 更合适。</p>
+<p>两者也可以接在同一条工作流上：<strong>Skill 规定代码审查要检查什么，Hook 负责在文件修改后运行 formatter、在危险命令执行前拦截，以及在响应结束前检查是否留下测试结果。</strong></p>
+<h2 id="实际落地先把三个-hook-跑稳" tabindex="-1">实际落地：先把三个 Hook 跑稳</h2>
+<p>第一版不用急着覆盖所有生命周期事件，按 <code>Notification</code>、<code>PostToolUse</code>、<code>PreToolUse</code> 的顺序接入就够了。</p>
+<p><img src="/img/hooks-progressive-rollout-c7b531e8.webp" alt="" loading="lazy"></p>
+<p>Hook 配得越多，出问题时越难定位。比如 Claude 突然不再响应，你得逐个确认：<code>PreToolUse</code> 有没有返回 deny，<code>PermissionRequest</code> 有没有给出权限决定，<code>Stop</code> 是否反复触发，某个 <code>PostToolUse</code> 脚本是不是跑超时了。这几种问题表面上很像，排查方式却完全不同。</p>
+<p>先接 <code>Notification</code>。前面的示例只在等待授权时发通知，不会修改项目文件。收到通知，至少能确认配置已经加载，事件和 matcher 也成功命中。即使写错了，影响通常也比较小。</p>
+<p>通知正常后，再把 <code>PostToolUse</code> 接到项目已有的格式化工具上。前端项目用 Prettier，Python 项目用 Ruff，Java 项目继续沿用原来的格式化命令。matcher 负责限制工具名，脚本再按文件类型筛选，别让一次无关的 Bash 命令或读取操作也启动 formatter。</p>
+<p>最后再测 <code>PreToolUse</code>，因为它会直接阻断工具调用。刚开始只拦几类明确的高风险操作，例如删除命令、递归提权，以及对 <code>.env</code>、<code>.git/</code>、私钥和生产配置的访问。先从日志里观察拦截结果，再根据误拦记录调整规则。</p>
+<p>命令黑名单只能识别已经写进去的命令形式，换一种写法就可能绕过去。路径限制、权限配置、沙箱和人工 Review 仍然要保留，不能因为加了 <code>PreToolUse</code> 就删掉。</p>
+<p>这三个 Hook 跑稳后，再根据项目里实际发生的问题补事件。上下文压缩后经常丢规则，可以用 <code>SessionStart</code> 的 <code>compact</code> matcher 重新注入，必要时再通过 <code>PreCompact</code> 保存当前状态。需要追踪配置变化时接 <code>ConfigChange</code>；工作目录或文件变化会影响环境时，再考虑用 <code>CwdChanged</code>、<code>FileChanged</code> 配合 <code>CLAUDE_ENV_FILE</code>。</p>
+<p>如果用 <code>Stop</code> 做完成检查，脚本里必须同时写好退出条件。否则 Hook 让 Claude 继续处理后，下一轮结束时又会命中同一条规则，来回重复。Claude Code 连续阻断 8 次后会强制结束本轮，但前面的重复处理照样会浪费时间和 token。</p>
+<p><code>PermissionRequest</code> 也很容易用错。它在工具调用进入权限决策流程时触发，不代表确认框已经显示出来；无法显示确认框的后台非交互 subagent，同样可能运行这个 Hook。</p>
+<p>普通 <code>claude -p</code> 没有这套权限请求流程，需要自动决定权限时，应把规则放到 <code>PreToolUse</code>。官方示例只自动批准 <code>ExitPlanMode</code>。照搬示例时，matcher 和事件输入也要一起保留，别用一条宽泛的 allow 规则接管所有权限请求。删除文件、操作生产环境、读取凭证或调用外部 API 写数据，继续交给人确认更稳妥。</p>
+<h2 id="hook-没按预期工作怎么排查" tabindex="-1">Hook 没按预期工作，怎么排查</h2>
+<p>配置写进去了，Claude Code 却毫无反应；或者 Hook 明明运行了，危险命令还是继续执行。像事件有哪些字段、某个 <code>handler</code> 支持哪些事件、<code>stdout</code> 会不会进入上下文，这类细节跟版本有关，用到时让 AI 对照当前官方文档查就行。</p>
+<p>真遇到问题，我更建议按下面的顺序排查：</p>
+<p><img src="/img/hooks-troubleshooting-flow-ce2a8586.webp" alt="" loading="lazy"></p>
+<ol>
+<li>
+<p>先运行 <code>/hooks</code>，确认配置已经加载，并且挂在预期的事件上。如果这里看不到，先检查 settings 文件的位置和 JSON 格式，暂时不用管脚本逻辑。</p>
+<p><img src="/img/hooks-menu-official-docs-b4560e95.png" alt="" loading="lazy"></p>
+</li>
+<li>
+<p>把脚本从 Claude Code 里拿出来单独运行。Hook 脚本会从 <code>stdin</code> 读取 JSON，先确认它能读到字段、给出预期的退出码，再接回配置。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-built_in">printf</span> <span class="hljs-string">&#x27;%s\n&#x27;</span> <span class="hljs-string">&#x27;{&quot;tool_name&quot;:&quot;Bash&quot;,&quot;tool_input&quot;:{&quot;command&quot;:&quot;rm -rf /tmp/demo&quot;}}&#x27;</span> \
+  | .claude/hooks/guard.sh
+
+<span class="hljs-built_in">echo</span> $?
+<span class="hljs-comment"># 预期输出 2</span>
+</code></pre>
+</li>
+<li>
+<p>脚本单独运行正常，再记录 Claude Code 实际传进来的事件数据。调试信息写到 <code>stderr</code> 或临时日志，不要混进准备返回 JSON 的 <code>stdout</code>。</p>
+<pre class="md-pre"><code class="hljs">input=<span class="hljs-string">&quot;<span class="hljs-subst">$(cat)</span>&quot;</span>
+<span class="hljs-built_in">printf</span> <span class="hljs-string">&#x27;%s\n&#x27;</span> <span class="hljs-string">&quot;<span class="hljs-variable">$input</span>&quot;</span> &gt;&gt; /tmp/claude-hook-debug.log
+</code></pre>
+<p>日志里可能包含文件路径、命令和 Prompt 内容，排查结束后记得删掉，不要提交进仓库。</p>
+</li>
+<li>
+<p>一次只启用一个 Hook。多个 Hook 同时命中时会并行运行，只看最终表现很难判断是哪一条出了问题。单个脚本跑通后，再逐个恢复其他规则。</p>
+</li>
+</ol>
+<p>如果已经出现明确症状，可以先查对应这一项：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>优先检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/hooks</code> 里看不到配置</td>
+<td>settings 文件位置、JSON 格式</td>
+</tr>
+<tr>
+<td>已注册，但一直没有触发</td>
+<td>事件是否选对、matcher 是否匹配实际输入</td>
+</tr>
+<tr>
+<td>脚本报错了，工具调用仍在继续</td>
+<td>是否误用了 <code>exit 1</code>；安全拦截是否放在 <code>PreToolUse</code></td>
+</tr>
+<tr>
+<td>Claude 不停继续处理，无法结束</td>
+<td><code>Stop</code> Hook 是否缺少退出条件</td>
+</tr>
+<tr>
+<td>每次操作都运行 formatter</td>
+<td>matcher 是否省略或写得太宽</td>
+</tr>
+<tr>
+<td>通知脚本执行了，但没有弹窗</td>
+<td>先手动运行通知命令，再检查操作系统的通知权限</td>
+</tr>
+<tr>
+<td>交互模式正常，<code>claude -p</code> 异常</td>
+<td>不要依赖 <code>PermissionRequest</code>，需要自动决策时改用 <code>PreToolUse</code></td>
+</tr>
+</tbody>
+</table>
+<p>还定位不出来，可以把 <code>claude --version</code> 的输出、Hook 配置、脚本和实际现象一起交给 AI，让它对照当前官方文档检查。粘贴之前，记得删掉密钥、Token 和业务敏感信息。提示词不用写得很复杂：</p>
+<pre class="md-pre"><code class="hljs">我在 Claude Code &lt;版本号&gt; 中配置了下面这个 Hook。
+
+预期行为：&lt;希望它做什么&gt;
+实际行为：&lt;现在发生了什么&gt;
+
+Hook 配置：
+&lt;粘贴配置&gt;
+
+脚本：
+&lt;粘贴脚本&gt;
+
+请先查阅 Claude Code 当前版本的官方文档，再依次检查事件、matcher、输入字段、退出码和 JSON 输出格式。
+只指出会导致当前问题的地方，不要扩展其他配置。
+</code></pre>
+<h2 id="总结" tabindex="-1">总结</h2>
+<p>聊到这里，你应该已经能抓住 Hooks 的重点了：它会在 Claude Code 的关键节点自动执行固定动作，例如格式化、危险命令检查、权限通知。</p>
+<p>自动格式化放在 <code>PostToolUse</code>，危险命令和敏感文件拦截放在 <code>PreToolUse</code>，离开电脑时想及时收到提醒，就用 <code>Notification</code>。</p>
+<p>就我个人使用经验来说，不建议大家刚开始就配太多，没太大意义，还容易乱。</p>
+<p>先把这三个 Hook 跑稳。尤其是安全和权限规则，宁可收紧范围、慢慢补，也别一上来就自动批准所有操作。Hooks 能帮你守住固定流程，但沙箱、权限配置、CI 和人工 Review 还是要保留。</p>
+<p>还有一个容易混淆的地方：能写成确定脚本的规则交给 Hook；代码审查、故障排查这类需要结合上下文判断的任务，继续放在 Skill 里。按这个思路分工，配置会简单不少，后面排错也更轻松。</p>

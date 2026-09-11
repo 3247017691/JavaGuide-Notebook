@@ -1,0 +1,2410 @@
+[
+ {
+  "name": "面试准备（必看）",
+  "code": "01",
+  "blurb": "通关计划 · 简历 · 心态 · 项目经验",
+  "articles": [
+   {
+    "id": "01-001",
+    "title": "面试准备知识体系",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/",
+    "ext": 0
+   },
+   {
+    "id": "01-002",
+    "title": "⭐Java 后端面试通关计划",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/backend-interview-plan.html",
+    "ext": 0
+   },
+   {
+    "id": "01-003",
+    "title": "⭐如何高效准备 Java 面试？",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/teach-you-how-to-prepare-for-the-interview-hand-in-hand.html",
+    "ext": 0
+   },
+   {
+    "id": "01-004",
+    "title": "⭐程序员简历编写指南",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/resume-guide.html",
+    "ext": 0
+   },
+   {
+    "id": "01-005",
+    "title": "⭐Java 后端面试重点总结",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/key-points-of-interview.html",
+    "ext": 0
+   },
+   {
+    "id": "01-006",
+    "title": "Java 面试 + 后端面试 PDF 资料",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/pdf-interview-javaguide.html",
+    "ext": 0
+   },
+   {
+    "id": "01-007",
+    "title": "Java 学习路线",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/java-roadmap.html",
+    "ext": 0
+   },
+   {
+    "id": "01-008",
+    "title": "⭐项目经验指南",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/project-experience-guide.html",
+    "ext": 0
+   },
+   {
+    "id": "01-009",
+    "title": "⭐后端项目面试怎么讲？",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/backend-project-interview-guide.html",
+    "ext": 0
+   },
+   {
+    "id": "01-010",
+    "title": "面试太紧张怎么办？",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/how-to-handle-interview-nerves.html",
+    "ext": 0
+   },
+   {
+    "id": "01-011",
+    "title": "校招没有实习经历怎么办？实习经历怎么写？",
+    "group": "",
+    "url": "https://javaguide.cn/interview-preparation/internship-experience.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "Java",
+  "code": "02",
+  "blurb": "基础 · 集合 · 并发 · IO · JVM · 新特性",
+  "articles": [
+   {
+    "id": "02-001",
+    "title": "Java 知识体系",
+    "group": "",
+    "url": "https://javaguide.cn/java/",
+    "ext": 0
+   },
+   {
+    "id": "02-002",
+    "title": "⭐Java 基础常见面试题（上）",
+    "group": "基础",
+    "url": "https://javaguide.cn/java/basis/java-basic-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "02-003",
+    "title": "⭐Java 基础常见面试题（中）",
+    "group": "基础",
+    "url": "https://javaguide.cn/java/basis/java-basic-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "02-004",
+    "title": "⭐Java 基础常见面试题（下）",
+    "group": "基础",
+    "url": "https://javaguide.cn/java/basis/java-basic-questions-03.html",
+    "ext": 0
+   },
+   {
+    "id": "02-005",
+    "title": "Java 值传递详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/why-there-only-value-passing-in-java.html",
+    "ext": 0
+   },
+   {
+    "id": "02-006",
+    "title": "Java 序列化详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/serialization.html",
+    "ext": 0
+   },
+   {
+    "id": "02-007",
+    "title": "泛型&通配符详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/generics-and-wildcards.html",
+    "ext": 0
+   },
+   {
+    "id": "02-008",
+    "title": "Java 反射机制详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/reflection.html",
+    "ext": 0
+   },
+   {
+    "id": "02-009",
+    "title": "Java 代理模式详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/proxy.html",
+    "ext": 0
+   },
+   {
+    "id": "02-010",
+    "title": "BigDecimal 详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/bigdecimal.html",
+    "ext": 0
+   },
+   {
+    "id": "02-011",
+    "title": "Java 金额类型选择",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/money-long-vs-bigdecimal.html",
+    "ext": 0
+   },
+   {
+    "id": "02-012",
+    "title": "Java 魔法类 Unsafe 详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/unsafe.html",
+    "ext": 0
+   },
+   {
+    "id": "02-013",
+    "title": "Java SPI 机制详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/spi.html",
+    "ext": 0
+   },
+   {
+    "id": "02-014",
+    "title": "Java 语法糖详解",
+    "group": "基础 › 重要知识点",
+    "url": "https://javaguide.cn/java/basis/syntactic-sugar.html",
+    "ext": 0
+   },
+   {
+    "id": "02-015",
+    "title": "⭐Java 集合常见面试题（上）",
+    "group": "集合",
+    "url": "https://javaguide.cn/java/collection/java-collection-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "02-016",
+    "title": "⭐Java 集合常见面试题（下）",
+    "group": "集合",
+    "url": "https://javaguide.cn/java/collection/java-collection-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "02-017",
+    "title": "Java集合使用注意事项总结",
+    "group": "集合",
+    "url": "https://javaguide.cn/java/collection/java-collection-precautions-for-use.html",
+    "ext": 0
+   },
+   {
+    "id": "02-018",
+    "title": "ArrayList 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/arraylist-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-019",
+    "title": "LinkedList 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/linkedlist-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-020",
+    "title": "HashMap 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/hashmap-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-021",
+    "title": "ConcurrentHashMap 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/concurrent-hash-map-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-022",
+    "title": "LinkedHashMap 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/linkedhashmap-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-023",
+    "title": "CopyOnWriteArrayList 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/copyonwritearraylist-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-024",
+    "title": "ArrayBlockingQueue 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/arrayblockingqueue-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-025",
+    "title": "PriorityQueue 源码分析（付费）",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/priorityqueue-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-026",
+    "title": "DelayQueue 源码分析",
+    "group": "集合 › 源码分析",
+    "url": "https://javaguide.cn/java/collection/delayqueue-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "02-027",
+    "title": "⭐Java 并发常见面试题（上）",
+    "group": "并发编程",
+    "url": "https://javaguide.cn/java/concurrent/java-concurrent-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "02-028",
+    "title": "⭐Java 并发常见面试题（中）",
+    "group": "并发编程",
+    "url": "https://javaguide.cn/java/concurrent/java-concurrent-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "02-029",
+    "title": "⭐Java 并发常见面试题（下）",
+    "group": "并发编程",
+    "url": "https://javaguide.cn/java/concurrent/java-concurrent-questions-03.html",
+    "ext": 0
+   },
+   {
+    "id": "02-030",
+    "title": "Java 锁详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/java-lock.html",
+    "ext": 0
+   },
+   {
+    "id": "02-031",
+    "title": "乐观锁和悲观锁详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/optimistic-lock-and-pessimistic-lock.html",
+    "ext": 0
+   },
+   {
+    "id": "02-032",
+    "title": "CAS 详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/cas.html",
+    "ext": 0
+   },
+   {
+    "id": "02-033",
+    "title": "JMM（Java 内存模型）详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/jmm.html",
+    "ext": 0
+   },
+   {
+    "id": "02-034",
+    "title": "Java 线程池详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/java-thread-pool-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "02-035",
+    "title": "Java 线程池最佳实践",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/java-thread-pool-best-practices.html",
+    "ext": 0
+   },
+   {
+    "id": "02-036",
+    "title": "Java 常见并发容器总结",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/java-concurrent-collections.html",
+    "ext": 0
+   },
+   {
+    "id": "02-037",
+    "title": "AQS 详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/aqs.html",
+    "ext": 0
+   },
+   {
+    "id": "02-038",
+    "title": "Atomic 原子类总结",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/atomic-classes.html",
+    "ext": 0
+   },
+   {
+    "id": "02-039",
+    "title": "ThreadLocal 详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/threadlocal.html",
+    "ext": 0
+   },
+   {
+    "id": "02-040",
+    "title": "CompletableFuture 详解",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/completablefuture-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "02-041",
+    "title": "虚拟线程常见问题总结",
+    "group": "并发编程 › 重要知识点",
+    "url": "https://javaguide.cn/java/concurrent/virtual-thread.html",
+    "ext": 0
+   },
+   {
+    "id": "02-042",
+    "title": "Java IO 基础知识总结",
+    "group": "IO",
+    "url": "https://javaguide.cn/java/io/io-basis.html",
+    "ext": 0
+   },
+   {
+    "id": "02-043",
+    "title": "Java IO 设计模式总结",
+    "group": "IO",
+    "url": "https://javaguide.cn/java/io/io-design-patterns.html",
+    "ext": 0
+   },
+   {
+    "id": "02-044",
+    "title": "Java IO 模型详解",
+    "group": "IO",
+    "url": "https://javaguide.cn/java/io/io-model.html",
+    "ext": 0
+   },
+   {
+    "id": "02-045",
+    "title": "Java NIO 核心知识总结",
+    "group": "IO",
+    "url": "https://javaguide.cn/java/io/nio-basis.html",
+    "ext": 0
+   },
+   {
+    "id": "02-046",
+    "title": "⭐JVM 常见面试题总结",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/jvm-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "02-047",
+    "title": "Java内存区域详解（重点）",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/memory-area.html",
+    "ext": 0
+   },
+   {
+    "id": "02-048",
+    "title": "JVM垃圾回收详解（重点）",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/jvm-garbage-collection.html",
+    "ext": 0
+   },
+   {
+    "id": "02-049",
+    "title": "类文件结构详解",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/class-file-structure.html",
+    "ext": 0
+   },
+   {
+    "id": "02-050",
+    "title": "类加载过程详解",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/class-loading-process.html",
+    "ext": 0
+   },
+   {
+    "id": "02-051",
+    "title": "类加载器详解（重点）",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/classloader.html",
+    "ext": 0
+   },
+   {
+    "id": "02-052",
+    "title": "最重要的JVM参数总结",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/jvm-parameters-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "02-053",
+    "title": "JDK监控和故障处理工具总结",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/jdk-monitoring-and-troubleshooting-tools.html",
+    "ext": 0
+   },
+   {
+    "id": "02-054",
+    "title": "Java 后端线上问题排查",
+    "group": "JVM",
+    "url": "https://javaguide.cn/java/jvm/jvm-in-action.html",
+    "ext": 0
+   },
+   {
+    "id": "02-055",
+    "title": "Java8 新特性实战",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java8-common-new-features.html",
+    "ext": 0
+   },
+   {
+    "id": "02-056",
+    "title": "《Java8 指南》中文翻译",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java8-tutorial-translate.html",
+    "ext": 0
+   },
+   {
+    "id": "02-057",
+    "title": "Java 9 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java9.html",
+    "ext": 0
+   },
+   {
+    "id": "02-058",
+    "title": "Java 10 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java10.html",
+    "ext": 0
+   },
+   {
+    "id": "02-059",
+    "title": "Java 11 新特性概览（重要）",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java11.html",
+    "ext": 0
+   },
+   {
+    "id": "02-060",
+    "title": "Java 12  & 13 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java12-13.html",
+    "ext": 0
+   },
+   {
+    "id": "02-061",
+    "title": "Java 14  & 15 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java14-15.html",
+    "ext": 0
+   },
+   {
+    "id": "02-062",
+    "title": "Java 16 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java16.html",
+    "ext": 0
+   },
+   {
+    "id": "02-063",
+    "title": "Java 17（JDK 17）新特性：密封类、switch 模式匹配与随机数 API",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java17.html",
+    "ext": 0
+   },
+   {
+    "id": "02-064",
+    "title": "Java 18 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java18.html",
+    "ext": 0
+   },
+   {
+    "id": "02-065",
+    "title": "Java 19 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java19.html",
+    "ext": 0
+   },
+   {
+    "id": "02-066",
+    "title": "Java 20 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java20.html",
+    "ext": 0
+   },
+   {
+    "id": "02-067",
+    "title": "Java 21（JDK 21）新特性：虚拟线程、分代 ZGC 与有序集合",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java21.html",
+    "ext": 0
+   },
+   {
+    "id": "02-068",
+    "title": "Java 22 & 23 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java22-23.html",
+    "ext": 0
+   },
+   {
+    "id": "02-069",
+    "title": "Java 24 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java24.html",
+    "ext": 0
+   },
+   {
+    "id": "02-070",
+    "title": "Java 25 新特性概览",
+    "group": "新特性",
+    "url": "https://javaguide.cn/java/new-features/java25.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "数据库",
+  "code": "03",
+  "blurb": "MySQL · Redis · ES · MongoDB · SQL",
+  "articles": [
+   {
+    "id": "03-001",
+    "title": "数据库知识体系",
+    "group": "",
+    "url": "https://javaguide.cn/database/",
+    "ext": 0
+   },
+   {
+    "id": "03-002",
+    "title": "数据库基础常见面试题总结",
+    "group": "基础",
+    "url": "https://javaguide.cn/database/basis.html",
+    "ext": 0
+   },
+   {
+    "id": "03-003",
+    "title": "NoSQL基础常见面试题总结",
+    "group": "基础",
+    "url": "https://javaguide.cn/database/nosql.html",
+    "ext": 0
+   },
+   {
+    "id": "03-004",
+    "title": "字符集详解",
+    "group": "基础",
+    "url": "https://javaguide.cn/database/character-set.html",
+    "ext": 0
+   },
+   {
+    "id": "03-005",
+    "title": "SQL语法基础知识总结",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-syntax-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "03-006",
+    "title": "SQL常见面试题总结（1）",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-007",
+    "title": "SQL常见面试题总结（2）",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "03-008",
+    "title": "SQL常见面试题总结（3）",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-questions-03.html",
+    "ext": 0
+   },
+   {
+    "id": "03-009",
+    "title": "SQL常见面试题总结（4）",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-questions-04.html",
+    "ext": 0
+   },
+   {
+    "id": "03-010",
+    "title": "SQL常见面试题总结（5）",
+    "group": "基础 › SQL",
+    "url": "https://javaguide.cn/database/sql/sql-questions-05.html",
+    "ext": 0
+   },
+   {
+    "id": "03-011",
+    "title": "⭐MySQL 常见面试题总结",
+    "group": "MySQL",
+    "url": "https://javaguide.cn/database/mysql/mysql-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-012",
+    "title": "MySQL高性能优化规范建议总结",
+    "group": "MySQL",
+    "url": "https://javaguide.cn/database/mysql/mysql-high-performance-optimization-specification-recommendations.html",
+    "ext": 0
+   },
+   {
+    "id": "03-013",
+    "title": "MySQL索引详解",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-index.html",
+    "ext": 0
+   },
+   {
+    "id": "03-014",
+    "title": "MySQL索引失效场景总结",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-index-invalidation.html",
+    "ext": 0
+   },
+   {
+    "id": "03-015",
+    "title": "MySQL三大日志详解",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-logs.html",
+    "ext": 0
+   },
+   {
+    "id": "03-016",
+    "title": "MySQL备份与恢复",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-backup-and-restore.html",
+    "ext": 0
+   },
+   {
+    "id": "03-017",
+    "title": "MySQL同步ES方案",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-to-elasticsearch-sync.html",
+    "ext": 0
+   },
+   {
+    "id": "03-018",
+    "title": "MySQL事务隔离级别详解",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/transaction-isolation-level.html",
+    "ext": 0
+   },
+   {
+    "id": "03-019",
+    "title": "InnoDB存储引擎对MVCC的实现",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/innodb-implementation-of-mvcc.html",
+    "ext": 0
+   },
+   {
+    "id": "03-020",
+    "title": "SQL语句在MySQL中的执行过程",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/how-sql-executed-in-mysql.html",
+    "ext": 0
+   },
+   {
+    "id": "03-021",
+    "title": "MySQL查询缓存详解",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-query-cache.html",
+    "ext": 0
+   },
+   {
+    "id": "03-022",
+    "title": "MySQL执行计划分析",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-query-execution-plan.html",
+    "ext": 0
+   },
+   {
+    "id": "03-023",
+    "title": "MySQL自增主键一定是连续的吗？",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/mysql-auto-increment-primary-key-continuous.html",
+    "ext": 0
+   },
+   {
+    "id": "03-024",
+    "title": "MySQL日期类型选择建议",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/some-thoughts-on-database-storage-time.html",
+    "ext": 0
+   },
+   {
+    "id": "03-025",
+    "title": "MySQL隐式转换造成索引失效",
+    "group": "MySQL › 重要知识点",
+    "url": "https://javaguide.cn/database/mysql/index-invalidation-caused-by-implicit-conversion.html",
+    "ext": 0
+   },
+   {
+    "id": "03-026",
+    "title": "缓存基础常见面试题总结",
+    "group": "Redis",
+    "url": "https://javaguide.cn/database/redis/cache-basics.html",
+    "ext": 0
+   },
+   {
+    "id": "03-027",
+    "title": "⭐Redis 常见面试题总结（上）",
+    "group": "Redis",
+    "url": "https://javaguide.cn/database/redis/redis-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-028",
+    "title": "⭐Redis 常见面试题总结（下）",
+    "group": "Redis",
+    "url": "https://javaguide.cn/database/redis/redis-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "03-029",
+    "title": "如何基于Redis实现延时任务？",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-delayed-task.html",
+    "ext": 0
+   },
+   {
+    "id": "03-030",
+    "title": "如何基于Redis实现消息队列？",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-stream-mq.html",
+    "ext": 0
+   },
+   {
+    "id": "03-031",
+    "title": "3种常用的缓存读写策略详解",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/3-commonly-used-cache-read-and-write-strategies.html",
+    "ext": 0
+   },
+   {
+    "id": "03-032",
+    "title": "Redis 5 种基本数据类型详解",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-data-structures-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-033",
+    "title": "Redis 3 种特殊数据类型详解",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-data-structures-02.html",
+    "ext": 0
+   },
+   {
+    "id": "03-034",
+    "title": "Redis为什么用跳表实现有序集合",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-skiplist.html",
+    "ext": 0
+   },
+   {
+    "id": "03-035",
+    "title": "Redis持久化机制详解",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-persistence.html",
+    "ext": 0
+   },
+   {
+    "id": "03-036",
+    "title": "Redis内存碎片详解",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-memory-fragmentation.html",
+    "ext": 0
+   },
+   {
+    "id": "03-037",
+    "title": "Redis常见阻塞原因总结",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-common-blocking-problems-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "03-038",
+    "title": "Redis集群详解(付费)",
+    "group": "Redis › 重要知识点",
+    "url": "https://javaguide.cn/database/redis/redis-cluster.html",
+    "ext": 0
+   },
+   {
+    "id": "03-039",
+    "title": "Elasticsearch常见面试题总结(付费)",
+    "group": "Elasticsearch",
+    "url": "https://javaguide.cn/database/elasticsearch/elasticsearch-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-040",
+    "title": "MongoDB常见面试题总结（上）",
+    "group": "MongoDB",
+    "url": "https://javaguide.cn/database/mongodb/mongodb-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "03-041",
+    "title": "MongoDB常见面试题总结（下）",
+    "group": "MongoDB",
+    "url": "https://javaguide.cn/database/mongodb/mongodb-questions-02.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "常用框架",
+  "code": "04",
+  "blurb": "Spring · Spring Boot · MyBatis · Netty",
+  "articles": [
+   {
+    "id": "04-001",
+    "title": "Spring 常见面试题总结",
+    "group": "Spring&Spring Boot",
+    "url": "https://javaguide.cn/system-design/framework/spring/spring-knowledge-and-questions-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "04-002",
+    "title": "Spring Boot 常见面试题总结",
+    "group": "Spring&Spring Boot",
+    "url": "https://javaguide.cn/system-design/framework/spring/springboot-knowledge-and-questions-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "04-003",
+    "title": "Spring&SpringMVC&SpringBoot常用注解总结",
+    "group": "Spring&Spring Boot",
+    "url": "https://javaguide.cn/system-design/framework/spring/spring-common-annotations.html",
+    "ext": 0
+   },
+   {
+    "id": "04-004",
+    "title": "Spring Boot核心源码解读（付费）",
+    "group": "Spring&Spring Boot",
+    "url": "https://javaguide.cn/system-design/framework/spring/springboot-source-code.html",
+    "ext": 0
+   },
+   {
+    "id": "04-005",
+    "title": "IoC & AOP详解（快速搞懂）",
+    "group": "Spring&Spring Boot › 重要知识点",
+    "url": "https://javaguide.cn/system-design/framework/spring/ioc-and-aop.html",
+    "ext": 0
+   },
+   {
+    "id": "04-006",
+    "title": "Spring 事务详解",
+    "group": "Spring&Spring Boot › 重要知识点",
+    "url": "https://javaguide.cn/system-design/framework/spring/spring-transaction.html",
+    "ext": 0
+   },
+   {
+    "id": "04-007",
+    "title": "Spring 中的设计模式详解",
+    "group": "Spring&Spring Boot › 重要知识点",
+    "url": "https://javaguide.cn/system-design/framework/spring/spring-design-patterns-summary.html",
+    "ext": 0
+   },
+   {
+    "id": "04-008",
+    "title": "SpringBoot 自动装配原理详解",
+    "group": "Spring&Spring Boot › 重要知识点",
+    "url": "https://javaguide.cn/system-design/framework/spring/spring-boot-auto-assembly-principles.html",
+    "ext": 0
+   },
+   {
+    "id": "04-009",
+    "title": "Async 注解原理分析",
+    "group": "Spring&Spring Boot › 重要知识点",
+    "url": "https://javaguide.cn/system-design/framework/spring/async.html",
+    "ext": 0
+   },
+   {
+    "id": "04-010",
+    "title": "MyBatis 常见面试题总结",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/framework/mybatis/mybatis-interview.html",
+    "ext": 0
+   },
+   {
+    "id": "04-011",
+    "title": "Netty常见面试题总结(付费)",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/framework/netty.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "分布式",
+  "code": "05",
+  "blurb": "理论协议 · 网关 · ID · 锁 · 事务 · RPC · ZK",
+  "articles": [
+   {
+    "id": "05-001",
+    "title": "分布式系统入门",
+    "group": "",
+    "url": "https://javaguide.cn/distributed-system/distributed-system-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "05-002",
+    "title": "⭐分布式高频面试题",
+    "group": "",
+    "url": "https://javaguide.cn/distributed-system/distributed-system-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "05-003",
+    "title": "⭐微服务高频面试题",
+    "group": "",
+    "url": "https://javaguide.cn/distributed-system/microservices-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "05-004",
+    "title": "理论&算法&协议专题",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/",
+    "ext": 0
+   },
+   {
+    "id": "05-005",
+    "title": "CAP定理与BASE理论详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/cap-and-base-theorem.html",
+    "ext": 0
+   },
+   {
+    "id": "05-006",
+    "title": "分布式协调详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/centralized-and-decentralized.html",
+    "ext": 0
+   },
+   {
+    "id": "05-007",
+    "title": "拜占庭将军问题",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/byzantine-generals-problem.html",
+    "ext": 0
+   },
+   {
+    "id": "05-008",
+    "title": "Paxos算法详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/paxos-algorithm.html",
+    "ext": 0
+   },
+   {
+    "id": "05-009",
+    "title": "Raft算法详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/raft-algorithm.html",
+    "ext": 0
+   },
+   {
+    "id": "05-010",
+    "title": "ZAB协议详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/zab.html",
+    "ext": 0
+   },
+   {
+    "id": "05-011",
+    "title": "Gossip协议详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/gossip-protocol.html",
+    "ext": 0
+   },
+   {
+    "id": "05-012",
+    "title": "一致性哈希算法详解",
+    "group": "理论&算法&协议",
+    "url": "https://javaguide.cn/distributed-system/protocol/consistent-hashing.html",
+    "ext": 0
+   },
+   {
+    "id": "05-013",
+    "title": "API网关基础知识总结",
+    "group": "API网关",
+    "url": "https://javaguide.cn/distributed-system/api-gateway.html",
+    "ext": 0
+   },
+   {
+    "id": "05-014",
+    "title": "Spring Cloud Gateway面试题总结",
+    "group": "API网关",
+    "url": "https://javaguide.cn/distributed-system/spring-cloud-gateway-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "05-015",
+    "title": "分布式ID生成方案详解",
+    "group": "分布式ID",
+    "url": "https://javaguide.cn/distributed-system/distributed-id.html",
+    "ext": 0
+   },
+   {
+    "id": "05-016",
+    "title": "分布式ID设计实战指南",
+    "group": "分布式ID",
+    "url": "https://javaguide.cn/distributed-system/distributed-id-design.html",
+    "ext": 0
+   },
+   {
+    "id": "05-017",
+    "title": "分布式锁入门介绍",
+    "group": "分布式锁",
+    "url": "https://javaguide.cn/distributed-system/distributed-lock.html",
+    "ext": 0
+   },
+   {
+    "id": "05-018",
+    "title": "分布式锁常见实现方案总结",
+    "group": "分布式锁",
+    "url": "https://javaguide.cn/distributed-system/distributed-lock-implementations.html",
+    "ext": 0
+   },
+   {
+    "id": "05-019",
+    "title": "分布式事务解决方案总结",
+    "group": "分布式事务",
+    "url": "https://javaguide.cn/distributed-system/distributed-transaction.html",
+    "ext": 0
+   },
+   {
+    "id": "05-020",
+    "title": "分布式配置中心面试题总结",
+    "group": "分布式配置中心",
+    "url": "https://javaguide.cn/distributed-system/distributed-configuration-center.html",
+    "ext": 0
+   },
+   {
+    "id": "05-021",
+    "title": "RPC专题",
+    "group": "RPC",
+    "url": "https://javaguide.cn/distributed-system/rpc/",
+    "ext": 0
+   },
+   {
+    "id": "05-022",
+    "title": "RPC基础知识总结",
+    "group": "RPC",
+    "url": "https://javaguide.cn/distributed-system/rpc/rpc-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "05-023",
+    "title": "Dubbo面试题总结",
+    "group": "RPC",
+    "url": "https://javaguide.cn/distributed-system/rpc/dubbo.html",
+    "ext": 0
+   },
+   {
+    "id": "05-024",
+    "title": "ZooKeeper专题",
+    "group": "ZooKeeper",
+    "url": "https://javaguide.cn/distributed-system/distributed-process-coordination/zookeeper/",
+    "ext": 0
+   },
+   {
+    "id": "05-025",
+    "title": "ZooKeeper入门指南",
+    "group": "ZooKeeper",
+    "url": "https://javaguide.cn/distributed-system/distributed-process-coordination/zookeeper/zookeeper-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "05-026",
+    "title": "ZooKeeper进阶详解",
+    "group": "ZooKeeper",
+    "url": "https://javaguide.cn/distributed-system/distributed-process-coordination/zookeeper/zookeeper-plus.html",
+    "ext": 0
+   },
+   {
+    "id": "05-027",
+    "title": "ZooKeeper实战教程",
+    "group": "ZooKeeper",
+    "url": "https://javaguide.cn/distributed-system/distributed-process-coordination/zookeeper/zookeeper-in-action.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "高性能",
+  "code": "06",
+  "blurb": "CDN · 负载均衡 · 库表优化 · 消息队列",
+  "articles": [
+   {
+    "id": "06-001",
+    "title": "⭐高性能系统设计高频面试题",
+    "group": "",
+    "url": "https://javaguide.cn/high-performance/high-performance-system-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "06-002",
+    "title": "CDN工作原理详解",
+    "group": "CDN",
+    "url": "https://javaguide.cn/high-performance/cdn.html",
+    "ext": 0
+   },
+   {
+    "id": "06-003",
+    "title": "负载均衡原理及算法详解",
+    "group": "负载均衡",
+    "url": "https://javaguide.cn/high-performance/load-balancing.html",
+    "ext": 0
+   },
+   {
+    "id": "06-004",
+    "title": "读写分离和分库分表详解",
+    "group": "数据库优化",
+    "url": "https://javaguide.cn/high-performance/read-and-write-separation-and-library-subtable.html",
+    "ext": 0
+   },
+   {
+    "id": "06-005",
+    "title": "数据冷热分离详解",
+    "group": "数据库优化",
+    "url": "https://javaguide.cn/high-performance/data-cold-hot-separation.html",
+    "ext": 0
+   },
+   {
+    "id": "06-006",
+    "title": "常见SQL优化手段总结",
+    "group": "数据库优化",
+    "url": "https://javaguide.cn/high-performance/sql-optimization.html",
+    "ext": 0
+   },
+   {
+    "id": "06-007",
+    "title": "深度分页介绍及优化建议",
+    "group": "数据库优化",
+    "url": "https://javaguide.cn/high-performance/deep-pagination-optimization.html",
+    "ext": 0
+   },
+   {
+    "id": "06-008",
+    "title": "⭐消息队列高频面试题",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/message-queue-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "06-009",
+    "title": "消息队列基础知识总结",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/message-queue.html",
+    "ext": 0
+   },
+   {
+    "id": "06-010",
+    "title": "Disruptor常见问题总结",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/disruptor-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "06-011",
+    "title": "Kafka常见问题总结",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/kafka-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "06-012",
+    "title": "RocketMQ 常见问题总结",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/rocketmq-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "06-013",
+    "title": "RabbitMQ 常见问题总结",
+    "group": "消息队列",
+    "url": "https://javaguide.cn/high-performance/message-queue/rabbitmq-questions.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "高可用",
+  "code": "07",
+  "blurb": "幂等 · 限流 · 超时重试 · 降级熔断",
+  "articles": [
+   {
+    "id": "07-001",
+    "title": "⭐高可用系统面试题总结",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/high-availability-system-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "07-002",
+    "title": "高可用系统设计指南",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/high-availability-system-design.html",
+    "ext": 0
+   },
+   {
+    "id": "07-003",
+    "title": "⭐接口幂等方案总结",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/idempotency.html",
+    "ext": 0
+   },
+   {
+    "id": "07-004",
+    "title": "⭐服务限流详解",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/limit-request.html",
+    "ext": 0
+   },
+   {
+    "id": "07-005",
+    "title": "⭐超时和重试机制详解",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/timeout-and-retry.html",
+    "ext": 0
+   },
+   {
+    "id": "07-006",
+    "title": "服务降级与熔断详解",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/fallback-and-circuit-breaker.html",
+    "ext": 0
+   },
+   {
+    "id": "07-007",
+    "title": "冗余设计详解",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/redundancy.html",
+    "ext": 0
+   },
+   {
+    "id": "07-008",
+    "title": "性能测试入门",
+    "group": "",
+    "url": "https://javaguide.cn/high-availability/performance-test.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "系统设计",
+  "code": "08",
+  "blurb": "REST · 安全认证 · 设计模式 · 面经",
+  "articles": [
+   {
+    "id": "08-001",
+    "title": "系统设计知识体系",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/",
+    "ext": 0
+   },
+   {
+    "id": "08-002",
+    "title": "RestFul API 简明教程",
+    "group": "基础知识",
+    "url": "https://javaguide.cn/system-design/basis/RESTfulAPI.html",
+    "ext": 0
+   },
+   {
+    "id": "08-003",
+    "title": "软件工程简明教程",
+    "group": "基础知识",
+    "url": "https://javaguide.cn/system-design/basis/software-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "08-004",
+    "title": "代码命名指南",
+    "group": "基础知识",
+    "url": "https://javaguide.cn/system-design/basis/naming.html",
+    "ext": 0
+   },
+   {
+    "id": "08-005",
+    "title": "代码重构指南",
+    "group": "基础知识",
+    "url": "https://javaguide.cn/system-design/basis/refactoring.html",
+    "ext": 0
+   },
+   {
+    "id": "08-006",
+    "title": "单元测试指南",
+    "group": "基础知识",
+    "url": "https://javaguide.cn/system-design/basis/unit-test.html",
+    "ext": 0
+   },
+   {
+    "id": "08-007",
+    "title": "认证授权基础概念详解",
+    "group": "认证授权",
+    "url": "https://javaguide.cn/system-design/security/basis-of-authority-certification.html",
+    "ext": 0
+   },
+   {
+    "id": "08-008",
+    "title": "JWT 是什么？JWT 结构、解析与登录鉴权详解",
+    "group": "认证授权",
+    "url": "https://javaguide.cn/system-design/security/jwt-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "08-009",
+    "title": "JWT 身份认证优缺点分析",
+    "group": "认证授权",
+    "url": "https://javaguide.cn/system-design/security/advantages-and-disadvantages-of-jwt.html",
+    "ext": 0
+   },
+   {
+    "id": "08-010",
+    "title": "SSO 单点登录详解",
+    "group": "认证授权",
+    "url": "https://javaguide.cn/system-design/security/sso-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "08-011",
+    "title": "权限系统设计详解",
+    "group": "认证授权",
+    "url": "https://javaguide.cn/system-design/security/design-of-authority-system.html",
+    "ext": 0
+   },
+   {
+    "id": "08-012",
+    "title": "常见加密算法总结",
+    "group": "数据安全",
+    "url": "https://javaguide.cn/system-design/security/encryption-algorithms.html",
+    "ext": 0
+   },
+   {
+    "id": "08-013",
+    "title": "敏感词过滤方案总结",
+    "group": "数据安全",
+    "url": "https://javaguide.cn/system-design/security/sentive-words-filter.html",
+    "ext": 0
+   },
+   {
+    "id": "08-014",
+    "title": "数据脱敏方案总结",
+    "group": "数据安全",
+    "url": "https://javaguide.cn/system-design/security/data-desensitization.html",
+    "ext": 0
+   },
+   {
+    "id": "08-015",
+    "title": "为什么前后端都要做数据校验？",
+    "group": "数据安全",
+    "url": "https://javaguide.cn/system-design/security/data-validation.html",
+    "ext": 0
+   },
+   {
+    "id": "08-016",
+    "title": "为什么忘记密码时只能重置，不能告诉你原密码？",
+    "group": "数据安全",
+    "url": "https://javaguide.cn/system-design/security/why-password-reset-instead-of-retrieval.html",
+    "ext": 0
+   },
+   {
+    "id": "08-017",
+    "title": "⭐系统设计常见面试题总结",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/system-design-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "08-018",
+    "title": "⭐设计模式常见面试题总结",
+    "group": "",
+    "url": "https://interview.javaguide.cn/system-design/design-pattern.html",
+    "ext": 1
+   },
+   {
+    "id": "08-019",
+    "title": "Java 定时任务详解",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/schedule-task.html",
+    "ext": 0
+   },
+   {
+    "id": "08-020",
+    "title": "Web 实时消息推送详解",
+    "group": "",
+    "url": "https://javaguide.cn/system-design/web-real-time-message-push.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "开发工具",
+  "code": "09",
+  "blurb": "Maven · Gradle · Git · Docker",
+  "articles": [
+   {
+    "id": "09-001",
+    "title": "开发工具知识体系",
+    "group": "",
+    "url": "https://javaguide.cn/tools/",
+    "ext": 0
+   },
+   {
+    "id": "09-002",
+    "title": "Maven 核心概念总结",
+    "group": "Maven",
+    "url": "https://javaguide.cn/tools/maven/maven-core-concepts.html",
+    "ext": 0
+   },
+   {
+    "id": "09-003",
+    "title": "Maven 最佳实践",
+    "group": "Maven",
+    "url": "https://javaguide.cn/tools/maven/maven-best-practices.html",
+    "ext": 0
+   },
+   {
+    "id": "09-004",
+    "title": "Gradle 核心概念总结",
+    "group": "Gradle",
+    "url": "https://javaguide.cn/tools/gradle/gradle-core-concepts.html",
+    "ext": 0
+   },
+   {
+    "id": "09-005",
+    "title": "Git 核心概念总结",
+    "group": "Git",
+    "url": "https://javaguide.cn/tools/git/git-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "09-006",
+    "title": "GitHub 实用小技巧总结",
+    "group": "Git",
+    "url": "https://javaguide.cn/tools/git/github-tips.html",
+    "ext": 0
+   },
+   {
+    "id": "09-007",
+    "title": "Docker 核心概念总结",
+    "group": "Docker",
+    "url": "https://javaguide.cn/tools/docker/docker-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "09-008",
+    "title": "Docker 实战",
+    "group": "Docker",
+    "url": "https://javaguide.cn/tools/docker/docker-in-action.html",
+    "ext": 0
+   },
+   {
+    "id": "09-009",
+    "title": "IDEA",
+    "group": "",
+    "url": "https://gitee.com/SnailClimb/awesome-idea-tutorial",
+    "ext": 1
+   }
+  ]
+ },
+ {
+  "name": "计算机基础",
+  "code": "10",
+  "blurb": "网络 · 操作系统 · 数据结构 · 算法",
+  "articles": [
+   {
+    "id": "10-001",
+    "title": "⭐️计算机网络常见面试题总结（上）",
+    "group": "网络 › 面试题",
+    "url": "https://javaguide.cn/cs-basics/network/other-network-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "10-002",
+    "title": "⭐️计算机网络常见面试题总结（下）",
+    "group": "网络 › 面试题",
+    "url": "https://javaguide.cn/cs-basics/network/other-network-questions2.html",
+    "ext": 0
+   },
+   {
+    "id": "10-003",
+    "title": "OSI 七层模型与 TCP/IP 四层模型详解",
+    "group": "网络 › 基础",
+    "url": "https://javaguide.cn/cs-basics/network/osi-and-tcp-ip-model.html",
+    "ext": 0
+   },
+   {
+    "id": "10-004",
+    "title": "从输入 URL 到页面展示到底发生了什么？",
+    "group": "网络 › 基础",
+    "url": "https://javaguide.cn/cs-basics/network/the-whole-process-of-accessing-web-pages.html",
+    "ext": 0
+   },
+   {
+    "id": "10-005",
+    "title": "⭐️应用层常见协议总结",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/application-layer-protocol.html",
+    "ext": 0
+   },
+   {
+    "id": "10-006",
+    "title": "⭐️HTTP vs HTTPS",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/http-vs-https.html",
+    "ext": 0
+   },
+   {
+    "id": "10-007",
+    "title": "⭐️有了HTTP，为什么还要RPC？",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/http-vs-rpc.html",
+    "ext": 0
+   },
+   {
+    "id": "10-008",
+    "title": "HTTPS 握手里的 RSA 和 ECDHE",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/https-rsa-vs-ecdhe.html",
+    "ext": 0
+   },
+   {
+    "id": "10-009",
+    "title": "HTTP 1.0 vs HTTP 1.1",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/http1.0-vs-http1.1.html",
+    "ext": 0
+   },
+   {
+    "id": "10-010",
+    "title": "HTTP 常见状态码总结",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/http-status-codes.html",
+    "ext": 0
+   },
+   {
+    "id": "10-011",
+    "title": "DNS 域名系统详解",
+    "group": "网络 › 应用层",
+    "url": "https://javaguide.cn/cs-basics/network/dns.html",
+    "ext": 0
+   },
+   {
+    "id": "10-012",
+    "title": "⭐️TCP 三次握手和四次挥手",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/tcp-connection-and-disconnection.html",
+    "ext": 0
+   },
+   {
+    "id": "10-013",
+    "title": "TCP TIME_WAIT 详解",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/tcp-time-wait.html",
+    "ext": 0
+   },
+   {
+    "id": "10-014",
+    "title": "TCP Keepalive和HTTP Keep-Alive有什么区别？",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/tcp-keepalive-vs-http-keepalive.html",
+    "ext": 0
+   },
+   {
+    "id": "10-015",
+    "title": "TCP 字节流 vs UDP 报文",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/tcp-byte-stream-udp-datagram.html",
+    "ext": 0
+   },
+   {
+    "id": "10-016",
+    "title": "⭐️TCP 如何保证可靠传输？",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/tcp-reliability-guarantee.html",
+    "ext": 0
+   },
+   {
+    "id": "10-017",
+    "title": "能 Ping 通，TCP 就一定能连通吗？",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/can-ping-but-tcp-may-not-connect.html",
+    "ext": 0
+   },
+   {
+    "id": "10-018",
+    "title": "TCP 和 UDP 可以使用同一个端口吗？",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/can-tcp-and-udp-use-the-same-port.html",
+    "ext": 0
+   },
+   {
+    "id": "10-019",
+    "title": "一台主机最多能保持多少个 TCP 连接？",
+    "group": "网络 › 传输层",
+    "url": "https://javaguide.cn/cs-basics/network/maximum-number-of-tcp-connections-per-host.html",
+    "ext": 0
+   },
+   {
+    "id": "10-020",
+    "title": "ARP 协议详解",
+    "group": "网络 › 网络层",
+    "url": "https://javaguide.cn/cs-basics/network/arp.html",
+    "ext": 0
+   },
+   {
+    "id": "10-021",
+    "title": "NAT 协议详解",
+    "group": "网络 › 网络层",
+    "url": "https://javaguide.cn/cs-basics/network/nat.html",
+    "ext": 0
+   },
+   {
+    "id": "10-022",
+    "title": "网络攻击常见手段总结",
+    "group": "网络 › 安全",
+    "url": "https://javaguide.cn/cs-basics/network/network-attack-means.html",
+    "ext": 0
+   },
+   {
+    "id": "10-023",
+    "title": "⭐️操作系统常见面试题总结（上）",
+    "group": "操作系统 › 面试题",
+    "url": "https://javaguide.cn/cs-basics/operating-system/operating-system-basic-questions-01.html",
+    "ext": 0
+   },
+   {
+    "id": "10-024",
+    "title": "⭐️操作系统常见面试题总结（下）",
+    "group": "操作系统 › 面试题",
+    "url": "https://javaguide.cn/cs-basics/operating-system/operating-system-basic-questions-02.html",
+    "ext": 0
+   },
+   {
+    "id": "10-025",
+    "title": "⭐️虚拟内存详解",
+    "group": "操作系统 › 面试必考",
+    "url": "https://javaguide.cn/cs-basics/operating-system/virtual-memory.html",
+    "ext": 0
+   },
+   {
+    "id": "10-026",
+    "title": "⭐️I/O 多路复用详解",
+    "group": "操作系统 › 面试必考",
+    "url": "https://javaguide.cn/cs-basics/operating-system/io-multiplexing.html",
+    "ext": 0
+   },
+   {
+    "id": "10-027",
+    "title": "⭐️零拷贝详解",
+    "group": "操作系统 › 面试必考",
+    "url": "https://javaguide.cn/cs-basics/operating-system/zero-copy.html",
+    "ext": 0
+   },
+   {
+    "id": "10-028",
+    "title": "内存管理详解",
+    "group": "操作系统 › 内存与文件系统",
+    "url": "https://javaguide.cn/cs-basics/operating-system/memory-management.html",
+    "ext": 0
+   },
+   {
+    "id": "10-029",
+    "title": "文件系统详解",
+    "group": "操作系统 › 内存与文件系统",
+    "url": "https://javaguide.cn/cs-basics/operating-system/file-system.html",
+    "ext": 0
+   },
+   {
+    "id": "10-030",
+    "title": "⭐️进程与线程详解",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/process-and-thread.html",
+    "ext": 0
+   },
+   {
+    "id": "10-031",
+    "title": "⭐️锁与同步机制",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/os-lock-and-sync.html",
+    "ext": 0
+   },
+   {
+    "id": "10-032",
+    "title": "⭐️死锁详解",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/dead-lock.html",
+    "ext": 0
+   },
+   {
+    "id": "10-033",
+    "title": "中断、异常与系统调用",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/interrupt-exception-syscall.html",
+    "ext": 0
+   },
+   {
+    "id": "10-034",
+    "title": "CPU 调度与系统负载",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/cpu-scheduling-and-load.html",
+    "ext": 0
+   },
+   {
+    "id": "10-035",
+    "title": "进程间通信（IPC）详解",
+    "group": "操作系统 › 进程与线程",
+    "url": "https://javaguide.cn/cs-basics/operating-system/ipc.html",
+    "ext": 0
+   },
+   {
+    "id": "10-036",
+    "title": "Linux 基础知识总结",
+    "group": "操作系统 › Linux",
+    "url": "https://javaguide.cn/cs-basics/operating-system/linux-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "10-037",
+    "title": "Shell 编程基础知识总结",
+    "group": "操作系统 › Linux",
+    "url": "https://javaguide.cn/cs-basics/operating-system/shell-intro.html",
+    "ext": 0
+   },
+   {
+    "id": "10-038",
+    "title": "知识体系",
+    "group": "数据结构",
+    "url": "https://javaguide.cn/cs-basics/data-structure/",
+    "ext": 0
+   },
+   {
+    "id": "10-039",
+    "title": "线性数据结构",
+    "group": "数据结构 › 基础结构",
+    "url": "https://javaguide.cn/cs-basics/data-structure/linear-data-structure.html",
+    "ext": 0
+   },
+   {
+    "id": "10-040",
+    "title": "⭐️哈希表",
+    "group": "数据结构 › 基础结构",
+    "url": "https://javaguide.cn/cs-basics/data-structure/hash-table.html",
+    "ext": 0
+   },
+   {
+    "id": "10-041",
+    "title": "⭐️树结构",
+    "group": "数据结构 › 树与堆",
+    "url": "https://javaguide.cn/cs-basics/data-structure/tree.html",
+    "ext": 0
+   },
+   {
+    "id": "10-042",
+    "title": "⭐️堆",
+    "group": "数据结构 › 树与堆",
+    "url": "https://javaguide.cn/cs-basics/data-structure/heap.html",
+    "ext": 0
+   },
+   {
+    "id": "10-043",
+    "title": "红黑树",
+    "group": "数据结构 › 树与堆",
+    "url": "https://javaguide.cn/cs-basics/data-structure/red-black-tree.html",
+    "ext": 0
+   },
+   {
+    "id": "10-044",
+    "title": "图",
+    "group": "数据结构 › 图与集合",
+    "url": "https://javaguide.cn/cs-basics/data-structure/graph.html",
+    "ext": 0
+   },
+   {
+    "id": "10-045",
+    "title": "⭐️并查集",
+    "group": "数据结构 › 图与集合",
+    "url": "https://javaguide.cn/cs-basics/data-structure/union-find.html",
+    "ext": 0
+   },
+   {
+    "id": "10-046",
+    "title": "Trie 前缀树",
+    "group": "数据结构 › 字符串与有序索引",
+    "url": "https://javaguide.cn/cs-basics/data-structure/trie.html",
+    "ext": 0
+   },
+   {
+    "id": "10-047",
+    "title": "跳表",
+    "group": "数据结构 › 字符串与有序索引",
+    "url": "https://javaguide.cn/cs-basics/data-structure/skip-list.html",
+    "ext": 0
+   },
+   {
+    "id": "10-048",
+    "title": "⭐️布隆过滤器",
+    "group": "数据结构 › 工程型结构",
+    "url": "https://javaguide.cn/cs-basics/data-structure/bloom-filter.html",
+    "ext": 0
+   },
+   {
+    "id": "10-049",
+    "title": "⭐️LRU 缓存",
+    "group": "数据结构 › 工程型结构",
+    "url": "https://javaguide.cn/cs-basics/data-structure/lru-cache.html",
+    "ext": 0
+   },
+   {
+    "id": "10-050",
+    "title": "复杂度分析",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/complexity-analysis.html",
+    "ext": 0
+   },
+   {
+    "id": "10-051",
+    "title": "二分查找",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/binary-search.html",
+    "ext": 0
+   },
+   {
+    "id": "10-052",
+    "title": "双指针与滑动窗口",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/two-pointers-and-sliding-window.html",
+    "ext": 0
+   },
+   {
+    "id": "10-053",
+    "title": "DFS 与 BFS",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/dfs-bfs.html",
+    "ext": 0
+   },
+   {
+    "id": "10-054",
+    "title": "回溯算法",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/backtracking.html",
+    "ext": 0
+   },
+   {
+    "id": "10-055",
+    "title": "动态规划",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/dynamic-programming.html",
+    "ext": 0
+   },
+   {
+    "id": "10-056",
+    "title": "贪心算法",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/greedy.html",
+    "ext": 0
+   },
+   {
+    "id": "10-057",
+    "title": "Top K 问题",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/top-k.html",
+    "ext": 0
+   },
+   {
+    "id": "10-058",
+    "title": "经典算法思想",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/classical-algorithm-problems-recommendations.html",
+    "ext": 0
+   },
+   {
+    "id": "10-059",
+    "title": "数据结构 LeetCode",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/common-data-structures-leetcode-recommendations.html",
+    "ext": 0
+   },
+   {
+    "id": "10-060",
+    "title": "字符串算法题",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/string-algorithm-problems.html",
+    "ext": 0
+   },
+   {
+    "id": "10-061",
+    "title": "链表算法题",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/linkedlist-algorithm-problems.html",
+    "ext": 0
+   },
+   {
+    "id": "10-062",
+    "title": "剑指 Offer",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/the-sword-refers-to-offer.html",
+    "ext": 0
+   },
+   {
+    "id": "10-063",
+    "title": "经典排序算法",
+    "group": "算法",
+    "url": "https://javaguide.cn/cs-basics/algorithms/10-classical-sorting-algorithms.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "AI应用开发",
+  "code": "11",
+  "blurb": "大模型 · Agent · RAG · AI 系统设计",
+  "articles": [
+   {
+    "id": "11-001",
+    "title": "⭐️AI 核心概念总览",
+    "group": "入门总览",
+    "url": "https://javaguide.cn/ai/ai-core-concepts.html",
+    "ext": 0
+   },
+   {
+    "id": "11-002",
+    "title": "⭐️AI 应用开发面试指南",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/ai-interview-guide.html",
+    "ext": 0
+   },
+   {
+    "id": "11-003",
+    "title": "大模型基础面试题总结",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/llm-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "11-004",
+    "title": "AI Agent 面试题总结",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/agent-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "11-005",
+    "title": "Agent 项目面试实战",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/agent-project-interview-guide.html",
+    "ext": 0
+   },
+   {
+    "id": "11-006",
+    "title": "RAG 面试题总结",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/rag-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "11-007",
+    "title": "AI 系统设计面试题总结",
+    "group": "面试题",
+    "url": "https://javaguide.cn/ai/interview-questions/ai-system-design-interview-questions.html",
+    "ext": 0
+   },
+   {
+    "id": "11-008",
+    "title": "万字拆解 LLM 运行机制",
+    "group": "大模型基础",
+    "url": "https://javaguide.cn/ai/llm-basis/llm-operation-mechanism.html",
+    "ext": 0
+   },
+   {
+    "id": "11-009",
+    "title": "大模型 API 调用工程实践",
+    "group": "大模型基础",
+    "url": "https://javaguide.cn/ai/llm-basis/llm-api-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "11-010",
+    "title": "大模型结构化输出详解",
+    "group": "大模型基础",
+    "url": "https://javaguide.cn/ai/llm-basis/structured-output-function-calling.html",
+    "ext": 0
+   },
+   {
+    "id": "11-011",
+    "title": "AI 应用评测体系",
+    "group": "大模型基础",
+    "url": "https://javaguide.cn/ai/llm-basis/llm-evaluation.html",
+    "ext": 0
+   },
+   {
+    "id": "11-012",
+    "title": "⭐️AI Agent 核心概念详解",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/agent-basis.html",
+    "ext": 0
+   },
+   {
+    "id": "11-013",
+    "title": "⭐️AI Agent 记忆系统详解",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/agent-memory.html",
+    "ext": 0
+   },
+   {
+    "id": "11-014",
+    "title": "多 Agent 协作系统设计",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/multi-agent.html",
+    "ext": 0
+   },
+   {
+    "id": "11-015",
+    "title": "提示词工程实战指南",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/prompt-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "11-016",
+    "title": "上下文工程实战指南",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/context-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "11-017",
+    "title": "万字详解 Agent Skills",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/skills.html",
+    "ext": 0
+   },
+   {
+    "id": "11-018",
+    "title": "万字拆解 MCP 协议",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/mcp.html",
+    "ext": 0
+   },
+   {
+    "id": "11-019",
+    "title": "Harness Engineering 详解",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/harness-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "11-020",
+    "title": "AI 工作流详解",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/workflow-graph-loop.html",
+    "ext": 0
+   },
+   {
+    "id": "11-021",
+    "title": "Loop Engineering 详解",
+    "group": "AI Agent",
+    "url": "https://javaguide.cn/ai/agent/loop-engineering.html",
+    "ext": 0
+   },
+   {
+    "id": "11-022",
+    "title": "⭐️RAG 基础概念详解",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/rag-basis.html",
+    "ext": 0
+   },
+   {
+    "id": "11-023",
+    "title": "RAG 文档处理与切分策略",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/rag-document-processing.html",
+    "ext": 0
+   },
+   {
+    "id": "11-024",
+    "title": "⭐️RAG 向量索引算法和向量数据库",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/rag-vector-store.html",
+    "ext": 0
+   },
+   {
+    "id": "11-025",
+    "title": "RAG 知识库文档更新策略",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/rag-knowledge-update.html",
+    "ext": 0
+   },
+   {
+    "id": "11-026",
+    "title": "GraphRAG 详解",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/graphrag.html",
+    "ext": 0
+   },
+   {
+    "id": "11-027",
+    "title": "RAG 检索优化",
+    "group": "RAG",
+    "url": "https://javaguide.cn/ai/rag/rag-optimization.html",
+    "ext": 0
+   },
+   {
+    "id": "11-028",
+    "title": "AI 应用系统设计",
+    "group": "AI 系统设计",
+    "url": "https://javaguide.cn/ai/system-design/ai-application-architecture.html",
+    "ext": 0
+   },
+   {
+    "id": "11-029",
+    "title": "LLM/Agent 安全实战",
+    "group": "AI 系统设计",
+    "url": "https://javaguide.cn/ai/system-design/llm-security.html",
+    "ext": 0
+   },
+   {
+    "id": "11-030",
+    "title": "大模型网关详解",
+    "group": "AI 系统设计",
+    "url": "https://javaguide.cn/ai/system-design/llm-gateway.html",
+    "ext": 0
+   },
+   {
+    "id": "11-031",
+    "title": "AI 可观测性与 Trace",
+    "group": "AI 系统设计",
+    "url": "https://javaguide.cn/ai/system-design/ai-observability.html",
+    "ext": 0
+   },
+   {
+    "id": "11-032",
+    "title": "AI 语音技术详解",
+    "group": "AI 系统设计",
+    "url": "https://javaguide.cn/ai/system-design/ai-voice.html",
+    "ext": 0
+   }
+  ]
+ },
+ {
+  "name": "AI编程",
+  "code": "12",
+  "blurb": "Claude Code · Codex · AI 提效实战",
+  "articles": [
+   {
+    "id": "12-001",
+    "title": "AI 编程开放性面试题",
+    "group": "入门",
+    "url": "https://javaguide.cn/ai-coding/practices/ai-ide.html",
+    "ext": 0
+   },
+   {
+    "id": "12-002",
+    "title": "AI 编程选 CLI 还是 IDE？",
+    "group": "入门",
+    "url": "https://javaguide.cn/ai-coding/practices/cli-vs-ide.html",
+    "ext": 0
+   },
+   {
+    "id": "12-003",
+    "title": "⭐️Claude Code 使用指南",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/claudecode-tips.html",
+    "ext": 0
+   },
+   {
+    "id": "12-004",
+    "title": "Claude Code 核心命令详解",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/claudecode-commands.html",
+    "ext": 0
+   },
+   {
+    "id": "12-005",
+    "title": "⭐️OpenAI Codex 最佳实践指南",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/codex-best-practices.html",
+    "ext": 0
+   },
+   {
+    "id": "12-006",
+    "title": "高颜值 Claude Code 替代 OMP",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/oh-my-pi.html",
+    "ext": 0
+   },
+   {
+    "id": "12-007",
+    "title": "Ghostty 安装、配置和常见技巧",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/ghostty.html",
+    "ext": 0
+   },
+   {
+    "id": "12-008",
+    "title": "Claude Code Agent View 多会话管理",
+    "group": "Claude Code 与 Codex",
+    "url": "https://javaguide.cn/ai-coding/practices/claudecode-agentview.html",
+    "ext": 0
+   },
+   {
+    "id": "12-009",
+    "title": "Claude Code 上下文管理",
+    "group": "Claude Code 原理",
+    "url": "https://javaguide.cn/ai-coding/principles/claude-code-context-management.html",
+    "ext": 0
+   },
+   {
+    "id": "12-010",
+    "title": "Claude Code 记忆系统",
+    "group": "Claude Code 原理",
+    "url": "https://javaguide.cn/ai-coding/principles/claude-code-memory.html",
+    "ext": 0
+   },
+   {
+    "id": "12-011",
+    "title": "Claude Code Skills 原理",
+    "group": "Claude Code 原理",
+    "url": "https://javaguide.cn/ai-coding/principles/claude-code-skills.html",
+    "ext": 0
+   },
+   {
+    "id": "12-012",
+    "title": "Claude Code Hooks 原理",
+    "group": "Claude Code 原理",
+    "url": "https://javaguide.cn/ai-coding/principles/claude-code-hooks.html",
+    "ext": 0
+   },
+   {
+    "id": "12-013",
+    "title": "Claude Code 多 Agent 机制",
+    "group": "Claude Code 原理",
+    "url": "https://javaguide.cn/ai-coding/principles/claude-code-multi-agent.html",
+    "ext": 0
+   },
+   {
+    "id": "12-014",
+    "title": "⭐️Vibe Coding 实用技巧总结",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/the-cool-tricks-for-vibe-coding.html",
+    "ext": 0
+   },
+   {
+    "id": "12-015",
+    "title": "Spec Coding 规范驱动编程",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/spec-coding.html",
+    "ext": 0
+   },
+   {
+    "id": "12-016",
+    "title": "⭐️CLAUDE.md 最佳实践",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/claude-md-best-practices.html",
+    "ext": 0
+   },
+   {
+    "id": "12-017",
+    "title": "⭐️AI 编程必备 Skills 推荐",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/programmer-essential-skills.html",
+    "ext": 0
+   },
+   {
+    "id": "12-018",
+    "title": "AI 编程 Skills 选型与精简",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/skill-selection-and-pruning.html",
+    "ext": 0
+   },
+   {
+    "id": "12-019",
+    "title": "mattpocock/skills 深度使用指南",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/mattpocock-skills.html",
+    "ext": 0
+   },
+   {
+    "id": "12-020",
+    "title": "一个好用的 AI 绘图 Skill",
+    "group": "规范与提效",
+    "url": "https://javaguide.cn/ai-coding/practices/drawio-chart-skill.html",
+    "ext": 0
+   },
+   {
+    "id": "12-021",
+    "title": "IDEA + Qoder 插件多场景实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/idea-qoder-plugin.html",
+    "ext": 0
+   },
+   {
+    "id": "12-022",
+    "title": "Trae + MiniMax 多场景实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/trae-m2.7.html",
+    "ext": 0
+   },
+   {
+    "id": "12-023",
+    "title": "Claude Code 接入第三方模型实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/cc-glm5.1.html",
+    "ext": 0
+   },
+   {
+    "id": "12-024",
+    "title": "DeepSeek V4 + Claude Code 实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/deepseek-v4-claude-code.html",
+    "ext": 0
+   },
+   {
+    "id": "12-025",
+    "title": "MiniMax M3 + Claude Code 实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/cc-m3.html",
+    "ext": 0
+   },
+   {
+    "id": "12-026",
+    "title": "Kimi K3 多场景实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/cases/kimi-k3.html",
+    "ext": 0
+   },
+   {
+    "id": "12-027",
+    "title": "IDEA + CC GUI 插件实战",
+    "group": "AI 编程实战",
+    "url": "https://javaguide.cn/ai-coding/project/cc-guide.html",
+    "ext": 0
+   }
+  ]
+ }
+]

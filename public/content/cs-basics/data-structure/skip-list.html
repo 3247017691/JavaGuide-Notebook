@@ -1,0 +1,178 @@
+<p>跳表可以理解为“带多级索引的有序链表”。普通有序链表查询需要从头扫到尾，时间复杂度是 <code>O(n)</code>；跳表在链表上方加了多层索引，查询时可以从高层快速跳过一批节点，再逐层下降。</p>
+<p>Redis 的有序集合 ZSet 底层就使用了跳表和哈希表的组合，所以跳表在后端面试里经常和 Redis 一起出现。</p>
+<p>文章内容概览：</p>
+<ol>
+<li>什么是跳表？</li>
+<li>跳表为什么能把查询从 <code>O(n)</code> 降到平均 <code>O(logn)</code>？</li>
+<li>跳表如何查找、插入和删除？</li>
+<li>跳表和红黑树应该怎么对比？</li>
+<li>Redis ZSet 为什么会用到跳表？</li>
+</ol>
+<p><img src="/img/skip-list-60942a9b.png" alt="" loading="lazy"></p>
+<h2 id="什么是跳表" tabindex="-1">什么是跳表？</h2>
+<p>跳表（Skip List）是一种基于有序链表的数据结构。它的底层仍然是一条完整的有序链表，所有元素都会出现在最底层；在底层链表之上，跳表再建立若干层更稀疏的索引。</p>
+<p>可以把它想成一本书的目录：</p>
+<ul>
+<li>最底层链表像正文页码，信息最完整，但从第一页翻到最后一页很慢。</li>
+<li>上层索引像目录，信息更少，但能快速跳到接近目标的位置。</li>
+<li>查询时先从最高层索引往右跳，跳不动了就下降一层，直到最底层。</li>
+</ul>
+<p>跳表和普通链表最大的区别就在这里：普通链表每次只能向后走一步；跳表可以在高层索引中一次跳过多个节点。</p>
+<h2 id="跳表的节点长什么样" tabindex="-1">跳表的节点长什么样？</h2>
+<p>普通链表节点通常只有一个 <code>next</code> 指针，而跳表节点会有多个前进指针。一个节点如果出现在第 3 层，就意味着它在第 0、1、2 层都有对应指针。</p>
+<p>抽象来看，跳表节点可以理解成这样：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">class</span> <span class="hljs-title class_">SkipListNode</span> {
+    <span class="hljs-type">int</span> value;
+    SkipListNode[] forward;
+}
+</code></pre>
+<p>这里的 <code>forward[i]</code> 表示当前节点在第 <code>i</code> 层指向的下一个节点。真实工程实现里还可能保存 score、member、backward 指针、span 等信息，用来支持排名、反向遍历和范围查询。</p>
+<h2 id="层数是怎么来的" tabindex="-1">层数是怎么来的？</h2>
+<p>跳表并不通过旋转、变色来维持平衡，它依赖随机层数。</p>
+<p>插入一个新节点时，通常会用随机函数决定它能升到多少层。可以把这个过程想成抛硬币：节点一定会出现在最底层；如果第一次抛到正面，就升一层；再抛到正面，再升一层；直到抛到反面或达到最大层数。</p>
+<p>这样做的结果是：越高层的节点越少，越低层的节点越密。理想情况下，第 1 层大约保留一半节点，第 2 层再保留一半，第 3 层继续减少。虽然不是严格平衡，但从概率上看，高度会维持在 <code>O(logn)</code> 级别。</p>
+<p>这也是跳表名字里“跳”的来源：高层索引允许查询过程跳过一段又一段元素。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能说清跳表为什么比普通链表查询快。</li>
+<li>能描述查找、插入、删除的大致过程。</li>
+<li>能说明跳表平均查询、插入、删除是 <code>O(logn)</code>。</li>
+<li>能解释跳表和红黑树的取舍。</li>
+<li>能关联 Redis ZSet 的范围查询场景。</li>
+</ul>
+<h2 id="跳表怎么查找" tabindex="-1">跳表怎么查找？</h2>
+<p>查找时从最高层索引开始：</p>
+<ol>
+<li>如果当前节点的下一个节点小于目标值，就向右走。</li>
+<li>如果下一个节点大于目标值或为空，就下降一层。</li>
+<li>到最底层后继续查找目标节点。</li>
+</ol>
+<p>这个过程有点像在有序数组里二分，但跳表底层仍然是链表结构。</p>
+<p>更准确地说，跳表每一层都是有序链表。查询时始终遵循一个原则：能往右走就往右走，不能往右走就往下走。</p>
+<p>假设要查找 <code>26</code>：</p>
+<ol>
+<li>从最高层头节点开始。</li>
+<li>如果右侧节点值小于 <code>26</code>，说明目标还在右边，可以继续右移。</li>
+<li>如果右侧节点值大于 <code>26</code>，说明再往右就越过目标了，于是下降一层。</li>
+<li>重复这个过程，最后在最底层确认目标是否存在。</li>
+</ol>
+<p>如果目标不存在，跳表也能找到它应该插入的位置：最底层中小于目标值的最后一个节点，就是插入位置的前驱节点。</p>
+<h2 id="插入和删除" tabindex="-1">插入和删除</h2>
+<p>插入一个节点时，需要先找到每一层中它的前驱节点，然后把新节点接进去。新节点能提升到多少层，通常由随机函数决定。</p>
+<p>删除节点时，也要找到各层前驱节点，再把指针绕过目标节点。</p>
+<p>跳表不靠旋转维持平衡，而是靠随机层数让索引高度保持在合理范围内。这也是它实现起来比红黑树更容易的地方。</p>
+<p>实际写插入代码时，经常会维护一个 <code>update</code> 数组：<code>update[i]</code> 表示第 <code>i</code> 层中新节点应该插入在哪个节点后面。查找插入位置的过程中顺手把这些前驱节点记录下来，拿到随机层数后，就能逐层修改指针。</p>
+<p>删除也是类似思路：先找到每一层的前驱节点，如果这一层的下一个节点正好是目标节点，就把前驱节点的 <code>forward</code> 指向目标节点的下一个节点。</p>
+<p>因此，跳表的插入和删除并不是只改底层链表，还要同步维护目标节点出现过的那些索引层。</p>
+<h2 id="复杂度" tabindex="-1">复杂度</h2>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>平均复杂度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>查找</td>
+<td><code>O(logn)</code></td>
+<td>通过多级索引跳过节点</td>
+</tr>
+<tr>
+<td>插入</td>
+<td><code>O(logn)</code></td>
+<td>查找位置后更新多层指针</td>
+</tr>
+<tr>
+<td>删除</td>
+<td><code>O(logn)</code></td>
+<td>查找前驱后断开指针</td>
+</tr>
+<tr>
+<td>范围查询</td>
+<td><code>O(logn + k)</code></td>
+<td>先定位起点，再顺序返回 k 个元素</td>
+</tr>
+</tbody>
+</table>
+<p>空间复杂度是 <code>O(n)</code> 级别，但会比普通链表多一些索引指针。</p>
+<p>这里的 <code>O(logn)</code> 是平均意义上的复杂度，依赖随机层数带来的概率平衡。跳表不像红黑树那样提供严格的最坏情况平衡约束，但在随机函数正常、参数设置合理的情况下，性能通常很稳定。</p>
+<p>范围查询是跳表很舒服的场景：先用 <code>O(logn)</code> 定位到范围起点，再沿着最底层链表顺序向后遍历 <code>k</code> 个结果即可。</p>
+<h2 id="跳表和红黑树怎么选" tabindex="-1">跳表和红黑树怎么选？</h2>
+<table>
+<thead>
+<tr>
+<th>对比点</th>
+<th>跳表</th>
+<th>红黑树</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>平衡方式</td>
+<td>随机层数</td>
+<td>旋转和变色</td>
+</tr>
+<tr>
+<td>实现难度</td>
+<td>相对更直接</td>
+<td>插入删除修复更复杂</td>
+</tr>
+<tr>
+<td>范围查询</td>
+<td>顺着底层链表扫，很方便</td>
+<td>中序遍历也可以，但实现更绕</td>
+</tr>
+<tr>
+<td>最坏复杂度</td>
+<td>依赖随机性</td>
+<td>有严格平衡约束</td>
+</tr>
+<tr>
+<td>工程代表</td>
+<td>Redis ZSet</td>
+<td>Java <code>TreeMap</code>、<code>HashMap</code> 树化</td>
+</tr>
+</tbody>
+</table>
+<h2 id="redis-zset-为什么用跳表" tabindex="-1">Redis ZSet 为什么用跳表？</h2>
+<p>ZSet 需要支持：</p>
+<ul>
+<li>按 member 快速查 score。</li>
+<li>按 score 排序。</li>
+<li>按 score 范围查询。</li>
+<li>获取排名。</li>
+</ul>
+<p>哈希表适合按 member 查 score，跳表适合按 score 排序和范围查询。两者组合后，ZSet 能同时支持快速查找和有序遍历。</p>
+<p>更具体一点：</p>
+<ul>
+<li>通过哈希表，可以根据 member 直接找到对应 score。</li>
+<li>通过跳表，可以按 score 从小到大维护顺序。</li>
+<li>做 <code>ZRANGE</code>、<code>ZRANGEBYSCORE</code> 这类范围查询时，跳表可以先定位起点，再沿链表连续返回结果。</li>
+<li>如果跳表节点维护 span 信息，还可以支持排名相关操作。</li>
+</ul>
+<p>需要注意，Redis 会根据数据规模和配置使用不同的内部编码来节省内存。面试里说“ZSet 使用哈希表 + 跳表”通常是在讨论它面向较大有序集合时的核心结构。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li>跳表不是数组，也不是二叉树，它的底层是链表。</li>
+<li>跳表平均复杂度是 <code>O(logn)</code>，不是靠严格平衡保证。</li>
+<li>范围查询是跳表的强项，先定位起点，再沿底层链表遍历。</li>
+<li>Redis ZSet 不是只用跳表，还配合了哈希表。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li>跳表为什么查询快？</li>
+<li>跳表和红黑树有什么区别？</li>
+<li>Redis ZSet 为什么不用红黑树？</li>
+<li>跳表的层数怎么决定？</li>
+<li>跳表范围查询复杂度是多少？</li>
+</ul>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://dl.acm.org/doi/10.1145/78973.78977" target="_blank" rel="noopener">Skip Lists: A Probabilistic Alternative to Balanced Trees</a></li>
+<li><a href="https://drum.lib.umd.edu/bitstreams/17176ef8-8330-4a6c-8b75-4cd18c570bec/download" target="_blank" rel="noopener">William Pugh：A Skip List Cookbook</a></li>
+<li><a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/" target="_blank" rel="noopener">Redis Docs：Sorted Sets</a></li>
+<li><a href="https://github.com/redis/redis/blob/unstable/src/t_zset.c" target="_blank" rel="noopener">Redis 源码：t_zset.c</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

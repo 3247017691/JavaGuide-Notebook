@@ -1,0 +1,86 @@
+<!-- @include: @small-advertisement.snippet.md -->
+<p>这份 <strong>数据库知识体系</strong> 面向后端学习、工程实践和面试复习，按“数据库基础 -&gt; SQL -&gt; MySQL -&gt; Redis -&gt; NoSQL 与搜索”的顺序整理本站数据库相关文章。</p>
+<p>如果你时间有限，建议先看 <a href="/read/database/basis.html">数据库基础常见面试题总结</a>、<a href="/read/database/sql/sql-syntax-summary.html">SQL 语法基础知识总结</a>、<a href="/read/database/mysql/mysql-questions-01.html">MySQL 常见面试题总结</a> 和 <a href="/read/database/redis/redis-questions-01.html">Redis 常见面试题总结（上）</a>，快速建立高频问题清单。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>正在系统学习数据库基础、SQL、MySQL 和 Redis 的后端开发者。</li>
+<li>准备校招、社招、中大厂后端面试的同学。</li>
+<li>想补齐索引、事务、日志、执行计划、缓存一致性、Redis 持久化和集群能力的工程师。</li>
+<li>已经写过业务 CRUD，但对数据库底层原理、性能优化和 NoSQL 选型不够熟的读者。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>关系型数据库和 NoSQL 分别适合解决什么问题，常见选型边界在哪里？</li>
+<li>SQL 的查询、聚合、连接、子查询和事务语义应该如何掌握？</li>
+<li>MySQL 索引、事务隔离、MVCC、三大日志和执行计划如何串成一条主线？</li>
+<li>Redis 为什么快，常用数据结构、缓存策略、持久化、阻塞问题和集群机制如何理解？</li>
+<li>MongoDB、Elasticsearch 这类 NoSQL/搜索系统在后端面试和工程选型中常考哪些点？</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/database/basis.html">数据库基础常见面试题总结</a> 和 <a href="/read/database/nosql.html">NoSQL 基础常见面试题总结</a>：先理解数据库分类、事务、范式、NoSQL 类型和典型应用场景。</li>
+<li><a href="/read/database/sql/sql-syntax-summary.html">SQL 语法基础知识总结</a>：补齐查询、过滤、排序、聚合、连接、子查询、插入、更新和删除等 SQL 基本功。</li>
+<li><a href="/read/database/mysql/README.html">MySQL 专题</a>：重点学习索引、事务隔离、MVCC、三大日志、执行过程和执行计划。</li>
+<li><a href="/read/database/redis/README.html">Redis 专题</a>：重点学习缓存基础、数据结构、缓存读写策略、持久化、阻塞问题、内存碎片和集群。</li>
+<li><a href="/read/database/mongodb/README.html">MongoDB 专题</a> 和 <a href="/read/database/elasticsearch/elasticsearch-questions-01.html">Elasticsearch 常见面试题总结</a>：根据岗位要求补充文档数据库和搜索引擎相关知识。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="数据库基础与-sql" tabindex="-1">数据库基础与 SQL</h3>
+<p>这部分适合先建立数据库通用认知，重点理解数据库类型、事务语义、字符集、SQL 基础和常见查询题。</p>
+<ul>
+<li><a href="/read/database/basis.html">数据库基础常见面试题总结</a>：梳理数据库基础概念、事务特性、并发控制、范式和常见面试问题。</li>
+<li><a href="/read/database/nosql.html">NoSQL 基础常见面试题总结</a>：理解键值、文档、列族、图数据库等 NoSQL 类型及适用场景。</li>
+<li><a href="/read/database/character-set.html">字符集详解：字符集是什么？怎么用？</a>：理解字符集、编码、乱码原因以及 MySQL 字符集设置。</li>
+<li><a href="/read/database/sql/README.html">SQL 专题</a>：从 SQL 语法基础讲到常见 SQL 面试题。</li>
+<li><a href="/read/database/sql/sql-syntax-summary.html">SQL 语法基础知识总结</a>：覆盖查询、过滤、排序、聚合、分组、连接、子查询和数据修改。</li>
+</ul>
+<h3 id="mysql" tabindex="-1">MySQL</h3>
+<p>MySQL 是后端开发最核心的关系型数据库考点之一，学习时建议把“索引 -&gt; 执行计划 -&gt; 事务 -&gt; MVCC -&gt; 日志 -&gt; 性能优化”连起来。</p>
+<ul>
+<li><a href="/read/database/mysql/README.html">MySQL 专题</a>：串联 MySQL 索引、事务、MVCC、日志、执行计划和性能优化。</li>
+<li><a href="/read/database/mysql/mysql-questions-01.html">MySQL 常见面试题总结</a>：快速建立 MySQL 高频问题清单。</li>
+<li><a href="/read/database/mysql/mysql-index.html">MySQL 索引详解</a>：理解索引数据结构、最左前缀、覆盖索引、回表和索引设计原则。</li>
+<li><a href="/read/database/mysql/transaction-isolation-level.html">MySQL 事务隔离级别详解</a>：理解脏读、不可重复读、幻读和不同隔离级别的权衡。</li>
+<li><a href="/read/database/mysql/innodb-implementation-of-mvcc.html">InnoDB 存储引擎对 MVCC 的实现</a>：理解 Read View、隐藏字段、undo log 和快照读。</li>
+<li><a href="/read/database/mysql/mysql-logs.html">MySQL 三大日志详解</a>：理解 binlog、redo log、undo log 的作用和关系。</li>
+<li><a href="/read/database/mysql/mysql-to-elasticsearch-sync.html">MySQL 数据同步到 Elasticsearch 详解</a>：对比应用层双写、定时同步、Canal、Debezium 和 Flink CDC，理解全量、增量和数据一致性问题。</li>
+<li><a href="/read/database/mysql/mysql-query-execution-plan.html">MySQL 执行计划分析</a>：掌握 EXPLAIN 常见字段和慢 SQL 分析入口。</li>
+</ul>
+<h3 id="redis" tabindex="-1">Redis</h3>
+<p>Redis 既是缓存，也是高频中间件考点。学习时不要只背命令，更要理解缓存策略、数据结构、持久化、阻塞原因和集群机制。</p>
+<ul>
+<li><a href="/read/database/redis/README.html">Redis 专题</a>：围绕缓存、数据结构、持久化、集群、阻塞问题和工程实践展开。</li>
+<li><a href="/read/database/redis/cache-basics.html">缓存基础常见面试题总结</a>：理解缓存使用场景、缓存穿透、击穿、雪崩和一致性问题。</li>
+<li><a href="/read/database/redis/redis-questions-01.html">Redis 常见面试题总结（上）</a> 和 <a href="/read/database/redis/redis-questions-02.html">Redis 常见面试题总结（下）</a>：快速建立 Redis 高频问题清单。</li>
+<li><a href="/read/database/redis/redis-data-structures-01.html">Redis 5 种基本数据类型详解</a>：理解 String、List、Hash、Set、Sorted Set 的应用场景。</li>
+<li><a href="/read/database/redis/redis-persistence.html">Redis 持久化机制详解</a>：理解 RDB、AOF、AOF 重写和混合持久化。</li>
+<li><a href="/read/database/redis/redis-cluster.html">Redis 集群详解</a>：理解主从复制、哨兵、Cluster、槽位和故障转移。</li>
+</ul>
+<h3 id="nosql-与搜索" tabindex="-1">NoSQL 与搜索</h3>
+<p>这部分适合在掌握关系型数据库和缓存之后补充，用来理解文档数据库、搜索引擎和非关系型存储的选型边界。</p>
+<ul>
+<li><a href="/read/database/mongodb/README.html">MongoDB 专题</a>：整理 MongoDB 文档模型、索引、副本集、分片、事务和常见面试问题。</li>
+<li><a href="/read/database/mongodb/mongodb-questions-01.html">MongoDB 常见面试题总结（上）</a> 和 <a href="/read/database/mongodb/mongodb-questions-02.html">MongoDB 常见面试题总结（下）</a>：理解 MongoDB 核心概念和工程实践。</li>
+<li><a href="/read/database/elasticsearch/elasticsearch-questions-01.html">Elasticsearch 常见面试题总结</a>：理解倒排索引、分片、副本、写入查询流程和搜索场景。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>关系型数据库和 NoSQL 有什么区别？分别适合哪些场景？</li>
+<li>数据库事务 ACID 是什么？隔离级别分别解决什么问题？</li>
+<li>SQL 中 WHERE、GROUP BY、HAVING、ORDER BY 的执行顺序如何理解？</li>
+<li>MySQL 索引为什么能加速查询？什么情况下会索引失效？</li>
+<li>InnoDB 如何通过 MVCC 实现非锁定一致性读？</li>
+<li>binlog、redo log、undo log 分别解决什么问题？</li>
+<li>如何通过 EXPLAIN 分析 SQL 执行计划？</li>
+<li>Redis 为什么快？缓存穿透、击穿、雪崩如何处理？</li>
+<li>Redis 持久化、主从复制、哨兵和 Cluster 分别解决什么问题？</li>
+<li>MongoDB 和 Elasticsearch 分别适合什么业务场景？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统知识体系</a></li>
+<li><a href="/read/distributed-system/README.html">分布式系统知识体系</a></li>
+<li><a href="/read/system-design/README.html">系统设计</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

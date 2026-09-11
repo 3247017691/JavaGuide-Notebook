@@ -1,0 +1,48 @@
+<p>Docker 是后端开发非常常见的容器化工具，常用于本地快速启动 MySQL、Redis、Kafka 等依赖服务，也常用于测试环境和部署交付。学习 Docker 时，要把核心概念和命令实践结合起来。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想快速理解 Docker 容器化基础的后端开发者。</li>
+<li>需要用 Docker 搭建本地开发环境、测试环境或依赖服务的同学。</li>
+<li>准备面试，需要讲清容器、镜像、数据卷、网络和容器与虚拟机区别的读者。</li>
+<li>已经会复制 Docker 命令，但不清楚镜像构建、容器生命周期和数据持久化的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>容器解决的是应用运行环境隔离和一致性问题。</li>
+<li>镜像是静态模板，容器是镜像运行后的实例，仓库用于分发和复用镜像。</li>
+<li>Docker 常用命令要围绕镜像管理、容器生命周期、日志查看、端口映射和进入容器来掌握。</li>
+<li>数据卷用于数据持久化和宿主机目录挂载，网络用于容器之间和容器与外部服务通信。</li>
+<li>Docker Compose 用于定义和运行多容器应用，适合本地开发环境和简单服务编排。</li>
+<li>Docker 不是万能部署方案，生产环境还要结合镜像安全、资源限制、日志、监控和编排能力考虑。</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/tools/docker/docker-intro.html">Docker 核心概念总结</a>：先理解容器、镜像、仓库、Docker 引擎以及容器和虚拟机的区别。</li>
+<li><a href="/read/tools/docker/docker-in-action.html">Docker 实战</a>：通过实际命令练习镜像拉取、容器启动、端口映射、数据卷、日志查看和常见服务部署。</li>
+<li>结合一个 Java 项目练习：把应用依赖的 MySQL、Redis 等服务用 Docker 启动起来，再观察日志、数据目录和端口映射。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<ul>
+<li><a href="/read/tools/docker/docker-intro.html">Docker 核心概念总结</a>：讲解容器、镜像、仓库、Docker 引擎、Docker 架构、Docker Compose，以及 Docker 和虚拟机的区别。</li>
+<li><a href="/read/tools/docker/docker-in-action.html">Docker 实战</a>：通过常用命令和实践场景理解镜像管理、容器管理、服务部署、本地环境搭建和常见排查。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Docker 主要解决什么问题？</li>
+<li>容器和虚拟机有什么区别？</li>
+<li>镜像和容器是什么关系？</li>
+<li>Dockerfile、镜像、容器、仓库分别是什么？</li>
+<li>为什么容器删除后数据可能丢失？数据卷解决了什么问题？</li>
+<li>端口映射和容器网络分别解决什么问题？</li>
+<li>如何查看容器日志、进入容器、停止和删除容器？</li>
+<li><code>docker compose</code> 适合解决什么问题？和单独执行 <code>docker run</code> 有什么区别？</li>
+<li>Docker 在开发、测试和部署环境里分别有什么价值？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/tools/README.html">开发工具知识体系</a></li>
+<li><a href="/read/tools/git/README.html">Git 专题</a></li>
+<li><a href="/read/tools/maven/README.html">Maven 专题</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统设计</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

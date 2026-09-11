@@ -1,0 +1,357 @@
+<p>二分查找最容易让人翻车的地方不是思想，而是边界。<code>left</code>、<code>right</code>、<code>mid</code>、循环条件、返回值，只要有一个含义没想清楚，就很容易写出死循环或者漏掉答案。</p>
+<p>面试里判断能不能用二分，先看一句话：<strong>答案所在空间是否有单调性</strong>。数组有序只是最直观的一种情况，最小速度、最小容量、最小天数这类题，也可以在答案范围上二分。</p>
+<h2 id="面试考察重点" tabindex="-1">面试考察重点</h2>
+<ul>
+<li>能写出基础二分模板。</li>
+<li>能处理左边界、右边界。</li>
+<li>能识别答案二分，而不是只会在数组里找数。</li>
+<li>能解释为什么循环会结束，为什么不会漏答案。</li>
+<li>能说出时间复杂度是 <code>O(logn)</code>，空间复杂度通常是 <code>O(1)</code>。</li>
+</ul>
+<h2 id="什么时候想到二分" tabindex="-1">什么时候想到二分？</h2>
+<p>不要把二分查找理解成“只能在有序数组里找数字”。它真正依赖的是 <strong>单调性</strong>。</p>
+<p>常见单调性有两类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>例子</th>
+<th>判断方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数组单调</td>
+<td>有序数组中找 <code>target</code></td>
+<td><code>nums[mid]</code> 和 <code>target</code> 比较后能排除一半</td>
+</tr>
+<tr>
+<td>答案单调</td>
+<td>求最小速度、最小容量、最少天数</td>
+<td>某个答案可行时，更大的答案也可行，或反过来</td>
+</tr>
+</tbody>
+</table>
+<p>比如“爱吃香蕉的珂珂”里，吃香蕉速度越快，越容易在规定时间内吃完。这里数组本身不需要有序，单调的是“速度”和“是否能吃完”之间的关系。</p>
+<p>面试时可以这样判断：</p>
+<ol>
+<li>题目是否在找一个位置、边界或最小/最大可行值？</li>
+<li>如果猜一个答案 <code>x</code>，能不能在 <code>O(n)</code> 或更低复杂度内判断它是否可行？</li>
+<li><code>x</code> 变大或变小时，可行性是否单调变化？</li>
+</ol>
+<p>三个问题都能回答上来，基本就可以尝试二分。</p>
+<h2 id="基础二分模板" tabindex="-1">基础二分模板</h2>
+<p>适合在有序数组中查找一个确定值：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">binarySearch</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length - <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">while</span> (left &lt;= right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (nums[mid] == target) {
+            <span class="hljs-keyword">return</span> mid;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (nums[mid] &lt; target) {
+            left = mid + <span class="hljs-number">1</span>;
+        } <span class="hljs-keyword">else</span> {
+            right = mid - <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
+}
+</code></pre>
+<p>这个模板里，搜索区间是闭区间 <code>[left, right]</code>，所以循环条件是 <code>left &lt;= right</code>。每次排除 <code>mid</code>，因此更新成 <code>mid + 1</code> 或 <code>mid - 1</code>。</p>
+<p>用一句话记这个模板：<strong>区间里每个位置都还可能是答案，循环结束时区间为空。</strong></p>
+<p>举个例子，数组 <code>[1, 3, 5, 7, 9]</code> 中找 <code>7</code>：</p>
+<ol>
+<li><code>left = 0</code>，<code>right = 4</code>，<code>mid = 2</code>，<code>nums[mid] = 5</code>，目标在右侧。</li>
+<li>更新 <code>left = mid + 1 = 3</code>。</li>
+<li><code>mid = 3</code>，找到 <code>7</code>。</li>
+</ol>
+<p>如果查找 <code>6</code>，最后会出现 <code>left &gt; right</code>，说明闭区间已经被排空，返回 <code>-1</code>。</p>
+<h2 id="左边界模板" tabindex="-1">左边界模板</h2>
+<p>找第一个大于等于 <code>target</code> 的位置：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">lowerBound</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length;
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (nums[mid] &gt;= target) {
+            right = mid;
+        } <span class="hljs-keyword">else</span> {
+            left = mid + <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> left;
+}
+</code></pre>
+<p>这个模板的搜索区间是左闭右开 <code>[left, right)</code>。<code>right</code> 初始化为 <code>nums.length</code>，返回值可能等于 <code>nums.length</code>，表示数组中不存在大于等于 <code>target</code> 的位置。</p>
+<p>左边界模板的关键不是“找到 target”，而是“找到第一个满足条件的位置”。这个写法能自然处理目标不存在的情况。</p>
+<p>比如数组 <code>[1, 2, 2, 2, 4]</code>，找第一个大于等于 <code>2</code> 的位置：</p>
+<ul>
+<li>当 <code>nums[mid] &gt;= 2</code>，<code>mid</code> 可能就是答案，所以不能排除 <code>mid</code>，更新 <code>right = mid</code>。</li>
+<li>当 <code>nums[mid] &lt; 2</code>，<code>mid</code> 和它左边都不可能是答案，更新 <code>left = mid + 1</code>。</li>
+</ul>
+<p>循环结束时，<code>left == right</code>，这个位置就是第一个满足条件的位置。</p>
+<h2 id="右边界模板" tabindex="-1">右边界模板</h2>
+<p>找最后一个小于等于 <code>target</code> 的位置，可以先找第一个大于 <code>target</code> 的位置，再减 1：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">upperBound</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length;
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (nums[mid] &gt; target) {
+            right = mid;
+        } <span class="hljs-keyword">else</span> {
+            left = mid + <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> left - <span class="hljs-number">1</span>;
+}
+</code></pre>
+<p>这种写法的好处是左右边界只记一套思路：找第一个满足条件的位置。</p>
+<p>右边界容易写错，推荐转化成左边界问题：</p>
+<ul>
+<li>最后一个小于等于 <code>target</code> 的位置 = 第一个大于 <code>target</code> 的位置 - 1。</li>
+<li>最后一个小于 <code>target</code> 的位置 = 第一个大于等于 <code>target</code> 的位置 - 1。</li>
+</ul>
+<p>这样不需要维护两套模板，面试手写时更稳。</p>
+<h2 id="答案二分" tabindex="-1">答案二分</h2>
+<p>答案二分不是在数组里找元素，而是在答案范围里找最小可行值或最大可行值。</p>
+<p>典型问题：给定若干堆香蕉和总时间 <code>h</code>，求最小吃香蕉速度。速度越快，越容易在 <code>h</code> 小时内吃完，这就是单调性。</p>
+<p>这类题通常分两步：</p>
+<ol>
+<li>确定答案范围。比如速度最小是 <code>1</code>，最大不超过最大那堆香蕉数。</li>
+<li>写 <code>check</code> 函数。给定一个速度，判断能不能在 <code>h</code> 小时内吃完。</li>
+</ol>
+<p>这个上界成立依赖题目约束：<code>h &gt;= piles.length</code>。因为速度等于最大堆大小时，每堆香蕉最多 1 小时吃完，总耗时不会超过堆数。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span> <span class="hljs-title function_">minEatingSpeed</span><span class="hljs-params">(<span class="hljs-type">int</span>[] piles, <span class="hljs-type">int</span> h)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> pile : piles) {
+        right = Math.max(right, pile);
+    }
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (canFinish(piles, h, mid)) {
+            right = mid;
+        } <span class="hljs-keyword">else</span> {
+            left = mid + <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> left;
+}
+
+<span class="hljs-type">boolean</span> <span class="hljs-title function_">canFinish</span><span class="hljs-params">(<span class="hljs-type">int</span>[] piles, <span class="hljs-type">int</span> h, <span class="hljs-type">int</span> speed)</span> {
+    <span class="hljs-type">long</span> <span class="hljs-variable">hours</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> pile : piles) {
+        hours += (pile + speed - <span class="hljs-number">1</span>) / speed;
+    }
+    <span class="hljs-keyword">return</span> hours &lt;= h;
+}
+</code></pre>
+<p>这里为什么返回 <code>left</code>？因为循环一直在找“第一个可行速度”。当 <code>canFinish(mid)</code> 为 true，说明 <code>mid</code> 可行，但可能还有更小的速度也可行，所以收缩右边界。最后左右边界重合的位置，就是最小可行速度。</p>
+<p>答案二分的 <code>check</code> 函数往往比二分本身更重要。面试时建议先把 <code>check</code> 的含义说清楚，再写二分框架。</p>
+<h2 id="三类二分怎么选" tabindex="-1">三类二分怎么选？</h2>
+<table>
+<thead>
+<tr>
+<th>目标</th>
+<th>推荐模板</th>
+<th>返回值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>找到某个等于 <code>target</code> 的下标</td>
+<td>基础二分</td>
+<td>找到返回下标，找不到返回 <code>-1</code></td>
+</tr>
+<tr>
+<td>找第一个满足条件的位置</td>
+<td>左边界</td>
+<td>返回 <code>left</code>，可能等于数组长度</td>
+</tr>
+<tr>
+<td>找最小可行答案</td>
+<td>答案二分</td>
+<td>返回最终的 <code>left</code></td>
+</tr>
+</tbody>
+</table>
+<p>如果题目里有“第一个”“最后一个”“最小可行”“最大可行”，不要急着写基础二分，先判断是不是边界问题。</p>
+<h2 id="面试手写路径" tabindex="-1">面试手写路径</h2>
+<p>二分题的代码不长，面试里更容易被追问的是“你为什么敢丢掉一半”。手写时可以按这个顺序来：</p>
+<ol>
+<li>先说明搜索空间：是在数组下标里找，还是在答案范围里找。</li>
+<li>再说明单调性：<code>mid</code> 左右两侧为什么可以排除一边。</li>
+<li>明确区间含义：闭区间 <code>[left, right]</code> 还是左闭右开 <code>[left, right)</code>。</li>
+<li>写更新规则：<code>mid</code> 还能不能成为答案，决定写 <code>right = mid</code> 还是 <code>right = mid - 1</code>。</li>
+<li>最后说返回值：循环结束时 <code>left</code>、<code>right</code> 分别代表什么。</li>
+</ol>
+<p>一个很实用的自检问题是：<strong>当 <code>nums[mid]</code> 正好满足条件时，我有没有把可能的答案删掉？</strong> 左边界、答案二分里，<code>mid</code> 经常仍然可能是答案，所以不能随手写成 <code>right = mid - 1</code>。</p>
+<h2 id="代表题精讲查找第一个和最后一个位置" tabindex="-1">代表题精讲：查找第一个和最后一个位置</h2>
+<p><a href="https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/" target="_blank" rel="noopener">34. 在排序数组中查找元素的第一个和最后一个位置</a> 是边界二分的典型题。题目要求返回 <code>target</code> 的起始和结束位置，如果不存在返回 <code>[-1, -1]</code>。</p>
+<p>这题不要写成“找到一个 target 后向两边扫描”。虽然能过一些用例，但最坏情况下会退化成 <code>O(n)</code>。更稳的写法是做两次边界查找：</p>
+<ul>
+<li>第一次找第一个大于等于 <code>target</code> 的位置。</li>
+<li>第二次找第一个大于 <code>target</code> 的位置，再减 1。</li>
+</ul>
+<p>下面两个辅助方法与上文模板一致，这里保留完整代码，方便把返回值含义和主逻辑放在一起对照。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">int</span>[] <span class="hljs-title function_">searchRange</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> lowerBound(nums, target);
+    <span class="hljs-keyword">if</span> (left == nums.length || nums[left] != target) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {-<span class="hljs-number">1</span>, -<span class="hljs-number">1</span>};
+    }
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> upperBound(nums, target) - <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">int</span>[] {left, right};
+}
+
+<span class="hljs-type">int</span> <span class="hljs-title function_">lowerBound</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length;
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (nums[mid] &gt;= target) {
+            right = mid;
+        } <span class="hljs-keyword">else</span> {
+            left = mid + <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> left;
+}
+
+<span class="hljs-type">int</span> <span class="hljs-title function_">upperBound</span><span class="hljs-params">(<span class="hljs-type">int</span>[] nums, <span class="hljs-type">int</span> target)</span> {
+    <span class="hljs-type">int</span> <span class="hljs-variable">left</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;
+    <span class="hljs-type">int</span> <span class="hljs-variable">right</span> <span class="hljs-operator">=</span> nums.length;
+    <span class="hljs-keyword">while</span> (left &lt; right) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> left + (right - left) / <span class="hljs-number">2</span>;
+        <span class="hljs-keyword">if</span> (nums[mid] &gt; target) {
+            right = mid;
+        } <span class="hljs-keyword">else</span> {
+            left = mid + <span class="hljs-number">1</span>;
+        }
+    }
+    <span class="hljs-keyword">return</span> left;
+}
+</code></pre>
+<p>面试里这题常见追问是：如果数组中全是 <code>target</code> 怎么办？如果 <code>target</code> 不存在但应该插在中间怎么办？这两个问题其实都在考返回值含义。<code>lowerBound</code> 返回的是第一个满足条件的位置，不保证这个位置上的值一定等于 <code>target</code>，所以返回前要再检查一次。</p>
+<h2 id="过程示意和边界样例" tabindex="-1">过程示意和边界样例</h2>
+<p>以左边界模板为例，数组 <code>[1, 2, 2, 2, 4]</code> 中找第一个大于等于 <code>2</code> 的位置：</p>
+<table>
+<thead>
+<tr>
+<th>轮次</th>
+<th><code>left</code></th>
+<th><code>right</code></th>
+<th><code>mid</code></th>
+<th>判断</th>
+<th>下一步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>5</td>
+<td>2</td>
+<td><code>nums[2] &gt;= 2</code></td>
+<td><code>right = 2</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>2</td>
+<td>1</td>
+<td><code>nums[1] &gt;= 2</code></td>
+<td><code>right = 1</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td><code>nums[0] &lt; 2</code></td>
+<td><code>left = 1</code></td>
+</tr>
+<tr>
+<td>结束</td>
+<td>1</td>
+<td>1</td>
+<td>-</td>
+<td><code>left == right</code></td>
+<td>返回 1</td>
+</tr>
+</tbody>
+</table>
+<p>几个边界样例建议手写前先过一遍：</p>
+<table>
+<thead>
+<tr>
+<th>输入</th>
+<th>目标</th>
+<th>预期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[]</code></td>
+<td><code>1</code></td>
+<td>返回 <code>-1</code> 或插入位置 <code>0</code>，看题目要求</td>
+</tr>
+<tr>
+<td><code>[1]</code></td>
+<td><code>1</code></td>
+<td>能命中唯一元素</td>
+</tr>
+<tr>
+<td><code>[1, 1, 1]</code></td>
+<td>左边界 <code>1</code></td>
+<td>返回 <code>0</code></td>
+</tr>
+<tr>
+<td><code>[1, 3, 5]</code></td>
+<td>左边界 <code>4</code></td>
+<td>返回 <code>2</code></td>
+</tr>
+<tr>
+<td><code>[1, 3, 5]</code></td>
+<td>左边界 <code>6</code></td>
+<td>返回 <code>3</code></td>
+</tr>
+</tbody>
+</table>
+<p>常见错误写法：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">while</span> (left &lt; right) {
+    <span class="hljs-type">int</span> <span class="hljs-variable">mid</span> <span class="hljs-operator">=</span> (left + right) / <span class="hljs-number">2</span>;
+    <span class="hljs-keyword">if</span> (nums[mid] &gt;= target) {
+        right = mid - <span class="hljs-number">1</span>; <span class="hljs-comment">// 错：mid 可能就是左边界，不能直接排除</span>
+    } <span class="hljs-keyword">else</span> {
+        left = mid + <span class="hljs-number">1</span>;
+    }
+}
+</code></pre>
+<p>左边界里，当 <code>nums[mid] &gt;= target</code> 时，<code>mid</code> 仍然可能是答案，所以应该写 <code>right = mid</code>。</p>
+<h2 id="易错点" tabindex="-1">易错点</h2>
+<ul>
+<li><code>mid = (left + right) / 2</code> 可能整数溢出，推荐写成 <code>left + (right - left) / 2</code>。</li>
+<li>不要混用闭区间和左闭右开区间的更新方式。</li>
+<li>找边界时，命中目标后通常不能直接返回，还要继续收缩区间。</li>
+<li>答案二分要先证明单调性，不能看到“最小值”就硬套。</li>
+<li><code>canFinish</code> 这类判断函数里可能需要 <code>long</code>，避免累计值溢出。</li>
+</ul>
+<h2 id="高频问题自测" tabindex="-1">高频问题自测</h2>
+<ul>
+<li><code>left &lt; right</code> 和 <code>left &lt;= right</code> 有什么区别？</li>
+<li>二分查找为什么是 <code>O(logn)</code>？</li>
+<li>找左边界时，为什么命中后要移动 <code>right</code>？</li>
+<li>什么是答案二分？它和普通二分有什么区别？</li>
+<li>二分查找一定要求数组有序吗？</li>
+</ul>
+<h2 id="推荐练习题" tabindex="-1">推荐练习题</h2>
+<ul>
+<li><a href="https://leetcode.cn/problems/binary-search/" target="_blank" rel="noopener">704. 二分查找</a></li>
+<li><a href="https://leetcode.cn/problems/search-insert-position/" target="_blank" rel="noopener">35. 搜索插入位置</a></li>
+<li><a href="https://leetcode.cn/problems/find-first-and-last-position-of-element-in-sorted-array/" target="_blank" rel="noopener">34. 在排序数组中查找元素的第一个和最后一个位置</a></li>
+<li><a href="https://leetcode.cn/problems/koko-eating-bananas/" target="_blank" rel="noopener">875. 爱吃香蕉的珂珂</a></li>
+<li><a href="https://leetcode.cn/problems/capacity-to-ship-packages-within-d-days/" target="_blank" rel="noopener">1011. 在 D 天内送达包裹的能力</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

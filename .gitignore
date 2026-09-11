@@ -1,0 +1,37 @@
+# 依赖
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# 运行/构建日志
+tools/logs/
+*.log
+
+# 本地备份（改动前的原始文件）
+_backup/
+
+# 内部缺陷审计报告（私密，不入公开仓库）
+BUG-REPORT.html
+BUG-REPORT-round2.html
+
+# 旧版遗留样式（已被 cheat.css 替代，不入公开仓库）
+public/report.css
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# WorkBuddy / 本地工作区状态
+.workbuddy/
+.zcode/
+.impeccable/
+
+# 本地环境覆盖
+.env
+.env.local
+
+# 图片类型核对报告（构建产物，可由 download-images.js 重新生成）
+data/img-type-mismatch.txt

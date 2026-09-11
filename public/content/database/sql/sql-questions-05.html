@@ -1,0 +1,2692 @@
+<blockquote>
+<p>题目来源于：<a href="https://www.nowcoder.com/exam/oj?page=1&amp;tab=SQL%E7%AF%87&amp;topicId=240" target="_blank" rel="noopener">牛客题霸 - SQL 进阶挑战</a></p>
+</blockquote>
+<p>较难或者困难的题目可以根据自身实际情况和面试需要来决定是否要跳过。</p>
+<h2 id="空值处理" tabindex="-1">空值处理</h2>
+<h3 id="统计有未完成状态的试卷的未完成数和未完成率" tabindex="-1">统计有未完成状态的试卷的未完成数和未完成率</h3>
+<p><strong>描述</strong>：</p>
+<p>现有试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分），数据如下：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:01</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>2021-05-02 10:30:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-09-02 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+</tbody>
+</table>
+<p>请统计有未完成状态的试卷的未完成数 incomplete_cnt 和未完成率 incomplete_rate。由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>exam_id</th>
+<th>incomplete_cnt</th>
+<th>complete_rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9001</td>
+<td>1</td>
+<td>0.333</td>
+</tr>
+</tbody>
+</table>
+<p>解释：试卷 9001 有 3 次被作答的记录，其中两次完成，1 次未完成，因此未完成数为 1，未完成率为 0.333（保留 3 位小数）</p>
+<p><strong>思路</strong>：</p>
+<p>这题只需要注意一个是有条件限制，一个是没条件限制的；要么分别查询条件，然后合并；要么直接在 select 里面进行条件判断。</p>
+<p><strong>答案</strong>：</p>
+<p>写法 1：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+    exam_id,
+    (<span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>) <span class="hljs-operator">-</span> <span class="hljs-built_in">COUNT</span>(submit_time)) <span class="hljs-keyword">AS</span> incomplete_cnt,
+    ROUND((<span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>) <span class="hljs-operator">-</span> <span class="hljs-built_in">COUNT</span>(submit_time)) <span class="hljs-operator">/</span> <span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>), <span class="hljs-number">3</span>) <span class="hljs-keyword">AS</span> incomplete_rate
+<span class="hljs-keyword">FROM</span>
+    exam_record
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+    exam_id
+<span class="hljs-keyword">HAVING</span>
+    (<span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>) <span class="hljs-operator">-</span> <span class="hljs-built_in">COUNT</span>(submit_time)) <span class="hljs-operator">&gt;</span> <span class="hljs-number">0</span>;
+</code></pre>
+<p>利用 <code>COUNT(*)</code>统计分组内的总记录数，<code>COUNT(submit_time)</code> 只统计 <code>submit_time</code> 字段不为 NULL 的记录数（即已完成数）。两者相减，就是未完成数。</p>
+<p>写法 2：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+    exam_id,
+    <span class="hljs-built_in">COUNT</span>(<span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span> <span class="hljs-keyword">END</span>) <span class="hljs-keyword">AS</span> incomplete_cnt,
+    ROUND(<span class="hljs-built_in">COUNT</span>(<span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span> <span class="hljs-keyword">END</span>) <span class="hljs-operator">/</span> <span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>), <span class="hljs-number">3</span>) <span class="hljs-keyword">AS</span> incomplete_rate
+<span class="hljs-keyword">FROM</span>
+    exam_record
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+    exam_id
+<span class="hljs-keyword">HAVING</span>
+    <span class="hljs-built_in">COUNT</span>(<span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span> <span class="hljs-keyword">END</span>) <span class="hljs-operator">&gt;</span> <span class="hljs-number">0</span>;
+</code></pre>
+<p>使用 <code>CASE</code> 表达式，当条件满足时返回一个非 <code>NULL</code> 值（例如 1），否则返回 <code>NULL</code>。然后用 <code>COUNT</code> 函数来统计非 <code>NULL</code> 值的数量。</p>
+<p>写法 3：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+    exam_id,
+    <span class="hljs-built_in">SUM</span>(submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>) <span class="hljs-keyword">AS</span> incomplete_cnt,
+    ROUND(<span class="hljs-built_in">SUM</span>(submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>) <span class="hljs-operator">/</span> <span class="hljs-built_in">COUNT</span>(<span class="hljs-operator">*</span>), <span class="hljs-number">3</span>) <span class="hljs-keyword">AS</span> incomplete_rate
+<span class="hljs-keyword">FROM</span>
+    exam_record
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+    exam_id
+<span class="hljs-keyword">HAVING</span>
+    incomplete_cnt <span class="hljs-operator">&gt;</span> <span class="hljs-number">0</span>;
+</code></pre>
+<p>利用 <code>SUM</code> 函数对一个表达式求和。当 <code>submit_time</code> 为 <code>NULL</code> 时，表达式 <code>(submit_time IS NULL)</code> 的值为 1 (TRUE)，否则为 0 (FALSE)。将这些 1 和 0 加起来，就得到了未完成的数量。</p>
+<h3 id="0-级用户高难度试卷的平均用时和平均得分" tabindex="-1">0 级用户高难度试卷的平均用时和平均得分</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间），数据如下：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>10</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>2100</td>
+<td>6</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷信息表 <code>examination_info</code>（<code>exam_id</code> 试卷 ID, <code>tag</code> 试卷类别, <code>difficulty</code> 试卷难度, <code>duration</code> 考试时长, <code>release_time</code> 发布时间），数据如下：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+<th>release_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>9001</td>
+<td>SQL</td>
+<td>hard</td>
+<td>60</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>9002</td>
+<td>SQL</td>
+<td>easy</td>
+<td>60</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9004</td>
+<td>算法</td>
+<td>medium</td>
+<td>80</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分），数据如下：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-02-02 19:01:01</td>
+<td>2021-02-02 19:30:01</td>
+<td>87</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-06-02 19:01:01</td>
+<td>2021-06-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-05 19:01:01</td>
+<td>2021-09-05 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-01 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1002</td>
+<td>9002</td>
+<td>2021-05-05 18:01:01</td>
+<td>2021-05-05 18:59:02</td>
+<td>90</td>
+</tr>
+</tbody>
+</table>
+<p>请输出每个 0 级用户所有的高难度试卷考试平均用时和平均得分，未完成的默认试卷最大考试时长和 0 分处理。由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>avg_score</th>
+<th>avg_time_took</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1001</td>
+<td>33</td>
+<td>36.7</td>
+</tr>
+</tbody>
+</table>
+<p>解释：0 级用户有 1001，高难度试卷有 9001，1001 作答 9001 的记录有 3 条，分别用时 20 分钟、未完成（试卷时长 60 分钟）、30 分钟（未满 31 分钟），分别得分为 80 分、未完成（0 分处理）、20 分。因此他的平均用时为 110/3=36.7（保留一位小数），平均得分为 33 分（取整）</p>
+<p><strong>思路</strong>：这题用<code>IF</code>是判断的最方便的，因为涉及到 NULL 值的判断。当然 <code>case when</code>也可以，大同小异。这题的难点就在于空值的处理，其他的这些查询条件什么的，我相信难不倒大家。</p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> UID,
+       round(<span class="hljs-built_in">avg</span>(new_socre)) <span class="hljs-keyword">AS</span> avg_score,
+       round(<span class="hljs-built_in">avg</span>(time_diff), <span class="hljs-number">1</span>) <span class="hljs-keyword">AS</span> avg_time_took
+<span class="hljs-keyword">FROM</span>
+  (<span class="hljs-keyword">SELECT</span> er.uid,
+          IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, TIMESTAMPDIFF(<span class="hljs-keyword">MINUTE</span>, start_time, submit_time), ef.duration) <span class="hljs-keyword">AS</span> time_diff,
+          IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>,er.score,<span class="hljs-number">0</span>) <span class="hljs-keyword">AS</span> new_socre
+   <span class="hljs-keyword">FROM</span> exam_record er
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> user_info uf <span class="hljs-keyword">ON</span> er.uid <span class="hljs-operator">=</span> uf.uid
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> examination_info ef <span class="hljs-keyword">ON</span> er.exam_id <span class="hljs-operator">=</span> ef.exam_id
+   <span class="hljs-keyword">WHERE</span> uf.LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span> <span class="hljs-keyword">AND</span> ef.difficulty <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;hard&#x27;</span> ) t
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> UID
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> UID
+</code></pre>
+<h2 id="高级条件语句" tabindex="-1">高级条件语句</h2>
+<h3 id="筛选限定昵称成就值活跃日期的用户较难" tabindex="-1">筛选限定昵称成就值活跃日期的用户（较难）</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>1000</td>
+<td>2</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>进击的 3 号</td>
+<td>2200</td>
+<td>5</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>2500</td>
+<td>6</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 5 号</td>
+<td>3000</td>
+<td>7</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-02-02 19:01:01</td>
+<td>2021-02-02 19:30:01</td>
+<td>87</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-06-02 19:01:01</td>
+<td>2021-06-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-01 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-05 19:01:01</td>
+<td>2021-09-05 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1002</td>
+<td>9001</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:31:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-02-01 12:01:01</td>
+<td>2020-02-01 12:31:01</td>
+<td>82</td>
+</tr>
+<tr>
+<td>13</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-02-02 12:11:01</td>
+<td>2020-02-02 12:31:01</td>
+<td>83</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1002</td>
+<td>9002</td>
+<td>2021-05-05 18:01:01</td>
+<td>2021-05-05 18:59:02</td>
+<td>90</td>
+</tr>
+<tr>
+<td>16</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-06 12:01:01</td>
+<td>2021-09-06 12:21:01</td>
+<td>80</td>
+</tr>
+<tr>
+<td>17</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>18</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-07 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1003</td>
+<td>9003</td>
+<td>2021-02-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1003</td>
+<td>9001</td>
+<td>2021-09-07 10:01:01</td>
+<td>2021-09-07 10:31:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1004</td>
+<td>9002</td>
+<td>2021-08-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>1005</td>
+<td>9001</td>
+<td>2021-02-01 11:01:01</td>
+<td>2021-02-01 11:31:01</td>
+<td>84</td>
+</tr>
+<tr>
+<td>15</td>
+<td>1006</td>
+<td>9001</td>
+<td>2021-02-01 11:01:01</td>
+<td>2021-02-01 11:31:01</td>
+<td>84</td>
+</tr>
+</tbody>
+</table>
+<p>题目练习记录表 <code>practice_record</code>（<code>uid</code> 用户 ID, <code>question_id</code> 题目 ID, <code>submit_time</code> 提交时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>question_id</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>8001</td>
+<td>2021-08-02 11:41:01</td>
+<td>60</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>8001</td>
+<td>2021-09-02 19:30:01</td>
+<td>50</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1002</td>
+<td>8001</td>
+<td>2021-09-02 19:20:01</td>
+<td>70</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1002</td>
+<td>8002</td>
+<td>2021-09-02 19:38:01</td>
+<td>70</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1003</td>
+<td>8002</td>
+<td>2021-09-01 19:38:01</td>
+<td>80</td>
+</tr>
+</tbody>
+</table>
+<p>请找到昵称以『牛客』开头『号』结尾、成就值在 1200~2500 之间，且最近一次活跃（答题或作答试卷）在 2021 年 9 月的用户信息。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+</tr>
+</tbody>
+</table>
+<p><strong>解释</strong>：昵称以『牛客』开头『号』结尾且成就值在 1200~2500 之间的有 1002、1004；</p>
+<p>1002 最近一次试卷区活跃为 2021 年 9 月，最近一次题目区活跃为 2021 年 9 月；1004 最近一次试卷区活跃为 2021 年 8 月，题目区未活跃。</p>
+<p>因此最终满足条件的只有 1002。</p>
+<p><strong>思路</strong>：</p>
+<p>先根据条件列出主要查询语句</p>
+<p>昵称以『牛客』开头『号』结尾: <code>nick_name LIKE &quot;牛客%号&quot;</code></p>
+<p>成就值在 1200~2500 之间：<code>achievement BETWEEN 1200 AND 2500</code></p>
+<p>第三个条件因为限定了为 9 月，所以直接写就行：<code>( date_format( record.submit_time, '%Y%m' )= 202109 OR date_format( pr.submit_time, '%Y%m' )= 202109 )</code></p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">DISTINCT</span> u_info.uid,
+                u_info.nick_name,
+                u_info.achievement
+<span class="hljs-keyword">FROM</span> user_info u_info
+<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record record <span class="hljs-keyword">ON</span> record.uid <span class="hljs-operator">=</span> u_info.uid
+<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> practice_record pr <span class="hljs-keyword">ON</span> u_info.uid <span class="hljs-operator">=</span> pr.uid
+<span class="hljs-keyword">WHERE</span> u_info.nick_name <span class="hljs-keyword">LIKE</span> &quot;牛客%号&quot;
+  <span class="hljs-keyword">AND</span> u_info.achievement <span class="hljs-keyword">BETWEEN</span> <span class="hljs-number">1200</span>
+  <span class="hljs-keyword">AND</span> <span class="hljs-number">2500</span>
+  <span class="hljs-keyword">AND</span> (date_format(record.submit_time, <span class="hljs-string">&#x27;%Y%m&#x27;</span>)<span class="hljs-operator">=</span> <span class="hljs-number">202109</span>
+       <span class="hljs-keyword">OR</span> date_format(pr.submit_time, <span class="hljs-string">&#x27;%Y%m&#x27;</span>)<span class="hljs-operator">=</span> <span class="hljs-number">202109</span>)
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> u_info.uid
+</code></pre>
+<h3 id="筛选昵称规则和试卷规则的作答记录较难" tabindex="-1">筛选昵称规则和试卷规则的作答记录（较难）</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>1900</td>
+<td>2</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>2200</td>
+<td>5</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>2500</td>
+<td>6</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 555 号</td>
+<td>2000</td>
+<td>7</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>666666</td>
+<td>3000</td>
+<td>6</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷信息表 <code>examination_info</code>（<code>exam_id</code> 试卷 ID, <code>tag</code> 试卷类别, <code>difficulty</code> 试卷难度, <code>duration</code> 考试时长, <code>release_time</code> 发布时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+<th>release_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>9001</td>
+<td>C++</td>
+<td>hard</td>
+<td>60</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>9002</td>
+<td>c#</td>
+<td>hard</td>
+<td>80</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9003</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-06-02 19:01:01</td>
+<td>2021-06-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-02-02 19:01:01</td>
+<td>2021-02-02 19:30:01</td>
+<td>87</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-05 19:01:01</td>
+<td>2021-09-05 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-01 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1002</td>
+<td>9001</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:31:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>16</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-06 12:01:01</td>
+<td>2021-09-06 12:21:01</td>
+<td>80</td>
+</tr>
+<tr>
+<td>17</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>18</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-07 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1002</td>
+<td>9002</td>
+<td>2021-05-05 18:01:01</td>
+<td>2021-05-05 18:59:02</td>
+<td>90</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-02-01 12:01:01</td>
+<td>2020-02-01 12:31:01</td>
+<td>82</td>
+</tr>
+<tr>
+<td>13</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-02-02 12:11:01</td>
+<td>2020-02-02 12:31:01</td>
+<td>83</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1003</td>
+<td>9001</td>
+<td>2021-09-07 10:01:01</td>
+<td>2021-09-07 10:31:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1003</td>
+<td>9003</td>
+<td>2021-02-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1004</td>
+<td>9002</td>
+<td>2021-08-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>1005</td>
+<td>9001</td>
+<td>2021-02-01 11:01:01</td>
+<td>2021-02-01 11:31:01</td>
+<td>84</td>
+</tr>
+<tr>
+<td>15</td>
+<td>1006</td>
+<td>9001</td>
+<td>2021-02-01 11:01:01</td>
+<td>2021-09-01 11:31:01</td>
+<td>84</td>
+</tr>
+</tbody>
+</table>
+<p>找到昵称以&quot;牛客&quot;+纯数字+&quot;号&quot;或者纯数字组成的用户对于字母 c 开头的试卷类别（如 C,C++,c#等）的已完成的试卷 ID 和平均得分，按用户 ID、平均分升序排序。由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>exam_id</th>
+<th>avg_score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1002</td>
+<td>9001</td>
+<td>81</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>9002</td>
+<td>85</td>
+</tr>
+<tr>
+<td>1005</td>
+<td>9001</td>
+<td>84</td>
+</tr>
+<tr>
+<td>1006</td>
+<td>9001</td>
+<td>84</td>
+</tr>
+</tbody>
+</table>
+<p>解释：昵称满足条件的用户有 1002、1004、1005、1006；</p>
+<p>c 开头的试卷有 9001、9002；</p>
+<p>满足上述条件的作答记录中，1002 完成 9001 的得分有 81、80，平均分为 81（80.5 取整四舍五入得 81）；</p>
+<p>1002 完成 9002 的得分有 90、82、83，平均分为 85；</p>
+<p><strong>思路</strong>：</p>
+<p>还是老样子，既然给出了条件，就先把各个条件先写出来</p>
+<p>找到昵称以&quot;牛客&quot;+纯数字+&quot;号&quot;或者纯数字组成的用户： 我最开始是这么写的：<code>nick_name LIKE '牛客%号' OR nick_name REGEXP '^[0-9]+$'</code>，如果表中有个 “牛客 H 号” ，那也能通过。</p>
+<p>所以这里还得用正则： <code>nick_name LIKE '^牛客[0-9]+号'</code></p>
+<p>对于字母 c 开头的试卷类别： <code>e_info.tag LIKE 'c%'</code> 或者 <code>tag regexp '^c|^C'</code> 第一个也能匹配到大写 C</p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> UID,
+       exam_id,
+       ROUND(<span class="hljs-built_in">AVG</span>(score), <span class="hljs-number">0</span>) avg_score
+<span class="hljs-keyword">FROM</span> exam_record
+<span class="hljs-keyword">WHERE</span> UID <span class="hljs-keyword">IN</span>
+    (<span class="hljs-keyword">SELECT</span> UID
+     <span class="hljs-keyword">FROM</span> user_info
+     <span class="hljs-keyword">WHERE</span> nick_name RLIKE &quot;^牛客[0-9]+号 $&quot;
+       <span class="hljs-keyword">OR</span> nick_name RLIKE &quot;^[0-9]+$&quot;)
+  <span class="hljs-keyword">AND</span> exam_id <span class="hljs-keyword">IN</span>
+    (<span class="hljs-keyword">SELECT</span> exam_id
+     <span class="hljs-keyword">FROM</span> examination_info
+     <span class="hljs-keyword">WHERE</span> tag RLIKE &quot;^[cC]&quot;)
+  <span class="hljs-keyword">AND</span> score <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> UID,exam_id
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> UID,avg_score;
+</code></pre>
+<h3 id="根据指定记录是否存在输出不同情况困难" tabindex="-1">根据指定记录是否存在输出不同情况（困难）</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>19</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>进击的 3 号</td>
+<td>22</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 555 号</td>
+<td>2000</td>
+<td>7</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>666666</td>
+<td>3000</td>
+<td>6</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-02-02 19:01:01</td>
+<td>2021-02-02 19:30:01</td>
+<td>87</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-01 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1001</td>
+<td>9003</td>
+<td>2021-09-02 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1001</td>
+<td>9004</td>
+<td>2021-09-03 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1002</td>
+<td>9001</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:31:01</td>
+<td>99</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-02-01 12:01:01</td>
+<td>2020-02-01 12:31:01</td>
+<td>82</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-02-02 12:11:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1002</td>
+<td>9002</td>
+<td>2021-05-05 18:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1002</td>
+<td>9001</td>
+<td>2021-09-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1003</td>
+<td>9003</td>
+<td>2021-02-06 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>13</td>
+<td>1003</td>
+<td>9001</td>
+<td>2021-09-07 10:01:01</td>
+<td>2021-09-07 10:31:01</td>
+<td>89</td>
+</tr>
+</tbody>
+</table>
+<p>请你筛选表中的数据，当有任意一个 0 级用户未完成试卷数大于 2 时，输出每个 0 级用户的试卷未完成数和未完成率（保留 3 位小数）；若不存在这样的用户，则输出所有有作答记录的用户的这两个指标。结果按未完成率升序排序。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>incomplete_cnt</th>
+<th>incomplete_rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1004</td>
+<td>0</td>
+<td>0.000</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>1</td>
+<td>0.500</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>4</td>
+<td>0.667</td>
+</tr>
+</tbody>
+</table>
+<p><strong>解释</strong>：0 级用户有 1001、1003、1004；他们作答试卷数和未完成数分别为：6:4、2:1、0:0；</p>
+<p>存在 1001 这个 0 级用户未完成试卷数大于 2，因此输出这三个用户的未完成数和未完成率（1004 未作答过试卷，未完成率默认填 0，保留 3 位小数后是 0.000）；</p>
+<p>结果按照未完成率升序排序。</p>
+<p>附：如果 1001 不满足『未完成试卷数大于 2』，则需要输出 1001、1002、1003 的这两个指标，因为试卷作答记录表里只有这三个用户的作答记录。</p>
+<p><strong>思路</strong>：</p>
+<p>先把可能满足条件**“0 级用户未完成试卷数大于 2”**的 SQL 写出来</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> ui.uid UID
+<span class="hljs-keyword">FROM</span> user_info ui
+<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+<span class="hljs-keyword">WHERE</span> ui.uid <span class="hljs-keyword">IN</span>
+    (<span class="hljs-keyword">SELECT</span> ui.uid
+     <span class="hljs-keyword">FROM</span> user_info ui
+     <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+     <span class="hljs-keyword">WHERE</span> er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+       <span class="hljs-keyword">AND</span> ui.LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span> )
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> ui.uid
+<span class="hljs-keyword">HAVING</span> <span class="hljs-built_in">sum</span>(IF(er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>)) <span class="hljs-operator">&gt;</span> <span class="hljs-number">2</span>
+</code></pre>
+<p>然后再分别写出两种情况的 SQL 查询语句：</p>
+<p>情况 1. 查询存在条件要求的 0 级用户的试卷未完成率</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+	tmp1.uid uid,
+	<span class="hljs-built_in">sum</span>(
+	IF
+	( er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> )) incomplete_cnt,
+	round(
+		<span class="hljs-built_in">sum</span>(
+		IF
+		( er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> ))<span class="hljs-operator">/</span> <span class="hljs-built_in">count</span>( tmp1.uid ),
+		<span class="hljs-number">3</span>
+	) incomplete_rate
+<span class="hljs-keyword">FROM</span>
+	(
+	<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">DISTINCT</span>
+		ui.uid
+	<span class="hljs-keyword">FROM</span>
+		user_info ui
+		<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+	<span class="hljs-keyword">WHERE</span>
+		er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+		<span class="hljs-keyword">AND</span> ui.LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span>
+	) tmp1
+	<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> tmp1.uid <span class="hljs-operator">=</span> er.uid
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+	tmp1.uid
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+	incomplete_rate
+</code></pre>
+<p>情况 2. 查询不存在条件要求时所有有作答记录的 yong 用户的试卷未完成率</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+	ui.uid uid,
+	<span class="hljs-built_in">sum</span>( <span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span> <span class="hljs-keyword">ELSE</span> <span class="hljs-number">0</span> <span class="hljs-keyword">END</span> ) incomplete_cnt,
+	round(
+		<span class="hljs-built_in">sum</span>(
+		IF
+		( er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> ))<span class="hljs-operator">/</span> <span class="hljs-built_in">count</span>( ui.uid ),
+		<span class="hljs-number">3</span>
+	) incomplete_rate
+<span class="hljs-keyword">FROM</span>
+	user_info ui
+	<span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+	ui.uid
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+	incomplete_rate
+</code></pre>
+<p>拼在一起，就是答案</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">WITH</span> host_user <span class="hljs-keyword">AS</span>
+  (<span class="hljs-keyword">SELECT</span> ui.uid UID
+   <span class="hljs-keyword">FROM</span> user_info ui
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+   <span class="hljs-keyword">WHERE</span> ui.uid <span class="hljs-keyword">IN</span>
+       (<span class="hljs-keyword">SELECT</span> ui.uid
+        <span class="hljs-keyword">FROM</span> user_info ui
+        <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+        <span class="hljs-keyword">WHERE</span> er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+          <span class="hljs-keyword">AND</span> ui.LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span> )
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> ui.uid
+   <span class="hljs-keyword">HAVING</span> <span class="hljs-built_in">sum</span>(IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>))<span class="hljs-operator">&gt;</span> <span class="hljs-number">2</span>),
+     tt1 <span class="hljs-keyword">AS</span>
+  (<span class="hljs-keyword">SELECT</span> tmp1.uid UID,
+                   <span class="hljs-built_in">sum</span>(IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+                           <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>)) incomplete_cnt,
+                   round(<span class="hljs-built_in">sum</span>(IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+                                 <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>))<span class="hljs-operator">/</span> <span class="hljs-built_in">count</span>(tmp1.uid), <span class="hljs-number">3</span>) incomplete_rate
+   <span class="hljs-keyword">FROM</span>
+     (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">DISTINCT</span> ui.uid
+      <span class="hljs-keyword">FROM</span> user_info ui
+      <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+      <span class="hljs-keyword">WHERE</span> er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+        <span class="hljs-keyword">AND</span> ui.LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span> ) tmp1
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> tmp1.uid <span class="hljs-operator">=</span> er.uid
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> tmp1.uid
+   <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> incomplete_rate),
+     tt2 <span class="hljs-keyword">AS</span>
+  (<span class="hljs-keyword">SELECT</span> ui.uid UID,
+                 <span class="hljs-built_in">sum</span>(<span class="hljs-keyword">CASE</span>
+                         <span class="hljs-keyword">WHEN</span> er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+                              <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">THEN</span> <span class="hljs-number">1</span>
+                         <span class="hljs-keyword">ELSE</span> <span class="hljs-number">0</span>
+                     <span class="hljs-keyword">END</span>) incomplete_cnt,
+                 round(<span class="hljs-built_in">sum</span>(IF (er.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>
+                               <span class="hljs-keyword">AND</span> er.start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>))<span class="hljs-operator">/</span> <span class="hljs-built_in">count</span>(ui.uid), <span class="hljs-number">3</span>) incomplete_rate
+   <span class="hljs-keyword">FROM</span> user_info ui
+   <span class="hljs-keyword">JOIN</span> exam_record er <span class="hljs-keyword">ON</span> ui.uid <span class="hljs-operator">=</span> er.uid
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> ui.uid
+   <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> incomplete_rate)
+  (<span class="hljs-keyword">SELECT</span> tt1.<span class="hljs-operator">*</span>
+   <span class="hljs-keyword">FROM</span> tt1
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span>
+     (<span class="hljs-keyword">SELECT</span> UID
+      <span class="hljs-keyword">FROM</span> host_user) t1 <span class="hljs-keyword">ON</span> <span class="hljs-number">1</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>
+   <span class="hljs-keyword">WHERE</span> t1.uid <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span> )
+<span class="hljs-keyword">UNION</span> <span class="hljs-keyword">ALL</span>
+  (<span class="hljs-keyword">SELECT</span> tt2.<span class="hljs-operator">*</span>
+   <span class="hljs-keyword">FROM</span> tt2
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span>
+     (<span class="hljs-keyword">SELECT</span> UID
+      <span class="hljs-keyword">FROM</span> host_user) t2 <span class="hljs-keyword">ON</span> <span class="hljs-number">1</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>
+   <span class="hljs-keyword">WHERE</span> t2.uid <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>)
+</code></pre>
+<p>V2 版本（根据上面做出的改进，答案缩短了，逻辑更强）：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+	ui.uid,
+	<span class="hljs-built_in">SUM</span>(
+	IF
+	( start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">AND</span> score <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> )) <span class="hljs-keyword">AS</span> incomplete_cnt,#<span class="hljs-number">3.</span>试卷未完成数
+	ROUND( <span class="hljs-built_in">AVG</span>( IF ( start_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span> <span class="hljs-keyword">AND</span> score <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> )), <span class="hljs-number">3</span> ) <span class="hljs-keyword">AS</span> incomplete_rate #<span class="hljs-number">4.</span>未完成率
+
+<span class="hljs-keyword">FROM</span>
+	user_info ui
+	<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> exam_record <span class="hljs-keyword">USING</span> ( uid )
+<span class="hljs-keyword">WHERE</span>
+<span class="hljs-keyword">CASE</span>
+
+		<span class="hljs-keyword">WHEN</span> (#<span class="hljs-number">1.</span>当有任意一个<span class="hljs-number">0</span>级用户未完成试卷数大于<span class="hljs-number">2</span>时
+		<span class="hljs-keyword">SELECT</span>
+			<span class="hljs-built_in">MAX</span>( lv0_incom_cnt )
+		<span class="hljs-keyword">FROM</span>
+			(
+			<span class="hljs-keyword">SELECT</span>
+				<span class="hljs-built_in">SUM</span>(
+				IF
+				( score <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NULL</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span> )) <span class="hljs-keyword">AS</span> lv0_incom_cnt
+			<span class="hljs-keyword">FROM</span>
+				user_info
+				<span class="hljs-keyword">JOIN</span> exam_record <span class="hljs-keyword">USING</span> ( uid )
+			<span class="hljs-keyword">WHERE</span>
+				LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span>
+			<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+				uid
+			) table1
+			)<span class="hljs-operator">&gt;</span> <span class="hljs-number">2</span> <span class="hljs-keyword">THEN</span>
+			uid <span class="hljs-keyword">IN</span> ( #<span class="hljs-number">1.1</span>找出每个<span class="hljs-number">0</span>级用户
+			<span class="hljs-keyword">SELECT</span> uid <span class="hljs-keyword">FROM</span> user_info <span class="hljs-keyword">WHERE</span> LEVEL <span class="hljs-operator">=</span> <span class="hljs-number">0</span> ) <span class="hljs-keyword">ELSE</span> uid <span class="hljs-keyword">IN</span> ( #<span class="hljs-number">2.</span>若不存在这样的用户，找出有作答记录的用户
+			<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">DISTINCT</span> uid <span class="hljs-keyword">FROM</span> exam_record )
+		<span class="hljs-keyword">END</span>
+		<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+			ui.uid
+	<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span>
+	incomplete_rate #<span class="hljs-number">5.</span>结果按未完成率升序排序
+</code></pre>
+<h3 id="各用户等级的不同得分表现占比较难" tabindex="-1">各用户等级的不同得分表现占比（较难）</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>19</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>22</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 555 号</td>
+<td>2000</td>
+<td>7</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>666666</td>
+<td>3000</td>
+<td>6</td>
+<td>C++</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 exam_record（uid 用户 ID, exam_id 试卷 ID, start_time 开始作答时间, submit_time 交卷时间, score 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-05-02 10:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-02-02 19:01:01</td>
+<td>2021-02-02 19:30:01</td>
+<td>75</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-01 12:01:01</td>
+<td>2021-09-01 12:11:01</td>
+<td>60</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1001</td>
+<td>9003</td>
+<td>2021-09-02 12:01:01</td>
+<td>2021-09-02 12:41:01</td>
+<td>90</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1001</td>
+<td>9001</td>
+<td>2021-06-02 19:01:01</td>
+<td>2021-06-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1001</td>
+<td>9002</td>
+<td>2021-09-05 19:01:01</td>
+<td>2021-09-05 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1001</td>
+<td>9004</td>
+<td>2021-09-03 12:01:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1002</td>
+<td>9001</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:31:01</td>
+<td>99</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-02-01 12:01:01</td>
+<td>2020-02-01 12:31:01</td>
+<td>82</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-02-02 12:11:01</td>
+<td>2020-02-02 12:41:01</td>
+<td>76</td>
+</tr>
+</tbody>
+</table>
+<p>为了得到用户试卷作答的定性表现，我们将试卷得分按分界点[90,75,60]分为优良中差四个得分等级（分界点划分到左区间），请统计不同用户等级的人在完成过的试卷中各得分等级占比（结果保留 3 位小数），未完成过试卷的用户无需输出，结果按用户等级降序、占比降序排序。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>level</th>
+<th>score_grade</th>
+<th>ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>良</td>
+<td>0.667</td>
+</tr>
+<tr>
+<td>3</td>
+<td>优</td>
+<td>0.333</td>
+</tr>
+<tr>
+<td>0</td>
+<td>良</td>
+<td>0.500</td>
+</tr>
+<tr>
+<td>0</td>
+<td>中</td>
+<td>0.167</td>
+</tr>
+<tr>
+<td>0</td>
+<td>优</td>
+<td>0.167</td>
+</tr>
+<tr>
+<td>0</td>
+<td>差</td>
+<td>0.167</td>
+</tr>
+</tbody>
+</table>
+<p>解释：完成过试卷的用户有 1001、1002；完成了的试卷对应的用户等级和分数等级如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>exam_id</th>
+<th>score</th>
+<th>level</th>
+<th>score_grade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1001</td>
+<td>9001</td>
+<td>80</td>
+<td>0</td>
+<td>良</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>9002</td>
+<td>75</td>
+<td>0</td>
+<td>良</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>9002</td>
+<td>60</td>
+<td>0</td>
+<td>中</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>9003</td>
+<td>90</td>
+<td>0</td>
+<td>优</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>9001</td>
+<td>20</td>
+<td>0</td>
+<td>差</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>9002</td>
+<td>89</td>
+<td>0</td>
+<td>良</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>9001</td>
+<td>99</td>
+<td>3</td>
+<td>优</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>9003</td>
+<td>82</td>
+<td>3</td>
+<td>良</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>9003</td>
+<td>76</td>
+<td>3</td>
+<td>良</td>
+</tr>
+</tbody>
+</table>
+<p>因此 0 级用户（只有 1001）的各分数等级比例为：优 1/6，良 1/6，中 1/6，差 3/6；3 级用户（只有 1002）各分数等级比例为：优 1/3，良 2/3。结果保留 3 位小数。</p>
+<p><strong>思路</strong>：</p>
+<p>先把 **“将试卷得分按分界点[90,75,60]分为优良中差四个得分等级”**这个条件写出来，这里可以用到<code>case when</code></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">CASE</span>
+		<span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">90</span> <span class="hljs-keyword">THEN</span>
+		<span class="hljs-string">&#x27;优&#x27;</span>
+		<span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&lt;</span> <span class="hljs-number">90</span> <span class="hljs-keyword">AND</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">75</span> <span class="hljs-keyword">THEN</span>
+		<span class="hljs-string">&#x27;良&#x27;</span>
+		<span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&lt;</span> <span class="hljs-number">75</span> <span class="hljs-keyword">AND</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">60</span> <span class="hljs-keyword">THEN</span>
+	<span class="hljs-string">&#x27;中&#x27;</span> <span class="hljs-keyword">ELSE</span> <span class="hljs-string">&#x27;差&#x27;</span>
+<span class="hljs-keyword">END</span>
+</code></pre>
+<p>这题的关键点就在于这，其他剩下的就是条件拼接了</p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> a.LEVEL,
+       a.score_grade,
+       ROUND(a.cur_count <span class="hljs-operator">/</span> b.total_num, <span class="hljs-number">3</span>) <span class="hljs-keyword">AS</span> ratio
+<span class="hljs-keyword">FROM</span>
+  (<span class="hljs-keyword">SELECT</span> b.LEVEL <span class="hljs-keyword">AS</span> LEVEL,
+          (<span class="hljs-keyword">CASE</span>
+               <span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">90</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">&#x27;优&#x27;</span>
+               <span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&lt;</span> <span class="hljs-number">90</span>
+                    <span class="hljs-keyword">AND</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">75</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">&#x27;良&#x27;</span>
+               <span class="hljs-keyword">WHEN</span> a.score <span class="hljs-operator">&lt;</span> <span class="hljs-number">75</span>
+                    <span class="hljs-keyword">AND</span> a.score <span class="hljs-operator">&gt;=</span> <span class="hljs-number">60</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">&#x27;中&#x27;</span>
+               <span class="hljs-keyword">ELSE</span> <span class="hljs-string">&#x27;差&#x27;</span>
+           <span class="hljs-keyword">END</span>) <span class="hljs-keyword">AS</span> score_grade,
+          <span class="hljs-built_in">count</span>(<span class="hljs-number">1</span>) <span class="hljs-keyword">AS</span> cur_count
+   <span class="hljs-keyword">FROM</span> exam_record a
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> user_info b <span class="hljs-keyword">ON</span> a.uid <span class="hljs-operator">=</span> b.uid
+   <span class="hljs-keyword">WHERE</span> a.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> b.LEVEL,
+            score_grade) a
+<span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span>
+  (<span class="hljs-keyword">SELECT</span> b.LEVEL <span class="hljs-keyword">AS</span> LEVEL,
+          <span class="hljs-built_in">count</span>(b.LEVEL) <span class="hljs-keyword">AS</span> total_num
+   <span class="hljs-keyword">FROM</span> exam_record a
+   <span class="hljs-keyword">LEFT</span> <span class="hljs-keyword">JOIN</span> user_info b <span class="hljs-keyword">ON</span> a.uid <span class="hljs-operator">=</span> b.uid
+   <span class="hljs-keyword">WHERE</span> a.submit_time <span class="hljs-keyword">IS</span> <span class="hljs-keyword">NOT NULL</span>
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> b.LEVEL) b <span class="hljs-keyword">ON</span> a.LEVEL <span class="hljs-operator">=</span> b.LEVEL
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> a.LEVEL <span class="hljs-keyword">DESC</span>,
+         ratio <span class="hljs-keyword">DESC</span>
+</code></pre>
+<h2 id="限量查询" tabindex="-1">限量查询</h2>
+<h3 id="注册时间最早的三个人" tabindex="-1">注册时间最早的三个人</h3>
+<p><strong>描述</strong>：</p>
+<p>现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1 号</td>
+<td>19</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-02-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>22</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 555 号</td>
+<td>4000</td>
+<td>7</td>
+<td>C++</td>
+<td>2020-01-11 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>666666</td>
+<td>3000</td>
+<td>6</td>
+<td>C++</td>
+<td>2020-11-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>请从中找到注册时间最早的 3 个人。由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>nick_name</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1001</td>
+<td>牛客 1</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>2020-01-02 10:00:00</td>
+</tr>
+<tr>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>解释：按注册时间排序后选取前三名，输出其用户 ID、昵称、注册时间。</p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> uid, nick_name, register_time
+    <span class="hljs-keyword">FROM</span> user_info
+    <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> register_time
+    LIMIT <span class="hljs-number">3</span>
+</code></pre>
+<h3 id="注册当天就完成了试卷的名单第三页较难" tabindex="-1">注册当天就完成了试卷的名单第三页（较难）</h3>
+<p><strong>描述</strong>：现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1</td>
+<td>19</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>22</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 555 号</td>
+<td>4000</td>
+<td>7</td>
+<td>算法</td>
+<td>2020-01-11 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>牛客 6 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1007</td>
+<td>牛客 7 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1008</td>
+<td>牛客 8 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1009</td>
+<td>牛客 9 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1010</td>
+<td>牛客 10 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1011</td>
+<td>666666</td>
+<td>3000</td>
+<td>6</td>
+<td>C++</td>
+<td>2020-01-02 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷信息表 examination_info（exam_id 试卷 ID, tag 试卷类别, difficulty 试卷难度, duration 考试时长, release_time 发布时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+<th>release_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>9001</td>
+<td>算法</td>
+<td>hard</td>
+<td>60</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>9002</td>
+<td>算法</td>
+<td>hard</td>
+<td>80</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9003</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答记录表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-02 09:01:01</td>
+<td>2020-01-02 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-01-20 10:01:01</td>
+<td>2020-01-20 10:10:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-01-01 12:11:01</td>
+<td>2020-01-01 12:31:01</td>
+<td>83</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1003</td>
+<td>9002</td>
+<td>2020-01-01 19:01:01</td>
+<td>2020-01-01 19:30:01</td>
+<td>75</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1004</td>
+<td>9002</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:11:01</td>
+<td>60</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1005</td>
+<td>9002</td>
+<td>2020-01-01 12:01:01</td>
+<td>2020-01-01 12:41:01</td>
+<td>90</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1006</td>
+<td>9001</td>
+<td>2020-01-02 19:01:01</td>
+<td>2020-01-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1007</td>
+<td>9002</td>
+<td>2020-01-02 19:01:01</td>
+<td>2020-01-02 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1008</td>
+<td>9003</td>
+<td>2020-01-02 12:01:01</td>
+<td>2020-01-02 12:20:01</td>
+<td>99</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1008</td>
+<td>9001</td>
+<td>2020-01-02 12:01:01</td>
+<td>2020-01-02 12:31:01</td>
+<td>98</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1009</td>
+<td>9002</td>
+<td>2020-01-02 12:01:01</td>
+<td>2020-01-02 12:31:01</td>
+<td>82</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1010</td>
+<td>9002</td>
+<td>2020-01-02 12:11:01</td>
+<td>2020-01-02 12:41:01</td>
+<td>76</td>
+</tr>
+<tr>
+<td>13</td>
+<td>1011</td>
+<td>9001</td>
+<td>2020-01-02 10:01:01</td>
+<td>2020-01-02 10:31:01</td>
+<td>89</td>
+</tr>
+</tbody>
+</table>
+<p><img src="/img/D2B491866B85826119EE3474F10D3636-43590d8e.png" alt="" loading="lazy"></p>
+<p>找到求职方向为算法工程师，且注册当天就完成了算法类试卷的人，按参加过的所有考试最高得分排名。排名榜很长，我们将采用分页展示，每页 3 条，现在需要你取出第 3 页（页码从 1 开始）的人的信息。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>level</th>
+<th>register_time</th>
+<th>max_score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1010</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>76</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>0</td>
+<td>2020-01-01 10:00:00</td>
+<td>75</td>
+</tr>
+<tr>
+<td>1004</td>
+<td>0</td>
+<td>2020-01-01 11:00:00</td>
+<td>60</td>
+</tr>
+</tbody>
+</table>
+<p>解释：除了 1011 其他用户的求职方向都为算法工程师；算法类试卷有 9001 和 9002，11 个用户注册当天都完成了算法类试卷；计算他们的所有考试最大分时，只有 1002 和 1008 完成了两次考试，其他人只完成了一场考试，1002 两场考试最高分为 81，1008 最高分为 99。</p>
+<p>按最高分排名如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>level</th>
+<th>register_time</th>
+<th>max_score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1008</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>99</td>
+</tr>
+<tr>
+<td>1005</td>
+<td>7</td>
+<td>2020-01-01 10:00:00</td>
+<td>90</td>
+</tr>
+<tr>
+<td>1007</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>89</td>
+</tr>
+<tr>
+<td>1002</td>
+<td>3</td>
+<td>2020-01-01 10:00:00</td>
+<td>83</td>
+</tr>
+<tr>
+<td>1009</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>82</td>
+</tr>
+<tr>
+<td>1001</td>
+<td>0</td>
+<td>2020-01-01 10:00:00</td>
+<td>80</td>
+</tr>
+<tr>
+<td>1010</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>76</td>
+</tr>
+<tr>
+<td>1003</td>
+<td>0</td>
+<td>2020-01-01 10:00:00</td>
+<td>75</td>
+</tr>
+<tr>
+<td>1004</td>
+<td>0</td>
+<td>2020-01-01 11:00:00</td>
+<td>60</td>
+</tr>
+<tr>
+<td>1006</td>
+<td>0</td>
+<td>2020-01-02 11:00:00</td>
+<td>20</td>
+</tr>
+</tbody>
+</table>
+<p>每页 3 条，第三页也就是第 7~9 条，返回 1010、1003、1004 的行记录即可。</p>
+<p><strong>思路</strong>：</p>
+<ol>
+<li>
+<p>每页三条，即需要取出第三页的人的信息，要用到<code>limit</code></p>
+</li>
+<li>
+<p>统计求职方向为算法工程师且注册当天就完成了算法类试卷的人的<strong>信息和每次记录的得分</strong>，先求满足条件的用户，后用 left join 做连接查找信息和每次记录的得分</p>
+</li>
+</ol>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> t1.uid,
+       LEVEL,
+       register_time,
+       <span class="hljs-built_in">max</span>(score) <span class="hljs-keyword">AS</span> max_score
+<span class="hljs-keyword">FROM</span> exam_record t
+<span class="hljs-keyword">JOIN</span> examination_info <span class="hljs-keyword">USING</span> (exam_id)
+<span class="hljs-keyword">JOIN</span> user_info t1 <span class="hljs-keyword">ON</span> t.uid <span class="hljs-operator">=</span> t1.uid
+<span class="hljs-keyword">AND</span> <span class="hljs-type">date</span>(t.submit_time) <span class="hljs-operator">=</span> <span class="hljs-type">date</span>(t1.register_time)
+<span class="hljs-keyword">WHERE</span> job <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;算法&#x27;</span>
+  <span class="hljs-keyword">AND</span> tag <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;算法&#x27;</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> t1.uid,
+         LEVEL,
+         register_time
+<span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> max_score <span class="hljs-keyword">DESC</span>
+LIMIT <span class="hljs-number">6</span>,<span class="hljs-number">3</span>
+</code></pre>
+<h2 id="文本转换函数" tabindex="-1">文本转换函数</h2>
+<h3 id="修复串列了的记录" tabindex="-1">修复串列了的记录</h3>
+<p><strong>描述</strong>：现有试卷信息表 <code>examination_info</code>（<code>exam_id</code> 试卷 ID, <code>tag</code> 试卷类别, <code>difficulty</code> 试卷难度, <code>duration</code> 考试时长, <code>release_time</code> 发布时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+<th>release_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>9001</td>
+<td>算法</td>
+<td>hard</td>
+<td>60</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>9002</td>
+<td>算法</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9003</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>9004</td>
+<td>算法,medium,80</td>
+<td></td>
+<td>0</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>录题同学有一次手误将部分记录的试题类别 tag、难度、时长同时录入到了 tag 字段，请帮忙找出这些录错了的记录，并拆分后按正确的列类型输出。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9004</td>
+<td>算法</td>
+<td>medium</td>
+<td>80</td>
+</tr>
+</tbody>
+</table>
+<p><strong>思路</strong>：</p>
+<p>先来学习下本题要用到的函数</p>
+<p><code>SUBSTRING_INDEX</code> 函数用于提取字符串中指定分隔符的部分。它接受三个参数：原始字符串、分隔符和指定要返回的部分的数量。</p>
+<p>以下是 <code>SUBSTRING_INDEX</code> 函数的语法：</p>
+<pre class="md-pre"><code class="hljs">SUBSTRING_INDEX(str, delimiter, count)
+</code></pre>
+<ul>
+<li><code>str</code>：要进行分割的原始字符串。</li>
+<li><code>delimiter</code>：用作分割的字符串或字符。</li>
+<li><code>count</code>：指定要返回的部分的数量。
+<ul>
+<li>如果 <code>count</code> 大于 0，则返回从左边开始的前 <code>count</code> 个部分（以分隔符为界）。</li>
+<li>如果 <code>count</code> 小于 0，则返回从右边开始的前 <code>count</code> 个部分（以分隔符为界），即从右侧向左计数。</li>
+</ul>
+</li>
+</ul>
+<p>下面是一些示例，演示了 <code>SUBSTRING_INDEX</code> 函数的使用：</p>
+<ol>
+<li>
+<p>提取字符串中的第一个部分：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> SUBSTRING_INDEX(<span class="hljs-string">&#x27;apple,banana,cherry&#x27;</span>, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">1</span>);
+<span class="hljs-comment">-- 输出结果：&#x27;apple&#x27;</span>
+</code></pre>
+</li>
+<li>
+<p>提取字符串中的最后一个部分：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> SUBSTRING_INDEX(<span class="hljs-string">&#x27;apple,banana,cherry&#x27;</span>, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">-1</span>);
+<span class="hljs-comment">-- 输出结果：&#x27;cherry&#x27;</span>
+</code></pre>
+</li>
+<li>
+<p>提取字符串中的前两个部分：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> SUBSTRING_INDEX(<span class="hljs-string">&#x27;apple,banana,cherry&#x27;</span>, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">2</span>);
+<span class="hljs-comment">-- 输出结果：&#x27;apple,banana&#x27;</span>
+</code></pre>
+</li>
+<li>
+<p>提取字符串中的最后两个部分：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> SUBSTRING_INDEX(<span class="hljs-string">&#x27;apple,banana,cherry&#x27;</span>, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">-2</span>);
+<span class="hljs-comment">-- 输出结果：&#x27;banana,cherry&#x27;</span>
+</code></pre>
+</li>
+</ol>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+	exam_id,
+	substring_index( tag, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">1</span> ) tag,
+	substring_index( substring_index( tag, <span class="hljs-string">&#x27;,&#x27;</span>, <span class="hljs-number">2</span> ), <span class="hljs-string">&#x27;,&#x27;</span>,<span class="hljs-operator">-</span> <span class="hljs-number">1</span> ) difficulty,
+	substring_index( tag, <span class="hljs-string">&#x27;,&#x27;</span>,<span class="hljs-operator">-</span> <span class="hljs-number">1</span> ) duration
+<span class="hljs-keyword">FROM</span>
+	examination_info
+<span class="hljs-keyword">WHERE</span>
+	difficulty <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;&#x27;</span>
+</code></pre>
+<h3 id="对过长的昵称截取处理" tabindex="-1">对过长的昵称截取处理</h3>
+<p><strong>描述</strong>：现有用户信息表 <code>user_info</code>（<code>uid</code> 用户 ID，<code>nick_name</code> 昵称, <code>achievement</code> 成就值, <code>level</code> 等级, <code>job</code> 职业方向, <code>register_time</code> 注册时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>nick_name</th>
+<th>achievement</th>
+<th>level</th>
+<th>job</th>
+<th>register_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>牛客 1</td>
+<td>19</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>牛客 2 号</td>
+<td>1200</td>
+<td>3</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1003</td>
+<td>牛客 3 号 ♂</td>
+<td>22</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1004</td>
+<td>牛客 4 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-01 11:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1005</td>
+<td>牛客 5678901234 号</td>
+<td>4000</td>
+<td>7</td>
+<td>算法</td>
+<td>2020-01-11 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1006</td>
+<td>牛客 67890123456789 号</td>
+<td>25</td>
+<td>0</td>
+<td>算法</td>
+<td>2020-01-02 11:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>有的用户的昵称特别长，在一些展示场景会导致样式混乱，因此需要将特别长的昵称转换一下再输出，请输出字符数大于 10 的用户信息，对于字符数大于 13 的用户输出前 10 个字符然后加上三个点号：『...』。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>uid</th>
+<th>nick_name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1005</td>
+<td>牛客 5678901234 号</td>
+</tr>
+<tr>
+<td>1006</td>
+<td>牛客 67890123...</td>
+</tr>
+</tbody>
+</table>
+<p>解释：字符数大于 10 的用户有 1005 和 1006，长度分别为 13、17；因此需要对 1006 的昵称截断输出。</p>
+<p><strong>思路</strong>：</p>
+<p>这题涉及到字符的计算，要计算字符串的字符数（即字符串的长度），可以使用 <code>LENGTH</code> 函数或 <code>CHAR_LENGTH</code> 函数。这两个函数的区别在于对待多字节字符的方式。</p>
+<ol>
+<li><code>LENGTH</code> 函数：它返回给定字符串的字节数。对于包含多字节字符的字符串，每个字符都会被当作一个字节来计算。</li>
+</ol>
+<p>示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> LENGTH(<span class="hljs-string">&#x27;你好&#x27;</span>); <span class="hljs-comment">-- 输出结果：6，因为 &#x27;你好&#x27; 中的每个汉字每个占3个字节</span>
+</code></pre>
+<ol>
+<li><code>CHAR_LENGTH</code> 函数：它返回给定字符串的字符数。对于包含多字节字符的字符串，每个字符会被当作一个字符来计算。</li>
+</ol>
+<p>示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">CHAR_LENGTH</span>(<span class="hljs-string">&#x27;你好&#x27;</span>); <span class="hljs-comment">-- 输出结果：2，因为 &#x27;你好&#x27; 中有两个字符，即两个汉字</span>
+</code></pre>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span>
+	uid,
+<span class="hljs-keyword">CASE</span>
+
+		<span class="hljs-keyword">WHEN</span> <span class="hljs-keyword">CHAR_LENGTH</span>( nick_name ) <span class="hljs-operator">&gt;</span> <span class="hljs-number">13</span> <span class="hljs-keyword">THEN</span>
+		CONCAT( SUBSTR( nick_name, <span class="hljs-number">1</span>, <span class="hljs-number">10</span> ), <span class="hljs-string">&#x27;...&#x27;</span> ) <span class="hljs-keyword">ELSE</span> nick_name
+	<span class="hljs-keyword">END</span> <span class="hljs-keyword">AS</span> nick_name
+<span class="hljs-keyword">FROM</span>
+	user_info
+<span class="hljs-keyword">WHERE</span>
+	<span class="hljs-keyword">CHAR_LENGTH</span>( nick_name ) <span class="hljs-operator">&gt;</span> <span class="hljs-number">10</span>
+<span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span>
+	uid;
+</code></pre>
+<h3 id="大小写混乱时的筛选统计较难" tabindex="-1">大小写混乱时的筛选统计（较难）</h3>
+<p><strong>描述</strong>：</p>
+<p>现有试卷信息表 <code>examination_info</code>（<code>exam_id</code> 试卷 ID, <code>tag</code> 试卷类别, <code>difficulty</code> 试卷难度, <code>duration</code> 考试时长, <code>release_time</code> 发布时间）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>exam_id</th>
+<th>tag</th>
+<th>difficulty</th>
+<th>duration</th>
+<th>release_time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>9001</td>
+<td>算法</td>
+<td>hard</td>
+<td>60</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>9002</td>
+<td>C++</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>3</td>
+<td>9003</td>
+<td>C++</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>9004</td>
+<td>sql</td>
+<td>medium</td>
+<td>70</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9005</td>
+<td>C++</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>6</td>
+<td>9006</td>
+<td>C++</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>7</td>
+<td>9007</td>
+<td>C++</td>
+<td>hard</td>
+<td>80</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>8</td>
+<td>9008</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>9</td>
+<td>9009</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+<tr>
+<td>10</td>
+<td>9010</td>
+<td>SQL</td>
+<td>medium</td>
+<td>70</td>
+<td>2021-01-01 10:00:00</td>
+</tr>
+</tbody>
+</table>
+<p>试卷作答信息表 <code>exam_record</code>（<code>uid</code> 用户 ID, <code>exam_id</code> 试卷 ID, <code>start_time</code> 开始作答时间, <code>submit_time</code> 交卷时间, <code>score</code> 得分）：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>uid</th>
+<th>exam_id</th>
+<th>start_time</th>
+<th>submit_time</th>
+<th>score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1001</td>
+<td>9001</td>
+<td>2020-01-01 09:01:01</td>
+<td>2020-01-01 09:21:59</td>
+<td>80</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1002</td>
+<td>9003</td>
+<td>2020-01-20 10:01:01</td>
+<td>2020-01-20 10:10:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1002</td>
+<td>9002</td>
+<td>2020-02-01 12:11:01</td>
+<td>2020-02-01 12:31:01</td>
+<td>83</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1003</td>
+<td>9002</td>
+<td>2020-03-01 19:01:01</td>
+<td>2020-03-01 19:30:01</td>
+<td>75</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1004</td>
+<td>9002</td>
+<td>2020-03-01 12:01:01</td>
+<td>2020-03-01 12:11:01</td>
+<td>60</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1005</td>
+<td>9002</td>
+<td>2020-03-01 12:01:01</td>
+<td>2020-03-01 12:41:01</td>
+<td>90</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1006</td>
+<td>9001</td>
+<td>2020-05-02 19:01:01</td>
+<td>2020-05-02 19:32:00</td>
+<td>20</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1007</td>
+<td>9003</td>
+<td>2020-01-02 19:01:01</td>
+<td>2020-01-02 19:40:01</td>
+<td>89</td>
+</tr>
+<tr>
+<td>9</td>
+<td>1008</td>
+<td>9004</td>
+<td>2020-02-02 12:01:01</td>
+<td>2020-02-02 12:20:01</td>
+<td>99</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1008</td>
+<td>9001</td>
+<td>2020-02-02 12:01:01</td>
+<td>2020-02-02 12:31:01</td>
+<td>98</td>
+</tr>
+<tr>
+<td>11</td>
+<td>1009</td>
+<td>9002</td>
+<td>2020-02-02 12:01:01</td>
+<td>2020-01-02 12:43:01</td>
+<td>81</td>
+</tr>
+<tr>
+<td>12</td>
+<td>1010</td>
+<td>9001</td>
+<td>2020-01-02 12:11:01</td>
+<td>(NULL)</td>
+<td>(NULL)</td>
+</tr>
+<tr>
+<td>13</td>
+<td>1010</td>
+<td>9001</td>
+<td>2020-02-02 12:01:01</td>
+<td>2020-01-02 10:31:01</td>
+<td>89</td>
+</tr>
+</tbody>
+</table>
+<p>试卷的类别 tag 可能出现大小写混乱的情况，请先筛选出试卷作答数小于 3 的类别 tag，统计将其转换为大写后对应的原本试卷作答数。</p>
+<p>如果转换后 tag 并没有发生变化，不输出该条结果。</p>
+<p>由示例数据结果输出如下：</p>
+<table>
+<thead>
+<tr>
+<th>tag</th>
+<th>answer_cnt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C++</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<p>解释：被作答过的试卷有 9001、9002、9003、9004，他们的 tag 和被作答次数如下：</p>
+<table>
+<thead>
+<tr>
+<th>exam_id</th>
+<th>tag</th>
+<th>answer_cnt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9001</td>
+<td>算法</td>
+<td>4</td>
+</tr>
+<tr>
+<td>9002</td>
+<td>C++</td>
+<td>6</td>
+</tr>
+<tr>
+<td>9003</td>
+<td>c++</td>
+<td>2</td>
+</tr>
+<tr>
+<td>9004</td>
+<td>sql</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>作答次数小于 3 的 tag 有 c++和 sql，而转为大写后只有 C++本来就有作答数，于是输出 c++转化大写后的作答次数为 6。</p>
+<p><strong>思路</strong>：</p>
+<p>首先，这题有点混乱，9004 根据示例数据查出来只有 1 次，这里显示有 2 次。</p>
+<p>先看一下大小写转换函数：</p>
+<p>1.<code>UPPER(s)</code>或<code>UCASE(s)</code>函数可以将字符串 s 中的字母字符全部转换成大写字母；</p>
+<p>2.<code>LOWER(s)</code>或者<code>LCASE(s)</code>函数可以将字符串 s 中的字母字符全部转换成小写字母。</p>
+<p>难点在于相同表做连接要查询不同的值</p>
+<p><strong>答案</strong>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">WITH</span> a <span class="hljs-keyword">AS</span>
+  (<span class="hljs-keyword">SELECT</span> tag,
+          <span class="hljs-built_in">COUNT</span>(start_time) <span class="hljs-keyword">AS</span> answer_cnt
+   <span class="hljs-keyword">FROM</span> exam_record er
+   <span class="hljs-keyword">JOIN</span> examination_info ei <span class="hljs-keyword">ON</span> er.exam_id <span class="hljs-operator">=</span> ei.exam_id
+   <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> tag)
+<span class="hljs-keyword">SELECT</span> a.tag,
+       b.answer_cnt
+<span class="hljs-keyword">FROM</span> a
+<span class="hljs-keyword">INNER</span> <span class="hljs-keyword">JOIN</span> a <span class="hljs-keyword">AS</span> b <span class="hljs-keyword">ON</span> <span class="hljs-built_in">UPPER</span>(a.tag)<span class="hljs-operator">=</span> b.tag #a小写 b大写
+<span class="hljs-keyword">AND</span> a.tag <span class="hljs-operator">!=</span> b.tag
+<span class="hljs-keyword">WHERE</span> a.answer_cnt <span class="hljs-operator">&lt;</span> <span class="hljs-number">3</span>;
+</code></pre>
+<!-- @include: @article-footer.snippet.md -->

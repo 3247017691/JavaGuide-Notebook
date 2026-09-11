@@ -1,0 +1,732 @@
+<p>敏感词过滤是内容安全的核心环节。无论是社交媒体、电商平台、在线游戏，还是如今的 AI 应用，都需要对输入和生成的内容进行实时过滤，防止色情、暴力、仇恨言论等违规信息传播。</p>
+<p>从技术角度看，敏感词过滤本质上是<strong>多模式字符串匹配问题</strong>：在一段文本中同时查找多个关键词。</p>
+<p>这篇文章接近 2 万字，我会从算法演进开始讲起，还会分享一些生产经验例如对抗变形词、高并发优化、词库管理。</p>
+<p><strong>核心结论</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>适用场景</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Trie 树</strong></td>
+<td>词库规模较小（&lt; 1 万）</td>
+<td>实现简单，易于理解</td>
+</tr>
+<tr>
+<td><strong>AC 自动机</strong></td>
+<td>高吞吐量场景</td>
+<td>单次扫描匹配所有词，性能最优</td>
+</tr>
+<tr>
+<td><strong>双数组 Trie（DAT）</strong></td>
+<td>大规模词库（&gt; 1 万）</td>
+<td>内存占用低，构建成本高</td>
+</tr>
+</tbody>
+</table>
+<h2 id="算法演进" tabindex="-1">算法演进</h2>
+<p>下面按<strong>从简单到复杂</strong>的顺序，逐步介绍各类敏感词过滤算法，看看每一步优化的动机和效果。</p>
+<h3 id="暴力匹配bf-算法" tabindex="-1">暴力匹配（BF 算法）</h3>
+<p><strong>暴力匹配（Brute Force）</strong> 是最直观的方案：遍历文本的每个位置，尝试用每个敏感词进行匹配。</p>
+<p>假设敏感词库有 <code>n</code> 个词，平均长度为 <code>m</code>，待匹配文本长度为 <code>L</code>：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">bruteForceMatch</span><span class="hljs-params">(String text, List&lt;String&gt; words)</span> {
+    <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (String word : words) {              <span class="hljs-comment">// O(n)：遍历每个敏感词</span>
+        <span class="hljs-keyword">if</span> (text.contains(word)) {           <span class="hljs-comment">// O(L × m)：朴素子串匹配</span>
+            result.add(word);
+        }
+    }
+    <span class="hljs-keyword">return</span> result;
+}
+</code></pre>
+<p><strong>时间复杂度</strong>：O(n × L × m)</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>敏感词数</th>
+<th>文本长度</th>
+<th>平均词长</th>
+<th>操作次数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>小规模</td>
+<td>100</td>
+<td>1000</td>
+<td>5</td>
+<td>50 万</td>
+</tr>
+<tr>
+<td>中规模</td>
+<td>1000</td>
+<td>5000</td>
+<td>5</td>
+<td>2500 万</td>
+</tr>
+<tr>
+<td>大规模</td>
+<td>10000</td>
+<td>10000</td>
+<td>5</td>
+<td>5 亿</td>
+</tr>
+</tbody>
+</table>
+<p><strong>问题分析</strong>：</p>
+<ol>
+<li><strong>重复扫描</strong>：每个敏感词都要遍历整段文本，大量字符被重复比较。</li>
+<li><strong>无状态复用</strong>：敏感词之间没有关联，无法利用已匹配的信息。</li>
+<li><strong>扩展性差</strong>：词库增长时性能线性下降。</li>
+</ol>
+<p>当词库达到万级别时，暴力匹配的延迟会达到秒级，完全无法满足线上服务的性能要求。</p>
+<h3 id="trie-树利用前缀减少比较" tabindex="-1">Trie 树：利用前缀减少比较</h3>
+<p><strong>Trie 树</strong>（发音为 /ˈtraɪ/）也称为字典树、前缀树，通过<strong>空间换时间</strong>的策略优化暴力匹配。核心思想是：利用字符串的<strong>公共前缀</strong>来减少存储空间和查询时间的开销。</p>
+<p>浏览器搜索框的关键词提示功能就可以基于 Trie 树实现：</p>
+<p><img src="/img/brower-trie-2a2c090e.png" alt="" loading="lazy"></p>
+<h4 id="基本性质" tabindex="-1">基本性质</h4>
+<p>Trie 树具有以下 3 个基本性质：</p>
+<ol>
+<li><strong>根节点不包含字符</strong>，除根节点外每一个节点只包含一个字符。</li>
+<li><strong>从根节点到某一节点</strong>，路径上经过的字符连接起来，就是该节点对应的字符串。</li>
+<li><strong>每个节点的所有子节点包含的字符都不相同</strong>。</li>
+</ol>
+<h4 id="结构示例" tabindex="-1">结构示例</h4>
+<p>假设敏感词库中有以下词汇：</p>
+<ul>
+<li>高清视频</li>
+<li>高清 CV</li>
+<li>东京冷</li>
+<li>东京热</li>
+</ul>
+<p>构造的 Trie 树结构如下（红色节点表示字符串终止）：</p>
+<p><img src="/img/sensitive-word-trie-8f71e1f2.png" alt="" loading="lazy"></p>
+<p>当查找字符串“东京热”时，将其拆分为单个字符“东”、“京”、“热”，然后从根节点逐层匹配。</p>
+<h4 id="与暴力匹配的对比" tabindex="-1">与暴力匹配的对比</h4>
+<p>假设词库为 <code>[&quot;she&quot;, &quot;he&quot;, &quot;his&quot;, &quot;hers&quot;]</code>，在文本 <code>&quot;ushers&quot;</code> 中查找：</p>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>匹配过程</th>
+<th>字符比较次数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>暴力匹配</td>
+<td>分别用 4 个词扫描文本</td>
+<td>约 24 次¹</td>
+</tr>
+<tr>
+<td>Trie 树</td>
+<td>从每个位置开始，沿树匹配</td>
+<td>约 10 次</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>¹ 此处为简化估算（词数 × 文本长度），实际最坏比较次数取决于每个词的长度与文本位置，会更高。</p>
+</blockquote>
+<p>Trie 树的优势在于：<strong>所有敏感词共享同一棵树</strong>，一次遍历就能尝试匹配所有词。</p>
+<h4 id="复杂度分析" tabindex="-1">复杂度分析</h4>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>HashMap 实现</th>
+<th>数组实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>预处理</td>
+<td>O(n × m)</td>
+<td>O(n × m × σ)</td>
+</tr>
+<tr>
+<td>查询时间</td>
+<td>O(L × m)</td>
+<td>O(L × m)</td>
+</tr>
+<tr>
+<td>空间复杂度</td>
+<td>O(n × m)</td>
+<td>O(n × m × σ)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>σ 为字符集大小（汉字约 2 万，ASCII 仅 128）。本文代码示例采用 <code>HashMap</code> 实现，适合中文等大字符集；数组实现适合小字符集（如纯英文）。</p>
+</blockquote>
+<h4 id="trie-代码示例" tabindex="-1">Trie 代码示例</h4>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SimpleTrie</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span> {
+        <span class="hljs-type">Map</span>&lt;Character, Node&gt; <span class="hljs-variable">children</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+        <span class="hljs-type">boolean</span> isEnd;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Node</span> <span class="hljs-variable">root</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>();
+
+    <span class="hljs-comment">// 添加敏感词</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">addWord</span><span class="hljs-params">(String word)</span> {
+        <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">char</span> c : word.toCharArray()) {
+            node = node.children.computeIfAbsent(c, k -&gt; <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>());
+        }
+        node.isEnd = <span class="hljs-literal">true</span>;
+    }
+
+    <span class="hljs-comment">// 检测文本中是否包含敏感词</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">contains</span><span class="hljs-params">(String text)</span> {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; text.length(); i++) {
+            <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+            <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> i; j &lt; text.length(); j++) {
+                node = node.children.get(text.charAt(j));
+                <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">if</span> (node.isEnd) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+            }
+        }
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+
+    <span class="hljs-comment">// 获取文本中所有匹配的敏感词</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">matchAll</span><span class="hljs-params">(String text)</span> {
+        <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; text.length(); i++) {
+            <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+            <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">j</span> <span class="hljs-operator">=</span> i; j &lt; text.length(); j++) {
+                node = node.children.get(text.charAt(j));
+                <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) <span class="hljs-keyword">break</span>;
+                <span class="hljs-keyword">if</span> (node.isEnd) {
+                    result.add(text.substring(i, j + <span class="hljs-number">1</span>));
+                }
+            }
+        }
+        <span class="hljs-keyword">return</span> result;
+    }
+}
+</code></pre>
+<h4 id="trie-树的局限性" tabindex="-1">Trie 树的局限性</h4>
+<p>虽然 Trie 树相比暴力匹配有显著提升，但仍存在<strong>回溯问题</strong>：</p>
+<p>在文本 <code>&quot;ushers&quot;</code> 中查找词库 <code>[&quot;she&quot;, &quot;he&quot;, &quot;his&quot;]</code>：</p>
+<ol>
+<li>从位置 1 开始，匹配 <code>&quot;s&quot; → &quot;h&quot; → &quot;e&quot;</code>，找到 <code>&quot;she&quot;</code></li>
+<li>匹配完成后，<strong>回到位置 2</strong>，重新匹配 <code>&quot;h&quot; → &quot;e&quot;</code>，找到 <code>&quot;he&quot;</code></li>
+</ol>
+<p>这种“匹配失败后回退到下一位置重新开始”的策略，在最坏情况下（如文本 <code>&quot;aaaaaaaa&quot;</code> 匹配词 <code>&quot;aaaaab&quot;</code>）会退化到 O(L × m)。</p>
+<p>能否做到<strong>完全不回溯</strong>？这就引出了 AC 自动机。</p>
+<p><strong>注意</strong>：<a href="https://mvnrepository.com/artifact/org.apache.commons/commons-collections4" target="_blank" rel="noopener">Apache Commons Collections</a> 提供的 <code>PatriciaTrie</code> 是基于<strong>位操作</strong>的压缩二进制 Trie（PATRICIA = Practical Algorithm To Retrieve Information Coded In Alphanumeric），与本文描述的<strong>字符级 Trie</strong> 原理不同，不适合直接用于中文敏感词过滤场景。</p>
+<h3 id="ac-自动机单次扫描匹配所有词" tabindex="-1">AC 自动机：单次扫描匹配所有词</h3>
+<p><strong>AC 自动机（Aho-Corasick Automaton）</strong> 是一种建立在 Trie 树之上的多模式匹配算法，由贝尔实验室的 Alfred V. Aho 和 Margaret J. Corasick 于 1975 年提出。</p>
+<p>其核心思想与 KMP 算法一脉相承：<strong>利用已匹配的信息，在失配时跳转到合适位置继续匹配，避免回溯</strong>。区别在于 KMP 处理单模式串，而 AC 自动机处理多模式串。</p>
+<h4 id="核心组件" tabindex="-1">核心组件</h4>
+<p>AC 自动机的运行依赖于三个核心函数：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>goto 函数</strong></td>
+<td>状态转移：从当前状态读入字符后跳转到哪个状态</td>
+</tr>
+<tr>
+<td><strong>failure 函数</strong></td>
+<td>失配跳转：失配时跳转到「最长相同后缀」状态，避免回溯</td>
+</tr>
+<tr>
+<td><strong>output 函数</strong></td>
+<td>输出匹配：记录每个状态对应的匹配词集合</td>
+</tr>
+</tbody>
+</table>
+<h4 id="构建步骤" tabindex="-1">构建步骤</h4>
+<p>AC 自动机的构建分为三步：</p>
+<p><img src="/img/sensitive-word-ac-automaton-flow-8921f53f.png" alt="" loading="lazy"></p>
+<p><strong>第一步：构建 Trie 树</strong></p>
+<p>将所有模式串插入 Trie 树，形成自动机的基础骨架。每个模式串的末尾节点打上终止标记。</p>
+<p><strong>第二步：构建 fail 指针（核心）</strong></p>
+<p>fail 指针是 AC 自动机的核心机制。它的作用是：<strong>当当前字符无法继续匹配时，跳转到哪个状态继续尝试，而不是回到起点</strong>。</p>
+<p>构建过程使用 BFS（广度优先搜索）逐层遍历，对于当前节点 <code>temp</code>：</p>
+<ol>
+<li>找到 <code>temp</code> 父节点的 fail 节点</li>
+<li>在该 fail 节点的子节点中寻找与 <code>temp</code> 字符相同的节点</li>
+<li>若存在，则 <code>temp.fail</code> 指向该子节点</li>
+<li>若不存在，继续找 fail 节点的 fail 节点，直到找到或到达 root</li>
+</ol>
+<p><strong>fail 指针的本质</strong>：指向当前状态对应字符串的<strong>最长后缀</strong>所在的状态。</p>
+<div class="md-c md-c-tip"><p class="md-c-title">与 KMP 的关系</p><p>fail 指针就是 KMP 算法中 next 数组在 Trie 树上的泛化。例如：<code>&quot;she&quot;</code> 的后缀 <code>&quot;he&quot;</code> 与 <code>&quot;he&quot;</code> 的前缀相同，因此 <code>&quot;she&quot;</code> 结尾的 <code>'e'</code> 的 fail 指针指向 <code>&quot;he&quot;</code> 中的 <code>'e'</code>。</p>
+</div><p><strong>第三步：模式匹配</strong></p>
+<p>从文本串头部开始扫描，指针 <code>p</code> 初始指向 root：</p>
+<ol>
+<li><strong>状态转移</strong>：若当前字符在 <code>p</code> 的子节点中，<code>p</code> 下移；否则沿 fail 链回退，直到能匹配或回到 root</li>
+<li><strong>收集输出</strong>：【关键】每次转移后，<strong>必须沿 fail 链遍历一次</strong>，收集所有终止状态的匹配词</li>
+</ol>
+<p>为什么要沿 fail 链遍历？因为一个长词的后缀可能是另一个短词。例如 <code>&quot;she&quot;</code> 匹配成功时，沿 fail 链可以找到 <code>&quot;he&quot;</code>，否则会漏掉嵌套词。</p>
+<h4 id="ac-自动机代码示例" tabindex="-1">AC 自动机代码示例</h4>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">AhoCorasickAutomaton</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">Node</span> {
+        <span class="hljs-type">Map</span>&lt;Character, Node&gt; <span class="hljs-variable">children</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;();
+        Node fail;                    <span class="hljs-comment">// 失配指针</span>
+        <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">outputs</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;(); <span class="hljs-comment">// 该状态对应的匹配词</span>
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Node</span> <span class="hljs-variable">root</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>();
+
+    <span class="hljs-comment">// 第一步：构建 Trie 树</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">addWord</span><span class="hljs-params">(String word)</span> {
+        <span class="hljs-type">Node</span> <span class="hljs-variable">node</span> <span class="hljs-operator">=</span> root;
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">char</span> c : word.toCharArray()) {
+            node = node.children.computeIfAbsent(c, k -&gt; <span class="hljs-keyword">new</span> <span class="hljs-title class_">Node</span>());
+        }
+        node.outputs.add(word); <span class="hljs-comment">// 末尾节点记录匹配词</span>
+    }
+
+    <span class="hljs-comment">// 第二步：构建 fail 指针（BFS）</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">buildFailPointer</span><span class="hljs-params">()</span> {
+        <span class="hljs-type">Queue</span>&lt;Node&gt; <span class="hljs-variable">queue</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LinkedList</span>&lt;&gt;();
+        root.fail = root;
+
+        <span class="hljs-comment">// 根节点的直接子节点，fail 指向根</span>
+        <span class="hljs-keyword">for</span> (Node child : root.children.values()) {
+            child.fail = root;
+            queue.offer(child);
+        }
+
+        <span class="hljs-keyword">while</span> (!queue.isEmpty()) {
+            <span class="hljs-type">Node</span> <span class="hljs-variable">current</span> <span class="hljs-operator">=</span> queue.poll();
+            <span class="hljs-keyword">for</span> (Map.Entry&lt;Character, Node&gt; entry : current.children.entrySet()) {
+                <span class="hljs-type">char</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> entry.getKey();
+                <span class="hljs-type">Node</span> <span class="hljs-variable">child</span> <span class="hljs-operator">=</span> entry.getValue();
+
+                <span class="hljs-comment">// 沿父节点的 fail 链查找是否有字符 c 的转移</span>
+                <span class="hljs-type">Node</span> <span class="hljs-variable">fail</span> <span class="hljs-operator">=</span> current.fail;
+                <span class="hljs-keyword">while</span> (fail != root &amp;&amp; !fail.children.containsKey(c)) {
+                    fail = fail.fail;
+                }
+                child.fail = fail.children.getOrDefault(c, root);
+                <span class="hljs-comment">// 避免自环：如果 fail 指向了自己，改为指向根</span>
+                <span class="hljs-keyword">if</span> (child.fail == child) {
+                    child.fail = root;
+                }
+                <span class="hljs-comment">// 合并 fail 节点的输出（关键！）</span>
+                child.outputs.addAll(child.fail.outputs);
+                queue.offer(child);
+            }
+        }
+    }
+
+    <span class="hljs-comment">// 第三步：模式匹配（单次扫描）</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">match</span><span class="hljs-params">(String text)</span> {
+        <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+        <span class="hljs-type">Node</span> <span class="hljs-variable">state</span> <span class="hljs-operator">=</span> root;
+
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; text.length(); i++) {
+            <span class="hljs-type">char</span> <span class="hljs-variable">c</span> <span class="hljs-operator">=</span> text.charAt(i);
+            <span class="hljs-comment">// 沿 fail 链找到能处理字符 c 的状态</span>
+            <span class="hljs-keyword">while</span> (state != root &amp;&amp; !state.children.containsKey(c)) {
+                state = state.fail;
+            }
+            state = state.children.getOrDefault(c, root);
+            <span class="hljs-comment">// 收集当前状态的所有匹配词（已通过 fail 链合并）</span>
+            result.addAll(state.outputs);
+        }
+        <span class="hljs-keyword">return</span> result;
+    }
+}
+</code></pre>
+<p>使用示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">AhoCorasickAutomaton</span> <span class="hljs-variable">ac</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AhoCorasickAutomaton</span>();
+ac.addWord(<span class="hljs-string">&quot;she&quot;</span>);
+ac.addWord(<span class="hljs-string">&quot;he&quot;</span>);
+ac.addWord(<span class="hljs-string">&quot;her&quot;</span>);
+ac.addWord(<span class="hljs-string">&quot;hers&quot;</span>);
+ac.buildFailPointer(); <span class="hljs-comment">// 插入完所有词后，构建一次 fail 指针</span>
+
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">matches</span> <span class="hljs-operator">=</span> ac.match(<span class="hljs-string">&quot;ushers&quot;</span>);
+<span class="hljs-comment">// 输出: [she, he, her, hers]</span>
+</code></pre>
+<h4 id="性能对比" tabindex="-1">性能对比</h4>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>预处理</th>
+<th>匹配时间</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>暴力匹配</td>
+<td>O(1)</td>
+<td>O(L × n × m)</td>
+<td>每个词单独扫描</td>
+</tr>
+<tr>
+<td>Trie 树</td>
+<td>O(n × m)</td>
+<td>O(L × m)</td>
+<td>可能回溯</td>
+</tr>
+<tr>
+<td>AC 自动机</td>
+<td>O(n × m)¹</td>
+<td>O(L + z)</td>
+<td>单次扫描，z 为所有匹配命中的总次数（含重叠匹配）²</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<ol>
+<li>使用 HashMap 存储子节点时为 O(n × m)；若使用数组存储（需预分配字符集大小 σ），则为 O(n × m × σ)。</li>
+<li>极端场景下，若词库中存在大量嵌套词（如 &quot;a&quot;, &quot;ab&quot;, &quot;abc&quot;, ..., &quot;abc...z&quot;），z 可能远大于 L，此时耗时由 z 主导。实际工程中敏感词库通常不会出现这种极端嵌套。</li>
+</ol>
+</blockquote>
+<p>AC 自动机实现了<strong>线性时间匹配</strong>，与敏感词数量无关，只与文本长度和匹配结果数量相关。</p>
+<p>将 AC 自动机与 DAT 结合（<a href="https://github.com/hankcs/AhoCorasickDoubleArrayTrie" target="_blank" rel="noopener">AhoCorasickDoubleArrayTrie</a>），可以兼顾匹配效率和内存占用。</p>
+<h3 id="双数组-triedat压缩内存占用" tabindex="-1">双数组 Trie（DAT）：压缩内存占用</h3>
+<p>标准 Trie 树内存占用较大（每个节点需要一个 Map），实际工程中通常使用改进版——<strong>双数组 Trie（Double-Array Trie，DAT）</strong>。</p>
+<p>DAT 由日本的 Aoe Jun-ichi 等人在 1989 年的论文<a href="https://www.co-ding.com/assets/pdf/dat.pdf" target="_blank" rel="noopener">《An Efficient Implementation of Trie Structures》</a>中提出。它通过两个整型数组（base[] 和 check[]）压缩 Trie 结构：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>标准 Trie（数组实现）</th>
+<th>双数组 Trie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>空间复杂度</td>
+<td>O(n × m × σ)</td>
+<td>O(n × m)</td>
+</tr>
+<tr>
+<td>内存占用</td>
+<td>较大</td>
+<td>通常可降至数组实现的 20%~30%</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>简单</td>
+<td>较复杂（需处理冲突）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>注意</strong>：DAT 的压缩效率与词库的公共前缀比例强相关。极端情况下（无公共前缀），压缩效果有限。</p>
+<p>参考实现：<a href="https://github.com/komiya-atsushi/darts-java" target="_blank" rel="noopener">https://github.com/komiya-atsushi/darts-java</a></p>
+<h3 id="dfa-实现工程化封装" tabindex="-1">DFA 实现：工程化封装</h3>
+<p><strong>DFA（Deterministic Finite Automaton，确定性有限自动机）</strong> 是自动机理论中的概念。从实现角度看，Trie 从根出发的一次匹配过程本身就是一个 DFA 运行——每个节点代表一个状态，每条边代表一个字符转移。不过，普通 Trie 匹配需要从文本的每个位置重新启动 DFA，而 AC 自动机通过 fail 指针补全了所有状态转移，才是真正的<strong>单次扫描多模式 DFA</strong>。</p>
+<p><a href="https://hutool.cn/docs/#/dfa/%E6%A6%82%E8%BF%B0" target="_blank" rel="noopener">Hutool 5.8.x</a> 提供了基于 DFA 的敏感词过滤实现（底层为 Trie）：</p>
+<p><img src="/img/hutool-dfa-3208b9f3.png" alt="" loading="lazy"></p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">WordTree</span> <span class="hljs-variable">wordTree</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">WordTree</span>();
+wordTree.addWord(<span class="hljs-string">&quot;大&quot;</span>);
+wordTree.addWord(<span class="hljs-string">&quot;大憨憨&quot;</span>);
+wordTree.addWord(<span class="hljs-string">&quot;憨憨&quot;</span>);
+
+<span class="hljs-type">String</span> <span class="hljs-variable">text</span> <span class="hljs-operator">=</span> <span class="hljs-string">&quot;那人真是个大憨憨！&quot;</span>;
+
+<span class="hljs-comment">// 获得第一个匹配的关键字</span>
+<span class="hljs-type">String</span> <span class="hljs-variable">matchStr</span> <span class="hljs-operator">=</span> wordTree.match(text);
+System.out.println(matchStr); <span class="hljs-comment">// 输出: 大</span>
+
+<span class="hljs-comment">// matchAll(text, limit, isDensityMatch, isGreedy)</span>
+<span class="hljs-comment">// - limit: 匹配数量上限，-1 表示不限制</span>
+<span class="hljs-comment">// - isDensityMatch: 是否密度匹配（在已匹配词内部继续寻找重叠词）</span>
+<span class="hljs-comment">// - isGreedy: 是否贪婪匹配（true 匹配最长关键词，false 匹配最短关键词）</span>
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">matchStrList</span> <span class="hljs-operator">=</span> wordTree.matchAll(text, -<span class="hljs-number">1</span>, <span class="hljs-literal">false</span>, <span class="hljs-literal">false</span>);
+System.out.println(matchStrList); <span class="hljs-comment">// 输出: [大, 憨憨]</span>
+
+<span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-variable">matchStrList2</span> <span class="hljs-operator">=</span> wordTree.matchAll(text, -<span class="hljs-number">1</span>, <span class="hljs-literal">false</span>, <span class="hljs-literal">true</span>);
+System.out.println(matchStrList2); <span class="hljs-comment">// 输出: [大, 大憨憨]</span>
+</code></pre>
+<p><strong>输出解释</strong>：</p>
+<ul>
+<li>
+<p><code>matchAll(text, -1, false, false)</code>：非贪婪 + 非密度匹配</p>
+<ul>
+<li>从位置 0 开始，<code>&quot;大&quot;</code> 匹配成功（最短匹配）</li>
+<li>跳过已匹配字符后，<code>&quot;憨憨&quot;</code> 从位置 2 开始匹配成功</li>
+<li>结果：<code>[大, 憨憨]</code></li>
+</ul>
+</li>
+<li>
+<p><code>matchAll(text, -1, false, true)</code>：贪婪 + 非密度匹配</p>
+<ul>
+<li>从位置 0 开始，<code>&quot;大憨憨&quot;</code> 匹配成功（最长匹配）</li>
+<li>同时 <code>&quot;大&quot;</code> 也匹配成功（作为前缀）</li>
+<li>结果：<code>[大, 大憨憨]</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="对抗变形词" tabindex="-1">对抗变形词</h2>
+<p>实际场景中，用户常通过以下方式绕过敏感词过滤：</p>
+<table>
+<thead>
+<tr>
+<th>变形方式</th>
+<th>示例</th>
+<th>应对策略</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>谐音字</td>
+<td>“赌博” → “读博”</td>
+<td>维护谐音词库</td>
+</tr>
+<tr>
+<td>插入符号</td>
+<td>&quot;fuck&quot; → &quot;f*u*c*k&quot;</td>
+<td>预处理去除特殊字符</td>
+</tr>
+<tr>
+<td>繁简混用</td>
+<td>“台灣” → “台湾”</td>
+<td>统一转换为简体后再匹配</td>
+</tr>
+<tr>
+<td>全角字符</td>
+<td>&quot;abc&quot; → &quot;ａｂｃ&quot;</td>
+<td>全角转半角</td>
+</tr>
+</tbody>
+</table>
+<p><strong>前置清洗</strong>是处理变形词的常用策略：在匹配前对用于检测的文本副本进行标准化处理。下面的代码覆盖兼容等价字符、大小写、Unicode Code Point 和格式控制字符等基础情况，但仍然只是示例；生产系统需要结合支持的语言、误报容忍度和实际对抗样本持续补充规则。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.text.Normalizer;
+<span class="hljs-keyword">import</span> java.util.Locale;
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">preprocess</span><span class="hljs-params">(String text)</span> {
+    <span class="hljs-comment">// NFKC 会统一全角/半角等兼容等价字符。只处理检测副本，不覆盖用户原文。</span>
+    <span class="hljs-type">String</span> <span class="hljs-variable">normalized</span> <span class="hljs-operator">=</span> Normalizer.normalize(text, Normalizer.Form.NFKC)
+            .toLowerCase(Locale.ROOT);
+    <span class="hljs-type">StringBuilder</span> <span class="hljs-variable">sb</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">StringBuilder</span>();
+    normalized.codePoints()
+            <span class="hljs-comment">// 去掉零宽连接符等格式控制字符，防止插入不可见字符绕过匹配。</span>
+            .filter(codePoint -&gt; Character.getType(codePoint) != Character.FORMAT)
+            .filter(<span class="hljs-built_in">this</span>::isChineseOrAlphanumeric)
+            .forEach(sb::appendCodePoint);
+    <span class="hljs-keyword">return</span> toSimplifiedChinese(sb.toString()); <span class="hljs-comment">// 繁转简</span>
+}
+
+<span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">isChineseOrAlphanumeric</span><span class="hljs-params">(<span class="hljs-type">int</span> codePoint)</span> {
+    <span class="hljs-keyword">return</span> Character.isLetterOrDigit(codePoint)
+            || Character.UnicodeScript.of(codePoint) == Character.UnicodeScript.HAN;
+}
+</code></pre>
+<p><a href="https://github.com/toolgood/ToolGood.Words" target="_blank" rel="noopener">ToolGood.Words</a> 等成熟库已内置繁简互换、全角半角转换等功能，可直接使用。</p>
+<div class="md-c md-c-warning"><p class="md-c-title">注意</p><ul>
+<li><strong>位置映射</strong>：<code>preprocess</code> 方法会去除特殊字符，导致清洗后的文本与原文位置不再一一对应。如果业务需要返回敏感词在原文中的精确位置（如高亮标注、部分替换），需要维护一张从清洗后位置到原文位置的映射表。</li>
+<li><strong>规范化边界</strong>：NFKC 会消除部分具有业务语义的兼容字符差异，所以应只用于检测副本，保留原文用于展示和审计。删除字符还可能把原本分隔的内容拼接成新词，需要通过真实语料评估误报率。</li>
+<li><strong>同形异码</strong>：Unicode confusables 可以辅助发现跨脚本形似字符，但不适合直接作为通用文本的“归一化结果”。高风险命中应结合上下文模型或人工审核，不能只靠字符替换作最终判断。</li>
+</ul>
+</div><h2 id="高并发优化" tabindex="-1">高并发优化</h2>
+<h3 id="原子热替换支持词库热更新" tabindex="-1">原子热替换：支持词库热更新</h3>
+<p>生产环境中，敏感词库需要频繁更新，但不能影响正在进行的匹配请求。通过 <code>AtomicReference</code> 实现原子热替换（Atomic Hot-Swap）：先在后台构建新 Trie，构建完成后原子替换旧实例，确保读线程不受影响。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SensitiveWordFilter</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> AtomicReference&lt;SimpleTrie&gt; trieRef;
+
+    <span class="hljs-type">public</span> <span class="hljs-title function_">SensitiveWordFilter</span><span class="hljs-params">(List&lt;String&gt; initialWords)</span> {
+        <span class="hljs-built_in">this</span>.trieRef = <span class="hljs-keyword">new</span> <span class="hljs-title class_">AtomicReference</span>&lt;&gt;(buildTrie(initialWords));
+    }
+
+    <span class="hljs-comment">// 匹配时获取当前 Trie</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">match</span><span class="hljs-params">(String text)</span> {
+        <span class="hljs-type">SimpleTrie</span> <span class="hljs-variable">trie</span> <span class="hljs-operator">=</span> trieRef.get();
+        <span class="hljs-keyword">return</span> trie != <span class="hljs-literal">null</span> ? trie.matchAll(text) : Collections.emptyList();
+    }
+
+    <span class="hljs-comment">// 更新词库：先构建新 Trie，再原子发布</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-type">void</span> <span class="hljs-title function_">refreshWords</span><span class="hljs-params">(List&lt;String&gt; newWords)</span> {
+        <span class="hljs-type">SimpleTrie</span> <span class="hljs-variable">newTrie</span> <span class="hljs-operator">=</span> buildTrie(newWords);
+        trieRef.set(newTrie);  <span class="hljs-comment">// 原子发布，对读线程立即可见</span>
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-type">SimpleTrie</span> <span class="hljs-title function_">buildTrie</span><span class="hljs-params">(List&lt;String&gt; words)</span> {
+        <span class="hljs-type">SimpleTrie</span> <span class="hljs-variable">trie</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleTrie</span>();
+        <span class="hljs-keyword">for</span> (String word : words) {
+            trie.addWord(word);
+        }
+        <span class="hljs-keyword">return</span> trie;
+    }
+}
+</code></pre>
+<p><strong>关键点</strong>：</p>
+<ul>
+<li>使用 <code>AtomicReference</code> 确保切换操作是原子的。</li>
+<li>旧 Trie 可能仍有线程在使用，依赖 GC 自动回收。</li>
+<li>可在后台异步构建新 Trie，不影响服务响应。</li>
+</ul>
+<h3 id="并行处理超长文本分段" tabindex="-1">并行处理：超长文本分段</h3>
+<p>对于超长文本（如文章、评论），可以分段后并行处理。</p>
+<p><strong>注意</strong>：分段时必须加入重叠区域，否则会遗漏跨边界的敏感词。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 使用独立线程池，避免占用 ForkJoinPool.commonPool()</span>
+<span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> <span class="hljs-type">ExecutorService</span> <span class="hljs-variable">filterExecutor</span> <span class="hljs-operator">=</span>
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">ThreadPoolExecutor</span>(
+        <span class="hljs-number">4</span>, <span class="hljs-number">8</span>, <span class="hljs-number">60L</span>, TimeUnit.SECONDS,
+        LinkedBlockingQueue&lt;&gt;(<span class="hljs-number">1000</span>),
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">ThreadPoolExecutor</span>.CallerRunsPolicy() <span class="hljs-comment">// 队列满时由调用线程执行，实现背压</span>
+    );
+
+<span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">parallelMatch</span><span class="hljs-params">(String text, <span class="hljs-type">int</span> chunkSize, <span class="hljs-type">int</span> maxWordLength)</span> {
+    <span class="hljs-comment">// 重叠区域 = 最长敏感词长度 - 1，防止跨边界漏词</span>
+    <span class="hljs-type">int</span> <span class="hljs-variable">overlap</span> <span class="hljs-operator">=</span> maxWordLength - <span class="hljs-number">1</span>;
+    <span class="hljs-type">List</span>&lt;CompletableFuture&lt;List&lt;String&gt;&gt;&gt; <span class="hljs-variable">futures</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; text.length(); i += chunkSize) {
+        <span class="hljs-type">int</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> i;
+        <span class="hljs-type">int</span> <span class="hljs-variable">end</span> <span class="hljs-operator">=</span> Math.min(i + chunkSize + overlap, text.length());
+        <span class="hljs-type">String</span> <span class="hljs-variable">chunk</span> <span class="hljs-operator">=</span> text.substring(start, end);
+
+        <span class="hljs-comment">// 显式传入自定义线程池</span>
+        futures.add(CompletableFuture.supplyAsync(() -&gt;
+            trieRef.get().matchAll(chunk), filterExecutor
+        ));
+    }
+
+    <span class="hljs-keyword">return</span> futures.stream()
+        .flatMap(f -&gt; f.join().stream())
+        .distinct()
+        .collect(Collectors.toList());
+}
+</code></pre>
+<p><strong>为什么需要重叠区域？</strong></p>
+<p>假设敏感词 <code>&quot;赌博网站&quot;</code> 长度为 4，分块大小为 100。若文本恰好从位置 99 开始出现该词，会被切分到两个 chunk：</p>
+<ul>
+<li>chunk1: <code>...文本结束于位置99赌</code></li>
+<li>chunk2: <code>博网站继续...</code></li>
+</ul>
+<p>两个 chunk 都无法匹配完整的 <code>&quot;赌博网站&quot;</code>，导致漏报。重叠区域确保每个敏感词都能在至少一个 chunk 中完整出现。</p>
+<h3 id="快速排除布隆过滤器" tabindex="-1">快速排除：布隆过滤器</h3>
+<p>使用<strong>布隆过滤器（Bloom Filter）</strong> 做初筛，可以快速排除不含敏感词的文本。</p>
+<p><strong>适用前提</strong>：该方案仅在绝大多数文本不含敏感词且布隆过滤器假阳性率极低时有收益。因为 <code>quickCheck</code> 本身的复杂度为 O(L × maxWordLen)，与 Trie 匹配同阶，如果文本频繁命中布隆过滤器（假阳性），反而会增加额外开销。</p>
+<p><strong>注意</strong>：布隆过滤器检测的是单个元素的集合成员关系，需要对文本的子串进行检测，而非整段文本。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-type">List</span>&lt;String&gt; <span class="hljs-title function_">matchWithBloomFilter</span><span class="hljs-params">(String text, <span class="hljs-type">int</span> maxWordLength)</span> {
+    <span class="hljs-comment">// 快速检测：扫描所有可能的子串</span>
+    <span class="hljs-keyword">if</span> (!quickCheck(text, maxWordLength)) {
+        <span class="hljs-keyword">return</span> Collections.emptyList();  <span class="hljs-comment">// 确定不包含敏感词</span>
+    }
+    <span class="hljs-comment">// 可能包含敏感词，进行精确匹配</span>
+    <span class="hljs-keyword">return</span> trieRef.get().matchAll(text);
+}
+
+<span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> <span class="hljs-title function_">quickCheck</span><span class="hljs-params">(String text, <span class="hljs-type">int</span> maxWordLen)</span> {
+    <span class="hljs-type">BloomFilter</span>&lt;String&gt; <span class="hljs-variable">filter</span> <span class="hljs-operator">=</span> getBloomFilter();  <span class="hljs-comment">// 包含所有敏感词的布隆过滤器</span>
+    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; text.length(); i++) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">len</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span>; len &lt;= maxWordLen &amp;&amp; i + len &lt;= text.length(); len++) {
+            <span class="hljs-keyword">if</span> (filter.mightContain(text.substring(i, i + len))) {
+                <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;  <span class="hljs-comment">// 可能包含，需精确匹配</span>
+            }
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;  <span class="hljs-comment">// 确定不包含</span>
+}
+</code></pre>
+<p><strong>适用场景</strong>：敏感词覆盖率较低时，布隆过滤器可以快速排除大量不含敏感词的文本，减少 Trie 匹配次数。但布隆过滤器的扫描本身也有开销（O(L × maxWordLen)），需根据实际数据特征评估是否启用。</p>
+<h2 id="开源项目" tabindex="-1">开源项目</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>语言</th>
+<th>最低 JDK</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/toolgood/ToolGood.Words" target="_blank" rel="noopener">ToolGood.Words</a></td>
+<td>C#/Java/Python/Go/JS</td>
+<td>Java 8+</td>
+<td>多语言支持，内置繁简互换、全角半角、拼音转换；C# 版本过滤速度超 3 亿字符/秒</td>
+<td>多语言项目</td>
+</tr>
+<tr>
+<td><a href="https://hutool.cn/docs/#/dfa/%E6%A6%82%E8%BF%B0" target="_blank" rel="noopener">Hutool DFA</a></td>
+<td>Java</td>
+<td>Java 8+</td>
+<td>轻量级，API 简洁，基于 Trie 实现</td>
+<td>中小规模词库</td>
+</tr>
+<tr>
+<td><a href="https://github.com/hankcs/AhoCorasickDoubleArrayTrie" target="_blank" rel="noopener">AhoCorasickDoubleArrayTrie</a></td>
+<td>Java</td>
+<td>Java 7+</td>
+<td>AC 自动机 + 双数组 Trie，性能优异</td>
+<td>大规模词库、高吞吐量</td>
+</tr>
+</tbody>
+</table>
+<h2 id="生产建议" tabindex="-1">生产建议</h2>
+<h3 id="词库管理" tabindex="-1">词库管理</h3>
+<ul>
+<li><strong>定期更新</strong>：敏感词库需要持续维护，支持热加载避免重启服务。</li>
+<li><strong>分级管理</strong>：按业务场景分为高/中/低敏感度，采用不同的处理策略（直接拦截、人工审核、记录日志）。</li>
+<li><strong>白名单机制</strong>：维护白名单防止误杀。典型场景如敏感词 &quot;XXX&quot; 误杀正常词汇 &quot;XXY&quot;（子串误匹配）、&quot;公安&quot; 误杀 &quot;办公安排&quot; 等。常见应对策略包括白名单词组排除、要求最小匹配长度（如仅匹配完整词而非子串）、上下文窗口判定等。</li>
+<li><strong>匹配日志</strong>：记录匹配结果用于词库优化和误报分析。</li>
+</ul>
+<h3 id="异常处理" tabindex="-1">异常处理</h3>
+<ul>
+<li><strong>词库加载失败</strong>：构建新 Trie 失败时（如 OOM、文件损坏），应保留旧 Trie 不变，记录错误日志并告警。</li>
+<li><strong>空词库处理</strong>：词库为空时应记录 WARN 日志，而非静默放行所有文本。</li>
+<li><strong>匹配超时</strong>：超长文本 + 大词库场景可设置超时熔断。高风险内容超时后应拒绝、隔离或转人工审核，不能默认放行；只有明确的低风险场景经过业务审批后才可以采用 fail-open，并且要限制输入长度、记录指标和及时告警。</li>
+</ul>
+<h3 id="监控指标" tabindex="-1">监控指标</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>建议阈值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>匹配延迟（p99）</td>
+<td>&lt; 10ms</td>
+<td>单次过滤耗时</td>
+</tr>
+<tr>
+<td>误报率</td>
+<td>&lt; 1%</td>
+<td>正常内容被误判为敏感词</td>
+</tr>
+<tr>
+<td>漏报率</td>
+<td>持续监控</td>
+<td>敏感内容未被识别</td>
+</tr>
+<tr>
+<td>词库命中率</td>
+<td>按需分析</td>
+<td>各敏感词的触发频率，用于词库优化</td>
+</tr>
+</tbody>
+</table>
+<h3 id="架构建议" tabindex="-1">架构建议</h3>
+<p><img src="/img/sensitive-word-filter-arch-fc6046a9.png" alt="" loading="lazy"></p>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<h3 id="学术论文" tabindex="-1">学术论文</h3>
+<ul>
+<li>Unicode Standard Annex #15 - Unicode Normalization Forms：<a href="https://www.unicode.org/reports/tr15/" target="_blank" rel="noopener">https://www.unicode.org/reports/tr15/</a></li>
+<li>Unicode Technical Standard #39 - Unicode Security Mechanisms：<a href="https://www.unicode.org/reports/tr39/" target="_blank" rel="noopener">https://www.unicode.org/reports/tr39/</a></li>
+<li>Aho, A.V. and Corasick, M.J. (1975). &quot;<a href="https://dl.acm.org/doi/10.1145/360825.360855" target="_blank" rel="noopener">Efficient string matching: An aid to bibliographic search</a>.&quot; <em>Communications of the ACM</em>, 18(6), 333-340.（AC 自动机原始论文）</li>
+<li>Aoe, J., Morimoto, K., and Sato, T. (1989). &quot;<a href="https://www.co-ding.com/assets/pdf/dat.pdf" target="_blank" rel="noopener">An Efficient Implementation of Trie Structures</a>.&quot; <em>Software: Practice and Experience</em>.</li>
+</ul>
+<h3 id="相关专利" tabindex="-1">相关专利</h3>
+<ul>
+<li><a href="https://patents.google.com/patent/CN101964000B" target="_blank" rel="noopener">一种敏感词自动过滤管理系统</a></li>
+<li><a href="https://patents.google.com/patent/CN103714160A/zh" target="_blank" rel="noopener">一种网络游戏中敏感词过滤方法及系统</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

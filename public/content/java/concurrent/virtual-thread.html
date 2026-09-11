@@ -1,0 +1,308 @@
+<!-- @include: @article-header.snippet.md -->
+<p>一个 Web 请求进来，代码要查数据库、调远程接口、读写文件。按传统的同步写法，这个请求会占住一个平台线程，哪怕大部分时间都在等 I/O。</p>
+<p>线程池能缓解线程创建成本，但不能改变一个事实：平台线程数量仍然受操作系统线程数量、内存和调度成本限制。当并发请求继续增加时，线程池里的线程会被排队任务占满，吞吐量很快卡住。</p>
+<p>虚拟线程就是为这个问题来的。它让我们继续用简单的同步阻塞代码，同时让等待 I/O 的任务不再长期占着昂贵的平台线程。</p>
+<h2 id="什么是虚拟线程" tabindex="-1">什么是虚拟线程？</h2>
+<p>虚拟线程（Virtual Thread）是 Java 21 正式引入的一种轻量级线程，也是 <code>java.lang.Thread</code> 的一种实现。它由 JDK 管理和调度，而不是直接和某个操作系统线程一一绑定。</p>
+<p>平台线程（Platform Thread）通常是对操作系统线程的薄封装。一个平台线程运行时，会在整个生命周期内占用一个操作系统线程。虚拟线程不一样：它运行 Java 代码时需要挂载到某个平台线程上；当它执行可挂起的阻塞操作时，JDK 可以把它从平台线程上卸载下来，让这个平台线程去执行别的虚拟线程。</p>
+<p>因此，虚拟线程的数量可以远大于平台线程数量。官方文档里用虚拟内存做类比：操作系统把大量虚拟地址映射到有限物理内存，Java 运行时则把大量虚拟线程映射到较少的平台线程。</p>
+<p>虚拟线程的几个关键点：</p>
+<ul>
+<li>虚拟线程仍然是 <code>Thread</code>，支持 <code>ThreadLocal</code>、中断、异常栈、调试和 JFR 观测。</li>
+<li>虚拟线程适合大量阻塞等待的任务，比如 HTTP 调用、数据库查询、消息队列访问、文件或网络 I/O。</li>
+<li>虚拟线程不是更快的 CPU 执行单元，不会让一段纯计算代码跑得更快。</li>
+<li>虚拟线程很便宜，通常应该“每个任务一个虚拟线程”，而不是像平台线程一样池化复用。</li>
+</ul>
+<h2 id="虚拟线程和平台线程有什么关系" tabindex="-1">虚拟线程和平台线程有什么关系？</h2>
+<p>在 Java 里，虚拟线程、平台线程和操作系统线程大致是这样的关系：</p>
+<p><img src="/img/virtual-threads-platform-threads-kernel-threads--57103066.png" alt="" loading="lazy"></p>
+<p>在 Windows、Linux 等主流操作系统中，HotSpot JVM 的平台线程通常采用一对一线程模型，也就是一个平台线程对应一个操作系统线程。虚拟线程引入后，JDK 在平台线程之上又加了一层调度：</p>
+<ul>
+<li>虚拟线程是任务的承载者，业务代码看到的 <code>Thread.currentThread()</code> 返回的是虚拟线程本身。</li>
+<li>平台线程是虚拟线程的载体（Carrier Thread），负责真正执行虚拟线程里的 Java 代码。</li>
+<li>操作系统仍然只调度平台线程，不知道虚拟线程的存在。</li>
+</ul>
+<p>一个虚拟线程开始执行时，会被 JDK 调度器挂载（mount）到某个平台线程上。执行到阻塞 I/O、<code>BlockingQueue.take()</code>、<code>Future.get()</code> 等支持挂起的阻塞点时，虚拟线程可以卸载（unmount），平台线程被释放出来继续执行其他虚拟线程。等阻塞操作就绪后，虚拟线程再被提交回调度器，挂载到某个平台线程上继续执行。</p>
+<p>这个挂载和卸载过程对业务代码是透明的。你写的仍然是普通同步代码：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-type">String</span> <span class="hljs-variable">body</span> <span class="hljs-operator">=</span> httpClient.send(request, BodyHandlers.ofString()).body();
+<span class="hljs-type">Result</span> <span class="hljs-variable">result</span> <span class="hljs-operator">=</span> repository.query(body);
+<span class="hljs-keyword">return</span> service.handle(result);
+</code></pre>
+<p>如果这些调用内部发生阻塞，虚拟线程可以挂起自己；如果换成平台线程，这个线程会一直占住对应的操作系统线程。</p>
+<h2 id="project-loom-和虚拟线程是什么关系" tabindex="-1">Project Loom 和虚拟线程是什么关系？</h2>
+<p>Project Loom 是 OpenJDK 中改进 Java 并发模型的项目，虚拟线程是 Loom 最重要的成果之一。虚拟线程先后在 JDK 19、JDK 20 中预览，最终通过 <a href="https://openjdk.org/jeps/444" target="_blank" rel="noopener">JEP 444</a> 在 JDK 21 转正。</p>
+<p>Loom 不只是加了一个轻量级线程 API。它还推动了 JDK 阻塞 I/O、调试、JFR、线程转储等配套能力的调整，让传统的 thread-per-request 编程风格在高并发 I/O 场景下重新变得可扩展。</p>
+<p>这也是虚拟线程和普通“协程库”的一个重要区别：虚拟线程被纳入了 Java 平台的线程模型。调试器、Profiler、JFR、线程 dump 都能以线程为单位理解它，而不是把业务调用链拆成一堆回调阶段。</p>
+<h2 id="虚拟线程解决了什么问题" tabindex="-1">虚拟线程解决了什么问题？</h2>
+<p>很多服务端程序天然适合“一个请求一个线程”的模型。它的好处很明显：代码顺序执行，异常可以沿着调用栈抛出，调试器能一步步跟进去，线程 dump 也能看到请求卡在哪里。</p>
+<p>问题在于平台线程太贵。</p>
+<p>假设一个接口平均耗时 50ms，系统要达到 2000 QPS，按 Little's Law 粗略估算，需要同时处理约 100 个请求。如果接口平均耗时变成 500ms，同样 2000 QPS 就需要约 1000 个并发请求。每个请求都占一个平台线程时，线程数量很容易先于 CPU、网络带宽、数据库连接等资源成为瓶颈。</p>
+<p>异步编程、Reactive 编程可以把线程从等待 I/O 中释放出来，但代价也很明显：调用链被拆成回调、<code>CompletableFuture</code> 链或响应式流水线，异常处理、调试、火焰图和线程上下文都会变复杂。</p>
+<p>虚拟线程试图保留同步代码的可读性，同时降低阻塞等待时占用平台线程的成本。它提升的主要是吞吐能力和并发承载能力，不是单个请求的执行速度。</p>
+<h2 id="虚拟线程适合哪些场景" tabindex="-1">虚拟线程适合哪些场景？</h2>
+<p>虚拟线程最适合下面这类任务：</p>
+<ul>
+<li>并发任务数量很多，通常是成千上万级别。</li>
+<li>任务大部分时间在等待 I/O，比如数据库、Redis、HTTP/RPC、消息队列、文件和网络读写。</li>
+<li>现有代码主要是同步阻塞模型，不想为了扩展性改成复杂的异步链。</li>
+<li>希望保留传统调用栈，方便调试、压测分析和线上排查。</li>
+</ul>
+<p>典型场景包括：</p>
+<ul>
+<li>Spring MVC / Servlet 接口中调用数据库和外部 HTTP 服务。</li>
+<li>后台任务批量调用第三方接口。</li>
+<li>网关或聚合服务并发调用多个下游服务。</li>
+<li>消息消费逻辑中包含阻塞式数据库写入或远程调用。</li>
+</ul>
+<p>虚拟线程不适合把 CPU 密集型任务“变快”。如果任务主要是在算哈希、压缩图片、排序大数组、跑复杂规则引擎，线程数量超过 CPU 核心数之后，吞吐通常不会继续提高。CPU 密集型工作仍然应该关注算法、数据结构、批处理、并行流、专门的计算线程池或本地化优化。</p>
+<h2 id="如何创建虚拟线程" tabindex="-1">如何创建虚拟线程？</h2>
+<p>JDK 21 中常见的创建方式有四种。</p>
+<h3 id="使用-threadstartvirtualthread" tabindex="-1">使用 <code>Thread.startVirtualThread()</code></h3>
+<p>适合启动一个很简单的虚拟线程：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VirtualThreadDemo</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> <span class="hljs-keyword">throws</span> InterruptedException {
+    <span class="hljs-type">Thread</span> <span class="hljs-variable">thread</span> <span class="hljs-operator">=</span> Thread.startVirtualThread(() -&gt; {
+      System.out.println(Thread.currentThread());
+    });
+
+    thread.join();
+  }
+}
+</code></pre>
+<p>需要注意的是，虚拟线程是守护线程。如果 <code>main</code> 方法不等待它结束，JVM 可能直接退出，导致任务还没来得及执行完。</p>
+<h3 id="使用-threadofvirtual" tabindex="-1">使用 <code>Thread.ofVirtual()</code></h3>
+<p><code>Thread.ofVirtual()</code> 返回一个 <code>Thread.Builder.OfVirtual</code>，可以设置线程名，也可以选择创建后立即启动或先不启动：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VirtualThreadDemo</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> <span class="hljs-keyword">throws</span> InterruptedException {
+    <span class="hljs-type">Thread</span> <span class="hljs-variable">unstarted</span> <span class="hljs-operator">=</span> Thread.ofVirtual()
+        .name(<span class="hljs-string">&quot;order-query&quot;</span>)
+        .unstarted(() -&gt; System.out.println(<span class="hljs-string">&quot;query order&quot;</span>));
+
+    unstarted.start();
+    unstarted.join();
+
+    <span class="hljs-type">Thread</span> <span class="hljs-variable">started</span> <span class="hljs-operator">=</span> Thread.ofVirtual()
+        .name(<span class="hljs-string">&quot;payment-query&quot;</span>)
+        .start(() -&gt; System.out.println(<span class="hljs-string">&quot;query payment&quot;</span>));
+
+    started.join();
+  }
+}
+</code></pre>
+<h3 id="使用-threadfactory" tabindex="-1">使用 <code>ThreadFactory</code></h3>
+<p>如果你希望统一线程命名，或者把线程工厂交给框架使用，可以通过 <code>ThreadFactory</code> 创建虚拟线程：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.util.concurrent.ThreadFactory;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VirtualThreadDemo</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> <span class="hljs-keyword">throws</span> InterruptedException {
+    <span class="hljs-type">ThreadFactory</span> <span class="hljs-variable">factory</span> <span class="hljs-operator">=</span> Thread.ofVirtual()
+        .name(<span class="hljs-string">&quot;worker-&quot;</span>, <span class="hljs-number">0</span>)
+        .factory();
+
+    <span class="hljs-type">Thread</span> <span class="hljs-variable">thread</span> <span class="hljs-operator">=</span> factory.newThread(() -&gt; {
+      System.out.println(Thread.currentThread().getName());
+    });
+
+    thread.start();
+    thread.join();
+  }
+}
+</code></pre>
+<h3 id="使用-executorsnewvirtualthreadpertaskexecutor" tabindex="-1">使用 <code>Executors.newVirtualThreadPerTaskExecutor()</code></h3>
+<p>业务开发中最常见的是这种方式。它会为每个提交的任务创建一个新的虚拟线程：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.util.concurrent.ExecutorService;
+<span class="hljs-keyword">import</span> java.util.concurrent.Executors;
+<span class="hljs-keyword">import</span> java.util.concurrent.Future;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VirtualThreadDemo</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> <span class="hljs-keyword">throws</span> Exception {
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">ExecutorService</span> <span class="hljs-variable">executor</span> <span class="hljs-operator">=</span> Executors.newVirtualThreadPerTaskExecutor()) {
+      <span class="hljs-type">Future</span>&lt;String&gt; <span class="hljs-variable">future</span> <span class="hljs-operator">=</span> executor.submit(() -&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;hello virtual thread&quot;</span>;
+      });
+
+      System.out.println(future.get());
+    }
+  }
+}
+</code></pre>
+<p>这里的 <code>ExecutorService</code> 不是传统意义上的线程池。它不会维护一组固定虚拟线程来复用，而是每个任务一个新的虚拟线程。<code>try-with-resources</code> 结束时会调用 <code>close()</code>，等待已提交任务完成。</p>
+<h2 id="虚拟线程要不要池化" tabindex="-1">虚拟线程要不要池化？</h2>
+<p>不要池化虚拟线程。</p>
+<p>线程池的主要目标是复用昂贵的平台线程，并顺便限制并发。虚拟线程本身不是稀缺资源，池化它们通常没有意义，还会把“每个任务一个线程”的模型重新绕回旧思路。</p>
+<p>如果你的真实目标是限制访问某个资源的并发量，应该限制资源，而不是限制虚拟线程数量。比如某个老系统最多只能承受 20 个并发请求，可以用 <code>Semaphore</code> 控制并发：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.util.concurrent.Semaphore;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">OldServiceClient</span> {
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">Semaphore</span> <span class="hljs-variable">LIMIT</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Semaphore</span>(<span class="hljs-number">20</span>);
+
+  <span class="hljs-keyword">public</span> <span class="hljs-type">String</span> <span class="hljs-title function_">call</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> InterruptedException {
+    LIMIT.acquire();
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">return</span> doCall();
+    } <span class="hljs-keyword">finally</span> {
+      LIMIT.release();
+    }
+  }
+
+  <span class="hljs-keyword">private</span> <span class="hljs-type">String</span> <span class="hljs-title function_">doCall</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;ok&quot;</span>;
+  }
+}
+</code></pre>
+<p>如果瓶颈是数据库连接，那就调整连接池大小；如果瓶颈是下游接口限流，那就做限流、熔断和重试退避。虚拟线程能让等待变便宜，但不能让数据库连接、下游容量、CPU 和内存变无限。</p>
+<h2 id="虚拟线程和平台线程性能对比" tabindex="-1">虚拟线程和平台线程性能对比</h2>
+<p>先给结论：虚拟线程不是“跑得更快的线程”，而是“可以创建很多、阻塞成本更低的线程”。它通常能提升 I/O 密集型服务的吞吐，但不会降低一次数据库查询或一次 HTTP 调用本身的耗时。</p>
+<p>下面这个例子模拟 10,000 个阻塞 1 秒的任务：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">import</span> java.time.Duration;
+<span class="hljs-keyword">import</span> java.util.concurrent.ExecutorService;
+<span class="hljs-keyword">import</span> java.util.concurrent.Executors;
+<span class="hljs-keyword">import</span> java.util.stream.IntStream;
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">VirtualThreadCompareDemo</span> {
+  <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> {
+    <span class="hljs-type">long</span> <span class="hljs-variable">start</span> <span class="hljs-operator">=</span> System.currentTimeMillis();
+
+    <span class="hljs-keyword">try</span> (<span class="hljs-type">ExecutorService</span> <span class="hljs-variable">executor</span> <span class="hljs-operator">=</span> Executors.newVirtualThreadPerTaskExecutor()) {
+      IntStream.range(<span class="hljs-number">0</span>, <span class="hljs-number">10_000</span>).forEach(i -&gt; {
+        executor.submit(() -&gt; {
+          Thread.sleep(Duration.ofSeconds(<span class="hljs-number">1</span>));
+          <span class="hljs-keyword">return</span> i;
+        });
+      });
+    }
+
+    System.out.println(<span class="hljs-string">&quot;cost: &quot;</span> + (System.currentTimeMillis() - start) + <span class="hljs-string">&quot;ms&quot;</span>);
+  }
+}
+</code></pre>
+<p>如果把它换成 <code>Executors.newFixedThreadPool(200)</code>，同一时间最多只有 200 个任务在执行，10,000 个任务会被分批处理。按每批 1 秒粗略估计，总耗时接近 50 秒。虚拟线程版本可以让这 10,000 个任务几乎同时进入等待状态，平台线程在等待期间被释放出来，总耗时更接近单个任务的等待时间。</p>
+<p>这个例子只能说明虚拟线程对“阻塞等待”友好，不是严谨基准测试。真实服务要看数据库连接池、HTTP 客户端连接池、下游限流、GC、对象分配、锁竞争、容器 CPU 配额等因素。</p>
+<h2 id="虚拟线程的底层原理是什么" tabindex="-1">虚拟线程的底层原理是什么？</h2>
+<p>可以把虚拟线程的执行过程拆成三件事：调度、挂载/卸载、栈管理。</p>
+<h3 id="调度" tabindex="-1">调度</h3>
+<p>平台线程依赖操作系统调度。虚拟线程由 JDK 自己的调度器调度，再由平台线程承载执行。JEP 444 中说明，虚拟线程调度器是一个采用 FIFO 模式的 work-stealing <code>ForkJoinPool</code>，它和并行流使用的 common pool 不是同一个池。</p>
+<p>默认情况下，调度器的并行度和可用处理器数量相关，可以通过下面的系统属性调整：</p>
+<ul>
+<li><code>jdk.virtualThreadScheduler.parallelism</code>：调度器目标并行度。</li>
+<li><code>jdk.virtualThreadScheduler.maxPoolSize</code>：调度器可扩展的平台线程上限。</li>
+</ul>
+<p>大多数业务系统不需要改这两个参数。优先排查连接池、限流、锁和阻塞点，通常比调整调度器参数更有效。</p>
+<h3 id="挂载和卸载" tabindex="-1">挂载和卸载</h3>
+<p>虚拟线程执行 Java 代码时，会挂载到某个平台线程上。遇到支持挂起的阻塞操作时，虚拟线程可以保存当前执行状态并卸载，平台线程继续服务其他虚拟线程。</p>
+<p>常见的 JDK 阻塞操作已经为虚拟线程做了适配。例如网络 I/O、<code>BlockingQueue</code>、<code>Future.get()</code> 等，在虚拟线程中阻塞时通常不会长期占住底层平台线程。</p>
+<p>不是所有阻塞都能卸载。JDK 21 到 JDK 23 中，虚拟线程在 <code>synchronized</code> 代码块或方法中阻塞，会出现 Pinning，也就是被固定在载体线程上。JDK 24 的 <a href="https://openjdk.org/jeps/491" target="_blank" rel="noopener">JEP 491</a> 改进了这一点，使虚拟线程在 <code>synchronized</code> 中阻塞时也能释放底层平台线程，消除了绝大多数由 <code>synchronized</code> 带来的 Pinning 场景。调用 native 方法或 Foreign Function &amp; Memory API 相关代码时，仍然要关注剩余的 Pinning 风险。</p>
+<h3 id="栈管理" tabindex="-1">栈管理</h3>
+<p>平台线程通常使用固定大小的操作系统线程栈。虚拟线程的栈以栈块对象的形式存放在 Java 堆中，可以随着执行过程增长和收缩。这也是虚拟线程能够大量创建的重要原因之一。</p>
+<p>不过，这并不代表虚拟线程没有内存成本。每个虚拟线程仍然是对象，也有栈块、局部变量、<code>ThreadLocal</code> 等内存开销。百万级虚拟线程不是免费的，只是比百万级平台线程现实得多。</p>
+<h2 id="什么是-pinning" tabindex="-1">什么是 Pinning？</h2>
+<p>Pinning 可以理解为“虚拟线程暂时没法从载体线程上卸载”。虚拟线程被固定在某个平台线程上后，它在阻塞期间会连带占住底层操作系统线程，扩展性也会跟着变差。</p>
+<p>在 JDK 21 到 JDK 23 中，最典型的 Pinning 场景是：虚拟线程在 <code>synchronized</code> 代码块或方法里执行阻塞 I/O。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-type">String</span> <span class="hljs-title function_">load</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> IOException {
+  <span class="hljs-keyword">return</span> remoteClient.get(<span class="hljs-string">&quot;/config&quot;</span>); <span class="hljs-comment">// JDK 21-23 中，这里阻塞时可能固定载体线程</span>
+}
+</code></pre>
+<p>短小、纯内存操作的 <code>synchronized</code> 问题不大。真正需要关注的是高频路径上持锁执行慢 I/O，例如持有对象锁时查数据库、调远程接口、读大文件。</p>
+<p>如果你使用 JDK 21 到 JDK 23，可以考虑：</p>
+<ul>
+<li>避免在 <code>synchronized</code> 内部执行慢 I/O。</li>
+<li>对高频阻塞锁场景使用 <code>ReentrantLock</code>，并用 <code>try/finally</code> 释放锁。</li>
+<li>用 JFR 观察 <code>jdk.VirtualThreadPinned</code> 事件。</li>
+<li>临时使用 <code>-Djdk.tracePinnedThreads=full</code> 定位被固定的调用栈。</li>
+</ul>
+<p>如果你使用 JDK 24 或更高版本，<code>synchronized</code> 导致的主要 Pinning 问题已经被 JEP 491 解决。选择 <code>synchronized</code> 还是 <code>java.util.concurrent.locks</code>，可以重新回到代码语义、可维护性和锁能力本身来判断。</p>
+<h2 id="使用虚拟线程有哪些注意事项" tabindex="-1">使用虚拟线程有哪些注意事项？</h2>
+<h3 id="不要把虚拟线程当作提速-cpu-的工具" tabindex="-1">不要把虚拟线程当作提速 CPU 的工具</h3>
+<p>虚拟线程提升的是等待型任务的并发承载能力。CPU 密集型任务最终还是要抢 CPU 时间片，虚拟线程数量再多也不能突破 CPU 核心数的物理限制。</p>
+<h3 id="不要用线程池思维限制虚拟线程" tabindex="-1">不要用线程池思维限制虚拟线程</h3>
+<p>不要创建固定数量的虚拟线程池。需要限制并发时，用 <code>Semaphore</code>、连接池、限流器或队列容量限制具体资源。</p>
+<h3 id="小心-threadlocal-缓存大对象" tabindex="-1">小心 <code>ThreadLocal</code> 缓存大对象</h3>
+<p>Java 21 正式版保证虚拟线程支持 <code>ThreadLocal</code>，这有利于兼容老代码和框架。但不要用 <code>ThreadLocal</code> 给每个虚拟线程缓存大对象。</p>
+<p>以前在线程池里，一个 <code>ThreadLocal&lt;SimpleDateFormat&gt;</code> 可能只对应几十或几百个平台线程。迁移到虚拟线程后，如果每个任务一个虚拟线程，同样的写法可能变成每个任务创建一份缓存对象，内存和分配压力会被放大。</p>
+<p>如果只是传递请求上下文、用户 ID、Trace ID，通常问题不大。如果是缓存数据库连接、大数组、复杂 formatter、客户端对象，就要重新评估。JDK 25 通过 JEP 506 将 Scoped Values 转正，它更适合在大量虚拟线程之间传递不可变上下文。</p>
+<h3 id="虚拟线程不会消除线程安全问题" tabindex="-1">虚拟线程不会消除线程安全问题</h3>
+<p>虚拟线程让创建线程更便宜，也意味着你更容易同时跑起大量并发任务。原来因为线程池较小而没暴露的数据竞争，切到虚拟线程后可能更容易出现。</p>
+<p>需要继续遵守并发编程的基本规则：共享可变状态要加锁或隔离，数据库连接、会话对象、非线程安全客户端不要被多个虚拟线程同时乱用。</p>
+<h3 id="注意连接池和下游容量" tabindex="-1">注意连接池和下游容量</h3>
+<p>很多服务迁移到虚拟线程后，第一个瓶颈不再是业务线程池，而是数据库连接池、HTTP 连接池、Redis 连接数或下游限流。</p>
+<p>这不是虚拟线程的问题。虚拟线程只是让更多任务有机会同时推进，真正的共享资源仍然要按容量管理。压测时建议同时观察：</p>
+<ul>
+<li>应用 QPS、响应时间和错误率。</li>
+<li>数据库连接池活跃连接、等待队列和超时数。</li>
+<li>HTTP 客户端连接池和下游 429/5xx。</li>
+<li>CPU、堆内存、GC、对象分配速率。</li>
+<li>JFR 中的虚拟线程事件和锁竞争。</li>
+</ul>
+<h3 id="不要混用太多异步模型" tabindex="-1">不要混用太多异步模型</h3>
+<p>虚拟线程最适合同步阻塞代码。已经用 Reactive/WebFlux/Netty 写成全链路异步的系统，不一定能因为打开虚拟线程就获得明显收益。</p>
+<p>更麻烦的是混用模型：外层虚拟线程，内层又大量使用异步回调和线程池，排查时可能同时面对虚拟线程、事件循环、业务线程池、连接池几套上下文。迁移时最好先挑同步阻塞链路试点，而不是全系统一键替换。</p>
+<h2 id="spring-boot-如何开启虚拟线程" tabindex="-1">Spring Boot 如何开启虚拟线程？</h2>
+<p>Spring Boot 3.2 开始提供了比较直接的开关。使用 Java 21 或更高版本时，可以在配置中开启：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">spring.threads.virtual.enabled</span>=<span class="hljs-string">true</span>
+</code></pre>
+<p>Spring Boot 官方文档还提到几个实践点：</p>
+<ul>
+<li>开启虚拟线程后，配置传统线程池大小的部分属性不再按原来的方式生效，因为虚拟线程调度依赖 JVM 范围内的平台线程池。</li>
+<li>虚拟线程是守护线程。如果应用依赖 <code>@Scheduled</code> 等后台任务保持 JVM 存活，建议设置 <code>spring.main.keep-alive=true</code>。</li>
+<li>Spring Boot 官方目前建议 Java 24 或更高版本获得更好的虚拟线程体验，主要和 Pinning 改进有关。</li>
+</ul>
+<p>一个简单配置如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">spring:</span>
+  <span class="hljs-attr">threads:</span>
+    <span class="hljs-attr">virtual:</span>
+      <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">main:</span>
+    <span class="hljs-attr">keep-alive:</span> <span class="hljs-literal">true</span>
+</code></pre>
+<p>开启之后，不代表所有接口都会变快。它更可能改善的是同步阻塞、I/O 等待明显、并发较高的接口。如果接口主要耗在 CPU、锁竞争、慢 SQL 本身或下游限流上，虚拟线程只能让问题更早暴露。</p>
+<h2 id="如何排查虚拟线程问题" tabindex="-1">如何排查虚拟线程问题？</h2>
+<p>JDK 已经为虚拟线程补了不少观测能力。</p>
+<h3 id="使用-jcmd-导出线程转储" tabindex="-1">使用 <code>jcmd</code> 导出线程转储</h3>
+<p>传统 <code>jstack</code> 面对成千上万个虚拟线程时不太合适。JDK 提供了新的线程转储能力：</p>
+<pre class="md-pre"><code class="hljs">jcmd &lt;pid&gt; Thread.dump_to_file -format=json thread-dump.json
+</code></pre>
+<p>也可以导出文本格式：</p>
+<pre class="md-pre"><code class="hljs">jcmd &lt;pid&gt; Thread.dump_to_file -format=text thread-dump.txt
+</code></pre>
+<p>JSON 格式更适合工具分析，尤其是虚拟线程数量很多时。</p>
+<h3 id="使用-jfr-观察虚拟线程事件" tabindex="-1">使用 JFR 观察虚拟线程事件</h3>
+<p>JFR 中和虚拟线程相关的事件包括：</p>
+<ul>
+<li><code>jdk.VirtualThreadStart</code></li>
+<li><code>jdk.VirtualThreadEnd</code></li>
+<li><code>jdk.VirtualThreadPinned</code></li>
+<li><code>jdk.VirtualThreadSubmitFailed</code></li>
+</ul>
+<p>其中 <code>jdk.VirtualThreadPinned</code> 对排查 Pinning 很有用。JDK 24 以后，<code>synchronized</code> 相关 Pinning 大多被解决，但 native/FFM 等剩余场景仍然可以通过 JFR 观察。</p>
+<h3 id="临时打开-pinning-栈追踪" tabindex="-1">临时打开 Pinning 栈追踪</h3>
+<p>在 JDK 21 到 JDK 23 中，可以临时使用：</p>
+<pre class="md-pre"><code class="hljs">-Djdk.tracePinnedThreads=full
+</code></pre>
+<p>它会在虚拟线程阻塞且被固定时打印调用栈，适合本地或测试环境定位问题。JDK 24 的 JEP 491 之后，<code>synchronized</code> 相关的主要 Pinning 场景已经改进；native/FFM 等剩余边界仍然建议结合 JFR 和线程转储判断。</p>
+<h2 id="虚拟线程常见面试题" tabindex="-1">虚拟线程常见面试题</h2>
+<h3 id="虚拟线程和平台线程的区别是什么" tabindex="-1">虚拟线程和平台线程的区别是什么？</h3>
+<p>平台线程通常和操作系统线程一一对应，创建和上下文切换成本较高，数量有限。虚拟线程由 JDK 调度，可以把大量虚拟线程映射到少量平台线程上。虚拟线程阻塞等待 I/O 时，通常可以从载体线程卸载，让平台线程继续执行其他虚拟线程。</p>
+<h3 id="虚拟线程为什么适合-io-密集型任务" tabindex="-1">虚拟线程为什么适合 I/O 密集型任务？</h3>
+<p>I/O 密集型任务大部分时间在等待外部资源。平台线程等待时会占住操作系统线程；虚拟线程等待时可以挂起自己并释放载体线程。这样同样数量的平台线程可以承载更多并发任务。</p>
+<h3 id="虚拟线程适合-cpu-密集型任务吗" tabindex="-1">虚拟线程适合 CPU 密集型任务吗？</h3>
+<p>不适合把它当作 CPU 提速工具。CPU 密集型任务需要真实 CPU 时间，线程数超过核心数后只会增加调度竞争。虚拟线程能改善高并发等待，不会让单个计算任务更快。</p>
+<h3 id="虚拟线程需要池化吗" tabindex="-1">虚拟线程需要池化吗？</h3>
+<p>不需要，也不建议。虚拟线程便宜，应该按任务创建。需要限制并发时，限制具体资源，比如数据库连接池、HTTP 连接池、<code>Semaphore</code>、限流器，而不是池化虚拟线程。</p>
+<h3 id="虚拟线程和协程一样吗" tabindex="-1">虚拟线程和协程一样吗？</h3>
+<p>它们都属于轻量级并发的思路，但 Java 虚拟线程是 <code>java.lang.Thread</code> 的实现，纳入了 Java 原有线程模型。业务代码不需要写 <code>async/await</code>，也不需要手动 yield。和 Go goroutine 相比，虚拟线程更强调兼容 Java 既有线程 API、调试工具和阻塞式代码风格。对开发者来说，它更像“便宜很多的线程”。</p>
+<h3 id="使用虚拟线程后还需要-reactive-编程吗" tabindex="-1">使用虚拟线程后还需要 Reactive 编程吗？</h3>
+<p>看场景。很多同步阻塞的服务端接口可以用虚拟线程获得更好的可读性和足够的吞吐，不必为了释放线程写复杂回调链。但 Reactive 仍然适合流式处理、背压、事件驱动、长连接和已经全链路异步化的系统。虚拟线程不是替代所有异步模型的银弹。</p>
+<h3 id="jdk-21-里的-synchronized-还能不能用" tabindex="-1">JDK 21 里的 <code>synchronized</code> 还能不能用？</h3>
+<p>可以用，但要注意边界。JDK 21 到 JDK 23 中，虚拟线程在 <code>synchronized</code> 内部执行阻塞操作可能出现 Pinning。短小的内存同步问题不大，高频路径上不要持有 <code>synchronized</code> 锁执行慢 I/O。JDK 24 通过 JEP 491 改进后，<code>synchronized</code> 相关 Pinning 已经基本解决。</p>
+<h2 id="参考资料" tabindex="-1">参考资料</h2>
+<ul>
+<li><a href="https://openjdk.org/jeps/444" target="_blank" rel="noopener">JEP 444: Virtual Threads</a></li>
+<li><a href="https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html" target="_blank" rel="noopener">Oracle Java 21 Documentation: Virtual Threads</a></li>
+<li><a href="https://openjdk.org/jeps/491" target="_blank" rel="noopener">JEP 491: Synchronize Virtual Threads without Pinning</a></li>
+<li><a href="https://openjdk.org/jeps/506" target="_blank" rel="noopener">JEP 506: Scoped Values</a></li>
+<li><a href="https://docs.spring.io/spring-boot/reference/features/spring-application.html#features.spring-application.virtual-threads" target="_blank" rel="noopener">Spring Boot Reference Documentation: Virtual threads</a></li>
+<li><a href="https://spring.io/blog/2022/10/11/embracing-virtual-threads/" target="_blank" rel="noopener">Spring Blog: Embracing Virtual Threads</a></li>
+<li><a href="https://inside.java/2024/02/04/sip094/" target="_blank" rel="noopener">Inside Java: Managing Throughput with Virtual Threads</a></li>
+<li><a href="https://quarkus.io/blog/virtual-thread-1/" target="_blank" rel="noopener">Quarkus Blog: When Quarkus meets Virtual Threads</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

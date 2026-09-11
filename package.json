@@ -1,0 +1,26 @@
+{
+  "name": "javaguide-report",
+  "version": "1.0.0",
+  "description": "JavaGuide 学习报告册 —— 已读划线 + 各科进度统计（Node.js + MySQL）",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node db.js --seed-only",
+    "build": "node build-content.js",
+    "verify": "node verify-links.js",
+    "fetch-images": "node download-images.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mysql2": "^3.11.5",
+    "undici": "^8.10.2"
+  },
+  "devDependencies": {
+    "highlight.js": "^11.12.0",
+    "markdown-it": "^15.0.1",
+    "markdown-it-anchor": "^10.0.0",
+    "markdown-it-container": "^4.0.0",
+    "mermaid": "^11.17.2"
+  }
+}

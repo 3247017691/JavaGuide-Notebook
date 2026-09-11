@@ -1,0 +1,223 @@
+<blockquote>
+<p>这部分内容主要根据 Gradle 官方文档整理，做了对应的删减，主要保留比较重要的部分，不涉及实战，主要是一些重要概念的介绍。</p>
+</blockquote>
+<p>Gradle 这部分内容属于可选内容，可以根据自身需求决定是否学习。国内 Java 后端项目里 Maven 仍然更常见，但 Android、部分 Spring Boot 项目以及需要高度定制构建流程的项目中，Gradle 使用得也很多。</p>
+<h2 id="gradle-介绍" tabindex="-1">Gradle 介绍</h2>
+<p>Gradle 官方文档是这样介绍的 Gradle 的：</p>
+<blockquote>
+<p>Gradle is an open-source <a href="https://en.wikipedia.org/wiki/Build_automation" target="_blank" rel="noopener">build automation</a> tool flexible enough to build almost any type of software. Gradle makes few assumptions about what you’re trying to build or how to build it. This makes Gradle particularly flexible.</p>
+<p>Gradle 是一个开源的构建自动化工具，它足够灵活，可以构建几乎任何类型的软件。Gradle 对你要构建什么或者如何构建它做了很少的假设。这使得 Gradle 特别灵活。</p>
+</blockquote>
+<p>简单来说，Gradle 就是一个运行在 JVM 上的自动化项目构建工具，用来帮助我们完成编译、测试、打包、发布等构建任务。</p>
+<p>对于开发者来说，Gradle 的主要作用主要有 3 个：</p>
+<ol>
+<li><strong>项目构建</strong>：提供标准的、跨平台的自动化项目构建方式。</li>
+<li><strong>依赖管理</strong>：方便快捷的管理项目依赖的资源（jar 包），避免资源间的版本冲突问题。</li>
+<li><strong>统一开发结构</strong>：提供标准的、统一的项目结构。</li>
+</ol>
+<p>Gradle 构建脚本可以使用 Groovy DSL 或 Kotlin DSL 编写。现在新项目里 Kotlin DSL 也很常见，它的类型提示和 IDE 支持通常更好。</p>
+<h2 id="groovy-介绍" tabindex="-1">Groovy 介绍</h2>
+<p>Gradle 是运行在 JVM 上的一个程序，构建脚本可以使用 Groovy 或 Kotlin 编写。历史上很多 Gradle 示例使用 Groovy DSL，因此先了解一点 Groovy 语法对阅读老项目很有帮助。</p>
+<p>Groovy 是运行在 JVM 上的脚本语言，是基于 Java 扩展的动态语言，它的语法和 Java 非常的相似，可以使用 Java 的类库。Groovy 可以用于面向对象编程，也可以用作纯粹的脚本语言。在语言的设计上它吸纳了 Java、Python、Ruby 和 Smalltalk 语言的优秀特性，比如动态类型转换、闭包和元编程支持。</p>
+<p>我们可以用学习 Java 的方式去学习 Groovy ，学习成本相对来说还是比较低的，即使开发过程中忘记 Groovy 语法，也可以用 Java 语法继续编码。</p>
+<p>基于 JVM 的语言有很多种，比如 Groovy、Kotlin、Java、Scala，它们最终都会编译生成 Java 字节码文件并在 JVM 上运行。</p>
+<h2 id="gradle-优势" tabindex="-1">Gradle 优势</h2>
+<p>Gradle 是新一代的构建系统，具有高效和灵活等诸多优势，广泛用于 Java 开发。不仅 Android 将其作为官方构建系统, 越来越多的 Java 项目比如 Spring Boot 也慢慢迁移到 Gradle。</p>
+<ul>
+<li>在灵活性上，Gradle 支持基于 Groovy 语言编写脚本，侧重于构建过程的灵活性，适合于构建复杂度较高的项目，可以完成非常复杂的构建。</li>
+<li>在粒度性上，Gradle 构建的粒度细化到了每一个 task 之中。并且它所有的 Task 源码都是开源的，在我们掌握了这一整套打包流程后，我们就可以通过去修改它的 Task 去动态改变其执行流程。</li>
+<li>在扩展性上，Gradle 支持插件机制，所以我们可以复用这些插件，就如同复用库一样简单方便。</li>
+</ul>
+<h2 id="gradle-wrapper-介绍" tabindex="-1">Gradle Wrapper 介绍</h2>
+<p>Gradle 官方文档是这样介绍的 Gradle Wrapper 的：</p>
+<blockquote>
+<p>The recommended way to execute any Gradle build is with the help of the Gradle Wrapper (in short just “Wrapper”). The Wrapper is a script that invokes a declared version of Gradle, downloading it beforehand if necessary. As a result, developers can get up and running with a Gradle project quickly without having to follow manual installation processes saving your company time and money.</p>
+<p>执行 Gradle 构建的推荐方法是借助 Gradle Wrapper(简而言之就是“Wrapper”)。Wrapper 它是一个脚本，调用了已经声明的 Gradle 版本，如果需要的话，可以预先下载它。因此，开发人员可以快速启动并运行 Gradle 项目，而不必遵循手动安装过程，从而为公司节省时间和金钱。</p>
+</blockquote>
+<p>我们可以称 Gradle Wrapper 为 Gradle 包装器，它将 Gradle 再次包装，让所有的 Gradle 构建方法在 Gradle 包装器的帮助下运行。</p>
+<p>Gradle Wrapper 的工作流程图如下（图源<a href="https://docs.gradle.org/current/userguide/gradle_wrapper.html" target="_blank" rel="noopener">Gradle Wrapper 官方文档介绍</a>）：</p>
+<p><img src="/img/efa7a0006b04051e2b84cd116c6ccdfc-6b4abbc2.png" alt="" loading="lazy"></p>
+<p>整个流程主要分为下面 3 步：</p>
+<ol>
+<li>首先当我们刚创建的时候，如果指定的版本没有被下载，就先会去 Gradle 的服务器中下载对应版本的压缩包；</li>
+<li>下载完成后需要先进行解压缩并且执行批处理文件；</li>
+<li>后续项目每次构建都会重用这个解压过的 Gradle 版本。</li>
+</ol>
+<p>Gradle Wrapper 会给我们带来下面这些好处：</p>
+<ol>
+<li>在给定的 Gradle 版本上标准化项目，从而实现更可靠和健壮的构建。</li>
+<li>可以让我们的电脑中不安装 Gradle 环境也可以运行 Gradle 项目。</li>
+<li>为不同的用户和执行环境（例如 IDE 或持续集成服务器）提供新的 Gradle 版本就像更改 Wrapper 定义一样简单。</li>
+</ol>
+<h3 id="生成-gradle-wrapper" tabindex="-1">生成 Gradle Wrapper</h3>
+<p>如果想要首次生成 Gradle Wrapper，需要本地先有可用的 Gradle。Gradle 中已经内置了 Wrapper Task，在项目根目录执行 <code>gradle wrapper</code> 命令即可生成 Gradle Wrapper。</p>
+<p>执行命令 <code>gradle wrapper</code> 命令时可以指定一些参数来控制 wrapper 的生成。具体有如下两个配置参数：</p>
+<ul>
+<li><code>--gradle-version</code>：用于指定使用的 Gradle 版本。</li>
+<li><code>--gradle-distribution-url</code>：用于指定下载 Gradle 发行版的 URL，该值通常类似于 <code>https://services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip</code>。</li>
+<li><code>--gradle-distribution-sha256-sum</code>：用于指定发行版压缩包的 SHA-256 校验值，可以降低下载文件被篡改的风险。</li>
+</ul>
+<p>执行<code>gradle wrapper</code>命令之后，Gradle Wrapper 就生成完成了，项目根目录中生成如下文件：</p>
+<pre class="md-pre"><code class="hljs">├── gradle
+│   └── <span class="hljs-keyword">wrapper</span>
+│       ├── gradle-<span class="hljs-keyword">wrapper</span>.jar
+│       └── gradle-<span class="hljs-keyword">wrapper</span>.properties
+├── gradlew
+└── gradlew.bat
+</code></pre>
+<p>每个文件的含义如下：</p>
+<ul>
+<li><code>gradle-wrapper.jar</code>：包含了 Gradle 运行时的逻辑代码。</li>
+<li><code>gradle-wrapper.properties</code>：定义了 Gradle 的版本号和 Gradle 运行时的行为属性。</li>
+<li><code>gradlew</code>：Linux/macOS 平台下，用于执行 Gradle 命令的包装器脚本。</li>
+<li><code>gradlew.bat</code>：Windows 平台下，用于执行 Gradle 命令的包装器脚本。</li>
+</ul>
+<p><code>gradle-wrapper.properties</code> 文件的内容如下：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">distributionBase</span>=<span class="hljs-string">GRADLE_USER_HOME</span>
+<span class="hljs-attr">distributionPath</span>=<span class="hljs-string">wrapper/dists</span>
+<span class="hljs-attr">distributionUrl</span>=<span class="hljs-string">https\://services.gradle.org/distributions/gradle-6.0.1-bin.zip</span>
+<span class="hljs-attr">zipStoreBase</span>=<span class="hljs-string">GRADLE_USER_HOME</span>
+<span class="hljs-attr">zipStorePath</span>=<span class="hljs-string">wrapper/dists</span>
+</code></pre>
+<ul>
+<li><code>distributionBase</code>：Gradle 解包后存储的父目录。</li>
+<li><code>distributionPath</code>：<code>distributionBase</code>指定目录的子目录。<code>distributionBase+distributionPath</code>就是 Gradle 解包后的存放的具体目录。</li>
+<li><code>distributionUrl</code>：Gradle 指定版本的压缩包下载地址。</li>
+<li><code>zipStoreBase</code>：Gradle 压缩包下载后存储父目录。</li>
+<li><code>zipStorePath</code>：<code>zipStoreBase</code>指定目录的子目录。<code>zipStoreBase+zipStorePath</code>就是 Gradle 压缩包的存放位置。</li>
+</ul>
+<h3 id="更新-gradle-wrapper" tabindex="-1">更新 Gradle Wrapper</h3>
+<p>更新 Gradle Wrapper 有 2 种方式：</p>
+<ol>
+<li>直接修改 <code>distributionUrl</code> 字段，然后执行 Gradle 命令。</li>
+<li>执行 <code>./gradlew wrapper --gradle-version [version]</code>。</li>
+</ol>
+<p>下面的命令会将 Gradle 版本升级为 9.5.1。</p>
+<pre class="md-pre"><code class="hljs">./gradlew wrapper --gradle-version 9.5.1
+</code></pre>
+<p><code>gradle-wrapper.properties</code> 文件中的 <code>distributionUrl</code> 属性也发生了改变。</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-attr">distributionUrl</span>=<span class="hljs-string">https\://services.gradle.org/distributions/gradle-9.5.1-bin.zip</span>
+</code></pre>
+<p>项目已经生成 Wrapper 后，日常构建优先使用 <code>./gradlew build</code>，而不是直接使用本机安装的 <code>gradle build</code>。这样可以确保团队成员和 CI 使用同一个 Gradle 版本。</p>
+<h3 id="自定义-gradle-wrapper" tabindex="-1">自定义 Gradle Wrapper</h3>
+<p>Gradle 已经内置了 Wrapper Task，因此构建 Gradle Wrapper 会生成 Gradle Wrapper 的属性文件，这个属性文件可以通过自定义 Wrapper Task 来设置。比如我们想要修改要下载的 Gradle 版本为 9.5.1，可以这么设置：</p>
+<pre class="md-pre"><code class="hljs">tasks.wrapper {
+    gradleVersion = <span class="hljs-string">&#x27;9.5.1&#x27;</span>
+}
+</code></pre>
+<p>也可以设置 Gradle 发行版压缩包的下载地址和 Gradle 解包后的本地存储路径等配置。</p>
+<pre class="md-pre"><code class="hljs">tasks.wrapper {
+    gradleVersion = <span class="hljs-string">&#x27;9.5.1&#x27;</span>
+    distributionUrl = <span class="hljs-string">&#x27;../../gradle-9.5.1-bin.zip&#x27;</span>
+    distributionPath = <span class="hljs-string">&#x27;wrapper/dists&#x27;</span>
+}
+</code></pre>
+<p><code>distributionUrl</code> 属性可以设置为本地的项目目录，你也可以设置为网络地址。</p>
+<h2 id="gradle-任务" tabindex="-1">Gradle 任务</h2>
+<p>在 Gradle 中，任务(Task)是构建执行的单个工作单元。</p>
+<p>Gradle 的构建是基于 Task 进行的，当你运行项目的时候，实际就是在执行了一系列的 Task 比如编译 Java 源码的 Task、生成 jar 文件的 Task。</p>
+<p>Task 的声明方式如下（还有其他几种声明方式）：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">// 声明一个名字为 helloTask 的 Task</span>
+task helloTask{
+     doLast{
+       println <span class="hljs-string">&quot;Hello&quot;</span>
+     }
+}
+</code></pre>
+<p>创建一个 Task 后，可以根据需要给 Task 添加不同的 Action，上面的“doLast”就是给队列尾增加一个 Action。</p>
+<pre class="md-pre"><code class="hljs"> <span class="hljs-comment">//在Action 队列头部添加Action</span>
+ Task doFirst(Action&lt;? super Task&gt; action);
+ Task doFirst(Closure action);
+
+ <span class="hljs-comment">//在Action 队列尾部添加Action</span>
+ Task doLast(Action&lt;? super Task&gt; action);
+ Task doLast(Closure action);
+
+ <span class="hljs-comment">//删除所有的Action</span>
+ Task deleteAllActions();
+</code></pre>
+<p>一个 Task 中可以有多个 Acton，从队列头部开始向队列尾部执行 Acton。</p>
+<p>Action 代表的是一个个函数、方法，每个 Task 都是一堆 Action 按序组成的执行图。</p>
+<p>Task 声明依赖的关键字是<code>dependsOn</code>，支持声明一个或多个依赖：</p>
+<pre class="md-pre"><code class="hljs">task first {
+ doLast {
+        println <span class="hljs-string">&quot;+++++first+++++&quot;</span>
+    }
+}
+task second {
+ doLast {
+        println <span class="hljs-string">&quot;+++++second+++++&quot;</span>
+    }
+}
+
+<span class="hljs-comment">// 指定多个 task 依赖</span>
+task print(<span class="hljs-attr">dependsOn :</span>[second,first]) {
+ doLast {
+      logger.quiet <span class="hljs-string">&quot;指定多个task依赖&quot;</span>
+    }
+}
+
+<span class="hljs-comment">// 指定一个 task 依赖</span>
+task third(<span class="hljs-attr">dependsOn :</span> print) {
+ doLast {
+      println <span class="hljs-string">&#x27;+++++third+++++&#x27;</span>
+    }
+}
+</code></pre>
+<p>执行 Task 之前，会先执行它的依赖 Task。</p>
+<p>我们还可以设置默认 Task，脚本中我们不调用默认 Task ，也会执行。</p>
+<pre class="md-pre"><code class="hljs">defaultTasks <span class="hljs-string">&#x27;clean&#x27;</span>, <span class="hljs-string">&#x27;run&#x27;</span>
+
+task clean {
+    doLast {
+        println <span class="hljs-string">&#x27;Default Cleaning!&#x27;</span>
+    }
+}
+
+task run {
+    doLast {
+        println <span class="hljs-string">&#x27;Default Running!&#x27;</span>
+    }
+}
+</code></pre>
+<p>Gradle 本身也内置了很多 Task 比如 copy（复制文件）、delete（删除文件）。</p>
+<pre class="md-pre"><code class="hljs">task deleteFile(<span class="hljs-attr">type:</span> Delete) {
+    delete <span class="hljs-string">&quot;C:\\Users\\guide\\Desktop\\test&quot;</span>
+}
+</code></pre>
+<h2 id="gradle-插件" tabindex="-1">Gradle 插件</h2>
+<p>Gradle 提供的是一套核心的构建机制，而 Gradle 插件则是运行在这套机制上的一些具体构建逻辑，其本质上和 <code>.gradle</code> 文件是相同。你可以将 Gradle 插件看作是封装了一系列 Task 并执行的工具。</p>
+<p>Gradle 插件主要分为两类：</p>
+<ul>
+<li>脚本插件：脚本插件就是一个普通的脚本文件，它可以被导入都其他构建脚本中。</li>
+<li>二进制插件 / 对象插件：在一个单独的插件模块中定义，其他模块通过 Plugin ID 应用插件。因为这种方式发布和复用更加友好，我们一般接触到的 Gradle 插件都是指二进制插件的形式。</li>
+</ul>
+<p>虽然 Gradle 插件与 .gradle 文件本质上没有区别，<code>.gradle</code> 文件也能实现 Gradle 插件类似的功能。但是，Gradle 插件使用了独立模块封装构建逻辑，无论是从开发开始使用来看，Gradle 插件的整体体验都更友好。</p>
+<ul>
+<li><strong>逻辑复用：</strong> 将相同的逻辑提供给多个相似项目复用，减少重复维护类似逻辑开销。当然 .gradle 文件也能做到逻辑复用，但 Gradle 插件的封装性更好；</li>
+<li><strong>组件发布：</strong> 可以将插件发布到 Maven 仓库进行管理，其他项目可以使用插件 ID 依赖。当然 .gradle 文件也可以放到一个远程路径被其他项目引用；</li>
+<li><strong>构建配置：</strong> Gradle 插件可以声明插件扩展来暴露可配置的属性，提供定制化能力。当然 .gradle 文件也可以做到，但实现会麻烦些。</li>
+</ul>
+<h2 id="gradle-构建生命周期" tabindex="-1">Gradle 构建生命周期</h2>
+<p>Gradle 构建的生命周期有三个阶段：<strong>初始化阶段，配置阶段</strong>和<strong>运行阶段</strong>。</p>
+<p><img src="/img/dadbdf59fccd9a2ebf60a2d018541e52-7b92535e.png" alt="" loading="lazy"></p>
+<p>在初始化阶段与配置阶段之间、配置阶段结束之后、执行阶段结束之后，我们都可以加一些定制化的 Hook。</p>
+<p><img src="/img/5c297ccc4dac83229ff3e19caee9d1d2-7361439b.png" alt="" loading="lazy"></p>
+<h3 id="初始化阶段" tabindex="-1">初始化阶段</h3>
+<p>Gradle 支持单项目和多项目构建。在初始化阶段，Gradle 确定哪些项目将参与构建，并为每个项目创建一个 <a href="https://docs.gradle.org/current/dsl/org.gradle.api.Project.html" target="_blank" rel="noopener">Project 实例</a> 。本质上也就是执行 <code>settings.gradle</code> 脚本，从而读取整个项目中有多少个 Project 实例。</p>
+<h3 id="配置阶段" tabindex="-1">配置阶段</h3>
+<p>在配置阶段，Gradle 会解析每个工程的 <code>build.gradle</code> 文件，创建要执行的任务子集和确定各种任务之间的关系，以供执行阶段按照顺序执行，并对任务的做一些初始化配置。</p>
+<p>每个 <code>build.gradle</code> 对应一个 Project 对象，配置阶段执行的代码包括 <code>build.gradle</code> 中的各种语句、闭包以及 Task 中的配置语句。</p>
+<p>在配置阶段结束后，Gradle 会根据 Task 的依赖关系会创建一个 <strong>有向无环图</strong> 。</p>
+<h3 id="运行阶段" tabindex="-1">运行阶段</h3>
+<p>在运行阶段，Gradle 根据配置阶段创建和配置的要执行的任务子集，执行任务。</p>
+<h2 id="参考" tabindex="-1">参考</h2>
+<ul>
+<li>Gradle 官方文档：<a href="https://docs.gradle.org/current/userguide/userguide.html" target="_blank" rel="noopener">https://docs.gradle.org/current/userguide/userguide.html</a></li>
+<li>Gradle 入门教程：<a href="https://www.imooc.com/wiki/gradlebase" target="_blank" rel="noopener">https://www.imooc.com/wiki/gradlebase</a></li>
+<li>Groovy 快速入门看这篇就够了：<a href="https://cloud.tencent.com/developer/article/1358357" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1358357</a></li>
+<li>【Gradle】Gradle 的生命周期详解：<a href="https://juejin.cn/post/7067719629874921508" target="_blank" rel="noopener">https://juejin.cn/post/7067719629874921508</a></li>
+<li>手把手带你自定义 Gradle 插件 —— Gradle 系列(2)：<a href="https://www.cnblogs.com/pengxurui/p/16281537.html" target="_blank" rel="noopener">https://www.cnblogs.com/pengxurui/p/16281537.html</a></li>
+<li>Gradle 爬坑指南 -- 理解 Plugin、Task、构建流程：<a href="https://juejin.cn/post/6889090530593112077" target="_blank" rel="noopener">https://juejin.cn/post/6889090530593112077</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->

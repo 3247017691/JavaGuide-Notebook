@@ -1,0 +1,205 @@
+<p>在数据库性能优化中，索引是最直接有效的优化手段之一。然而，<strong>建了索引并不等于一定能用上索引</strong>。实际开发中，我们经常遇到这样的困惑：明明在字段上建立了索引，查询却依然慢如蜗牛，通过 <code>EXPLAIN</code> 分析发现居然是全表扫描。</p>
+<p>导致索引失效的原因多种多样，既有 SQL 语句写法问题，也有索引设计不当的因素。有些失效场景是显性的（如违背最左前缀原则），有些则非常隐蔽（如隐式类型转换）。如果不深入了解这些失效场景，很容易在生产环境中埋下性能隐患。</p>
+<p>本文将系统总结 MySQL 索引失效的常见场景，分析失效背后的原理机制，并提供相应的优化建议，帮助你在日常开发和排查问题中快速定位并解决索引失效问题。</p>
+<h3 id="select-查询成本权衡" tabindex="-1">SELECT * 查询（成本权衡）</h3>
+<ul>
+<li><strong>核心定义</strong>：<code>SELECT *</code> 本身<strong>不会直接导致索引失效</strong>。它是一种”非覆盖索引”查询，如果 <code>WHERE</code> 条件命中了索引，索引依然会被初步考虑。</li>
+<li><strong>回表成本决策</strong>：当查询需要的字段不在索引树中时，MySQL 必须拿着主键回聚簇索引查找整行数据（回表）。优化器会对比”索引扫描 + 回表”与”直接全表扫描”的成本。如果查询结果占总数据量的比例较高（通常阈值在 20%~30%），优化器会认为全表扫描的顺序 IO 效率高于回表的随机 IO，从而<strong>主动放弃索引</strong>。</li>
+<li><strong>场景权衡</strong>：
+<ul>
+<li><strong>覆盖索引场景</strong>：如果查询只需索引覆盖的字段，使用覆盖索引可以避免回表，性能最优。</li>
+<li><strong>回表不可避免时</strong>：如果业务确实需要多个非索引字段，直接 <code>SELECT 需要的字段</code> 即可。当需要大部分字段时，代码可读性可能比”省几个字段”的微优化更重要，此时用 <code>SELECT *</code> 也无妨。</li>
+</ul>
+</li>
+<li><strong>落地建议</strong>：优先 <code>SELECT 需要的字段</code>，能覆盖索引最好；如果需要大量字段且回表不可避免，不必教条地”省字段”。</li>
+</ul>
+<h3 id="违背最左前缀原则" tabindex="-1">违背最左前缀原则</h3>
+<ul>
+<li><strong>核心定义</strong>：最左前缀匹配原则指的是在使用联合索引时，MySQL 会根据索引中的字段顺序，从左到右依次匹配查询条件中的字段。如果查询条件与索引中的最左侧字段相匹配，那么 MySQL 就会使用索引来过滤数据。</li>
+<li><strong>范围查询的中断效应</strong>：在联合索引中，如果某个字段使用了范围查询（例如 &gt;、&lt;、BETWEEN、前缀匹配 LIKE &quot;abc%&quot;），该字段本身以及其之前的列可以正常匹配并用于索引的精确定位，但该字段之后的列将无法利用
+索引进行快速定位（即无法使用 ref 类型的二分查找）。这是因为在 B+Tree 索引结构中，只有当前导列完全相等时，后续列才是有序的。一旦前导列变成一个范围，后续列在整个扫描区间内就呈现相对无序状态，从而中断了精准定位能力。不过，在 MySQL 5.6 及以上版本中，这些后续列并未完全失效，而是降级为使用<strong>索引下推（Index Condition Pushdown, ICP）机制</strong>，在范围扫描的过程中直接进行条件过滤，以此来减少回表次数。</li>
+<li><strong>索引跳跃扫描 (ISS)</strong>：MySQL 8.0.13 引入了<strong>索引跳跃扫描（Index Skip Scan）</strong>，允许在缺失最左前缀时，通过枚举前导列的所有 Distinct 值来跳跃扫描后续索引树。
+<ul>
+<li><strong>版本避坑指南</strong>：在 <strong>MySQL 8.0.31</strong> 中，ISS 存在严重 Bug（<a href="https://bugs.mysql.com/bug.php?id=109145" target="_blank" rel="noopener">[Bug #109145]</a>），在跨 Range 读取时未清理陈旧的边界值，会导致查询直接<strong>丢失数据</strong>。</li>
+<li><strong>落地建议</strong>：ISS 在前导列基数（Cardinality）极低（如性别、状态枚举）时性能最优，因为优化器需要枚举前导列的所有 distinct 值逐一跳跃扫描——distinct 值越少，跳跃次数越少。但&quot;基数低&quot;本身并非官方限制条件，优化器会综合评估成本决定是否触发 ISS。在生产环境中，<strong>严禁依赖 ISS 来弥补糟糕的索引设计</strong>，必须通过调整联合索引顺序或补齐前导列条件来满足最左前缀。</li>
+</ul>
+</li>
+</ul>
+<p><strong>Index Skip Scan 失败路径图：</strong></p>
+<div class="md-mermaid"><pre class="mermaid-src">sequenceDiagram
+    participant Executor
+    participant InnoDB_Index
+
+    Note over Executor, InnoDB_Index: MySQL 8.0.31 触发 ISS Bug 场景
+    Executor-&gt;&gt;InnoDB_Index: Read Range 1 (Prefix A)
+    InnoDB_Index--&gt;&gt;Executor: Return Rows, Set End-of-Range = X
+    Executor-&gt;&gt;InnoDB_Index: Read Range 2 (Prefix B)
+    Note right of InnoDB_Index: [BUG] 未清理上一个 Range 的 End-of-Range X
+    InnoDB_Index--&gt;&gt;Executor: 发现当前值 &gt; X，错误判定越界，提前终止！
+    Note over Executor: 导致结果集丢失 (Incorrect Result)
+</pre></div>
+<p>失效示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">-- 索引：(sname, s_code, address)</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> s_code <span class="hljs-operator">=</span> <span class="hljs-number">1</span>;                  <span class="hljs-comment">-- 跳过最左列 sname，索引失效</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;A&#x27;</span> <span class="hljs-keyword">AND</span> address <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;Shanghai&#x27;</span>; <span class="hljs-comment">-- 跳过中间列，仅 sname 走索引（索引下推 ICP 可优化过滤）</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;A&#x27;</span> <span class="hljs-keyword">AND</span> s_code <span class="hljs-operator">&gt;</span> <span class="hljs-number">1</span> <span class="hljs-keyword">AND</span> address <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;Shanghai&#x27;</span>; <span class="hljs-comment">-- 范围查询后，address 无法用于定位，仅用于过滤</span>
+</code></pre>
+<h3 id="在索引列上进行计算函数或类型转换" tabindex="-1">在索引列上进行计算、函数或类型转换</h3>
+<ul>
+<li><strong>核心定义</strong>：索引 B+Tree 存储的是字段的<strong>原始值</strong>。一旦在 <code>WHERE</code> 条件中对索引列应用了函数（如 <code>ABS()</code>、<code>DATE()</code>）或算术运算，该列的值在逻辑上发生了改变。</li>
+<li><strong>有序性破坏效应</strong>：由于 B+Tree 是基于原始值排序的，经过函数处理后的结果在索引树中是<strong>无序</strong>的。数据库无法利用二分查找快速定位，只能被迫进行全表扫描。</li>
+<li><strong>函数索引</strong>：MySQL 8.0 支持<strong>函数索引</strong>（Functional Index），可针对计算后的值建索引，但使用场景有限，首选还是优化 SQL 写法。</li>
+</ul>
+<p>失效示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> height <span class="hljs-operator">+</span> <span class="hljs-number">1</span> <span class="hljs-operator">=</span> <span class="hljs-number">170</span>;            <span class="hljs-comment">-- 对索引列进行计算</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> <span class="hljs-type">DATE</span>(create_time) <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;2022-01-01&#x27;</span>; <span class="hljs-comment">-- 对索引列使用函数</span>
+</code></pre>
+<p>优化建议：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> height <span class="hljs-operator">=</span> <span class="hljs-number">169</span>;                <span class="hljs-comment">-- 将计算移到等号右边</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> create_time <span class="hljs-keyword">BETWEEN</span> <span class="hljs-string">&#x27;2022-01-01 00:00:00&#x27;</span> <span class="hljs-keyword">AND</span> <span class="hljs-string">&#x27;2022-01-01 23:59:59&#x27;</span>;
+</code></pre>
+<h3 id="like-模糊查询以通配符开头" tabindex="-1">LIKE 模糊查询以通配符开头</h3>
+<ul>
+<li><strong>核心定义</strong>：<code>LIKE</code> 查询必须以具体字符开头才能利用索引有序性，例如 <code>WHERE sname LIKE 'Guide%';</code>。这是因为 B+ 树是从左到右排序的。前缀通配符（<code>%</code>）破坏了有序性，无法定位起始点。</li>
+<li><strong>前缀通配符的失效机制</strong>：如果以 <code>%</code> 开头（如 <code>'%abc'</code>），由于索引是按字符从左到右排序的，前缀不确定意味着可能出现在索引树的任何位置，导致无法定位搜索区间的起始点。</li>
+<li><strong>落地建议</strong>：
+<ul>
+<li>如果必须进行全模糊查询，尽量只查询索引覆盖的列，此时 <code>EXPLAIN</code> 会显示 <code>type: index</code>（<strong>Index Full Scan</strong>），虽然扫描了整棵树，但无需回表，性能仍优于 <code>ALL</code>。</li>
+<li>核心业务的大规模模糊搜索应通过 <strong>ElasticSearch</strong> 或其他搜索引擎实现。</li>
+</ul>
+</li>
+</ul>
+<p>失效示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-keyword">LIKE</span> <span class="hljs-string">&#x27;%Guide&#x27;</span>;          <span class="hljs-comment">-- 前缀模糊，全表扫描</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-keyword">LIKE</span> <span class="hljs-string">&#x27;%Guide%&#x27;</span>;         <span class="hljs-comment">-- 前后模糊，全表扫描</span>
+</code></pre>
+<h3 id="or-连接与-index-merge" tabindex="-1">OR 连接与 Index Merge</h3>
+<ul>
+<li><strong>核心定义</strong>：在 <code>OR</code> 连接的多个条件中，只要有<strong>任意一列没有索引</strong>，MySQL 就会放弃所有索引转而执行全表扫描。</li>
+<li><strong>Index Merge 机制</strong>：若 <code>OR</code> 两侧都有索引，MySQL 5.1+ 可能会触发**索引合并（Index Merge）**优化，分别扫描两个索引后取并集。不过，如果两个索引过滤后的数据量都很大，合并结果集的成本可能高于全表扫描，依然会放弃索引。</li>
+<li><strong>落地建议</strong>：
+<ul>
+<li>优先将 <code>OR</code> 改写为 <code>UNION ALL</code>。<code>UNION ALL</code> 可以让每一段查询独立使用索引，且规避了优化器对 <code>OR</code> 成本估算不准的问题。</li>
+<li>注意：只有当确定结果集不重复时才用 <code>UNION ALL</code>，否则需用 <code>UNION</code>（涉及临时表去重，有额外开销）。</li>
+</ul>
+</li>
+</ul>
+<p>失效示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-comment">-- 假设 sname 和 address 都有索引，但各匹配 30%+ 数据</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;学生 1&#x27;</span> <span class="hljs-keyword">OR</span> address <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;上海&#x27;</span>; <span class="hljs-comment">-- 可能放弃索引，全表扫描</span>
+
+<span class="hljs-comment">-- 建议改写为</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> sname <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;学生 1&#x27;</span>
+<span class="hljs-keyword">UNION</span> <span class="hljs-keyword">ALL</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> address <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;上海&#x27;</span>; <span class="hljs-comment">-- 各自走索引</span>
+</code></pre>
+<p><strong>验证方式</strong>：<code>EXPLAIN</code> 中若出现 <code>type: index_merge</code> 和 <code>Extra: Using union; Using where</code>，说明使用了 Index Merge。</p>
+<h3 id="in-not-in-使用不当" tabindex="-1">IN / NOT IN 使用不当</h3>
+<p><strong><code>IN</code> 列表长度</strong>：</p>
+<ul>
+<li><code>eq_range_index_dive_limit</code>（默认 <strong>200</strong>）并不直接导致索引失效，而是影响<strong>行数估算策略</strong>：
+<ul>
+<li><strong>&lt;= 200</strong>：MySQL 使用 <strong>Index Dive</strong>（深入索引树探测）精确估算行数，成本估算准确，索引大概率有效。</li>
+<li><strong>&gt; 200</strong>：当 <code>IN</code> 列表长度超过 <code>eq_range_index_dive_limit</code>（MySQL 5.7.4+ 默认为 200）时，优化器从精确的 Index Dive 切换为基于 <code>index_statistics</code> 的估算。若表数据的基数（Cardinality）统计陈旧，可能导致估算成本异常，从而放弃走范围扫描（Range Scan）而选择全表扫描。</li>
+</ul>
+</li>
+<li>可通过调大 <code>eq_range_index_dive_limit</code> 或改写为 <code>JOIN</code> 临时表来规避。</li>
+</ul>
+<p><strong><code>NOT IN</code></strong> ：</p>
+<ul>
+<li><strong>常量列表</strong>（如 <code>NOT IN (1,2,3)</code>）：通常全表扫描，因需遍历整个 B+ 树证明&quot;不在集合中&quot;。</li>
+<li><strong>子查询关联索引列</strong>：<code>WHERE id NOT IN (SELECT user_id FROM orders WHERE user_id &gt; 1000)</code> 可用 <code>orders</code> 表的 <code>user_id</code> 索引。</li>
+<li><strong>推荐替代</strong>：优先使用 <code>NOT EXISTS</code> 或 <code>LEFT JOIN / IS NULL</code>，性能更优且语义更清晰。</li>
+</ul>
+<p>失效示例：</p>
+<pre class="md-pre"><code class="hljs"><span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> s_code <span class="hljs-keyword">IN</span> (<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, ..., <span class="hljs-number">500</span>); <span class="hljs-comment">-- 列表过长，可能改用统计估算导致误判</span>
+<span class="hljs-keyword">SELECT</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">FROM</span> students <span class="hljs-keyword">WHERE</span> s_code <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">IN</span> (<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);     <span class="hljs-comment">-- 常量列表，全表扫描</span>
+</code></pre>
+<h3 id="隐式类型转换" tabindex="-1">隐式类型转换</h3>
+<p>这是开发中最隐蔽的坑，<strong>转换的方向决定了索引的生死</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>示例</th>
+<th>转换方向</th>
+<th>索引是否有效</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>字符串列 + 数字值</strong></td>
+<td><code>varchar_col = 123</code></td>
+<td>字符串转数字（发生在索引列）</td>
+<td>❌ 失效</td>
+</tr>
+<tr>
+<td><strong>数字列 + 字符串值</strong></td>
+<td><code>int_col = '123'</code></td>
+<td>字符串转数字（发生在常量）</td>
+<td>✅ 有效</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键点</strong>：</p>
+<ul>
+<li>只有当<strong>转换发生在索引列上</strong>时，索引才会失效。</li>
+<li>当字符串与数字进行比较时，MySQL 默认将字符串转换为**浮点数（DOUBLE）**进行比较（详见 <a href="https://dev.mysql.com/doc/refman/8.0/en/type-conversion.html" target="_blank" rel="noopener">MySQL 官方文档规则 7</a>）。对索引列发生隐式类型转换等同于在索引列上应用了不可逆的转换函数，破坏了 B+ 树的有序性，导致只能走全表扫描。</li>
+<li><code>int_col = '123'</code> 会被转换为 <code>int_col = CAST('123' AS DOUBLE)</code>，转换发生在常量侧，不影响索引使用。</li>
+</ul>
+<p><strong>详细介绍</strong>：<a href="/read/database/mysql/index-invalidation-caused-by-implicit-conversion.html">MySQL隐式转换造成索引失效</a></p>
+<h3 id="order-by-排序优化陷阱" tabindex="-1">ORDER BY 排序优化陷阱</h3>
+<p>即使 <code>WHERE</code> 条件精准，如果 <code>ORDER BY</code> 处理不好，依然会出现慢查询。</p>
+<p><strong>触发 <code>Using filesort</code> 的条件</strong>：</p>
+<ul>
+<li>排序字段不在索引中</li>
+<li>索引顺序与 <code>ORDER BY</code> 不一致（如索引 <code>(a,b)</code> 但 <code>ORDER BY b,a</code>）</li>
+<li><code>WHERE</code> 与 <code>ORDER BY</code> 分别使用不同索引</li>
+<li>排序列包含 <code>SELECT *</code> 中非索引列（需回表排序）</li>
+</ul>
+<p><strong>优化方案</strong>：</p>
+<ul>
+<li>利用<strong>覆盖索引</strong>同时满足 <code>WHERE</code> 和 <code>ORDER BY</code>。例如索引为 <code>(name, age)</code>，查询 <code>SELECT name, age FROM users WHERE name = 'A' ORDER BY age</code>。</li>
+<li>调整索引顺序以匹配 <code>ORDER BY</code>。</li>
+</ul>
+<p><strong>验证方式</strong>：<code>EXPLAIN</code> 中 <code>Extra</code> 列出现 <code>Using filesort</code> 即表示触发了排序。</p>
+<h3 id="总结" tabindex="-1">总结</h3>
+<p>本文系统梳理了 MySQL 索引失效的常见场景，从底层机制上可归纳为以下两大核心类：</p>
+<p><strong>1. SQL 写法与底层逻辑冲突（破坏 B+Tree 有序性）</strong></p>
+<p>此类问题最为常见，本质是查询条件让底层的 B+Tree 失去了“二分查找”的快速定位能力。</p>
+<ul>
+<li><strong>违背最左前缀原则</strong>：跳过联合索引前导列，或遇到范围查询（如 <code>&gt;</code>、<code>&lt;</code>、<code>BETWEEN</code>、<code>LIKE &quot;abc%&quot;</code>）导致后续列中断精确定位，降级为范围扫描加过滤。</li>
+<li><strong>对索引列进行加工</strong>：在 <code>WHERE</code> 左侧对索引列进行数学计算或应用函数，导致原始数据发生逻辑改变，在索引树中呈现无序状态。</li>
+<li><strong>隐式类型转换（隐蔽且致命）</strong>：当“字符串类型的列”去比较“数字类型的值”时，MySQL 会默认在列上套用转换函数，直接破坏树的有序性。</li>
+<li><strong>LIKE 模糊查询前置通配符</strong>：如 <code>LIKE &quot;%abc&quot;</code>，前缀字符的不确定性使得优化器无法锁定扫描区间的起始点。</li>
+<li><strong>ORDER BY 排序陷阱</strong>：排序列未命中索引、排序方向与索引结构不一致等触发额外的内存或磁盘排序（<code>Using filesort</code>）。</li>
+</ul>
+<p><strong>2. 优化器的成本决策（基于 I/O 成本妥协）</strong></p>
+<p>此类问题并非索引本身不可用，而是 MySQL 优化器经过计算后，认为”不走普通索引”整体开销反而更小。<strong>需要特别说明的是：优化器选择全表扫描或回表查询，往往是正确的成本决策，而非”性能问题”</strong>。</p>
+<ul>
+<li><strong>回表查询是正常现象</strong>：当查询需要非索引覆盖的字段时，回表是不可避免的正常操作。索引过滤 + 回表获取业务字段是标准查询模式，并非”性能不佳”的表现。只有当回表次数过多（如命中数据量超过 20%~30%）且存在更优的全表扫描方案时，才需要关注。</li>
+<li><strong>全表扫描可能是最优选择</strong>：优化器选择全表扫描通常是基于成本计算的理性决策。当索引选择率低（命中数据量大）时，顺序 IO 的全表扫描往往比随机 IO 的索引回表更高效。这不是索引”失效”，而是优化器选择了更优的执行路径。</li>
+<li><strong><code>SELECT *</code> 的场景权衡</strong>：优先 <code>SELECT 需要的字段</code>，能命中覆盖索引最好。如果需要大量非索引字段且回表不可避免，不必教条地&quot;省字段&quot;——当需要大部分字段时，代码可读性可能比&quot;少传几个字段&quot;的微优化更重要。</li>
+<li><strong><code>OR</code> 条件导致全表扫描</strong>：只要 <code>OR</code> 连接的任意一侧条件没有对应索引，就会触发全表扫描。即使两侧都有索引，若 Index Merge（索引合并）的预期成本过高，依然会被放弃。</li>
+<li><strong><code>IN</code> 列表过长引发估算失真</strong>：当 <code>IN</code> 列表长度超过系统阈值（默认 200）时，优化器会从精准的深入探测（Index Dive）切换为粗略的统计估算，极易因统计信息陈旧而产生执行成本的误判。</li>
+</ul>
+<p><strong>实战建议</strong>：</p>
+<ol>
+<li><strong>养成 <code>EXPLAIN</code> 分析习惯</strong>：在编写复杂 SQL 后，务必使用 <code>EXPLAIN</code> 分析执行计划，重点关注 <code>type</code>、<code>key</code>、<code>rows</code>、<code>Extra</code> 字段。<strong>注意</strong>：<code>type: ALL</code> 不一定是问题，可能是优化器的正确决策。</li>
+<li><strong>根据场景选择查询策略</strong>：
+<ul>
+<li>如果查询字段能被索引覆盖，优先使用覆盖索引避免回表</li>
+<li>如果必须获取多个非索引字段，避免为了&quot;省字段&quot;而拆分多次查询，减少网络往返</li>
+</ul>
+</li>
+<li><strong>规范数据类型使用</strong>：保持查询条件与字段类型一致，避免隐式类型转换。</li>
+<li><strong>合理设计联合索引</strong>：按照查询频率和选择性安排字段顺序，优先满足高频查询场景。</li>
+<li><strong>大规模模糊搜索考虑 ES</strong>：对于前后模糊查询（<code>%keyword%</code>），建议使用 Elasticsearch 等搜索引擎。</li>
+</ol>
+<p>索引优化是数据库性能优化的基本功，但也需要结合实际业务场景和数据分布进行权衡。理解索引失效的根本原因，才能在遇到性能问题时快速定位并解决。</p>
+<p><strong>延伸阅读</strong>：</p>
+<ul>
+<li><a href="/read/database/mysql/mysql-index.html">MySQL 索引详解</a></li>
+<li><a href="/read/database/mysql/mysql-query-execution-plan.html">MySQL 执行计划分析</a></li>
+<li><a href="/read/database/mysql/index-invalidation-caused-by-implicit-conversion.html">MySQL 隐式转换造成索引失效</a></li>
+</ul>

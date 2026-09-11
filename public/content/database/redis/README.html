@@ -1,0 +1,68 @@
+<p>Redis 是后端开发最常用的缓存和高性能内存数据存储之一。学习 Redis 时，不能只停留在命令和数据类型上，还要理解缓存读写策略、底层数据结构、持久化、阻塞原因、内存管理、复制与集群等工程问题。</p>
+<h2 id="适合谁看" tabindex="-1">适合谁看</h2>
+<ul>
+<li>想系统学习 Redis 原理、缓存设计和工程实践的后端开发者。</li>
+<li>准备 Redis 数据结构、持久化、集群、高可用、缓存一致性相关面试题的同学。</li>
+<li>已经在项目中使用 Redis，但对缓存异常、阻塞、内存碎片和集群机制不够熟的读者。</li>
+<li>需要基于 Redis 实现延时任务、消息队列、排行榜、购物车等能力的工程师。</li>
+</ul>
+<h2 id="学习重点" tabindex="-1">学习重点</h2>
+<ul>
+<li>Redis 常用数据结构分别适合哪些业务场景，底层编码如何影响性能？</li>
+<li>缓存穿透、击穿、雪崩和缓存一致性问题应该如何设计方案？</li>
+<li>Redis 持久化中 RDB、AOF、AOF 重写和混合持久化有什么区别？</li>
+<li>Redis 为什么可能阻塞，如何定位慢命令、大 Key、热 Key 和持久化影响？</li>
+<li>主从复制、哨兵和 Cluster 分别解决什么问题，故障转移有哪些关键流程？</li>
+<li>基于 Redis 做延时任务、消息队列时有哪些能力边界和可靠性风险？</li>
+</ul>
+<h2 id="建议阅读顺序" tabindex="-1">建议阅读顺序</h2>
+<ol>
+<li><a href="/read/database/redis/cache-basics.html">缓存基础常见面试题总结</a>：先理解缓存使用场景、缓存异常和一致性问题。</li>
+<li><a href="/read/database/redis/redis-questions-01.html">Redis 常见面试题总结（上）</a>、<a href="/read/database/redis/redis-questions-02.html">Redis 常见面试题总结（下）</a>：建立 Redis 高频问题清单。</li>
+<li><a href="/read/database/redis/redis-data-structures-01.html">Redis 5 种基本数据类型详解</a>、<a href="/read/database/redis/redis-data-structures-02.html">Redis 3 种特殊数据类型详解</a>：系统掌握数据结构和应用场景。</li>
+<li><a href="/read/database/redis/3-commonly-used-cache-read-and-write-strategies.html">3 种常用的缓存读写策略详解</a>、<a href="/read/database/redis/redis-persistence.html">Redis 持久化机制详解</a>：补齐缓存一致性和数据恢复能力。</li>
+<li><a href="/read/database/redis/redis-common-blocking-problems-summary.html">Redis 常见阻塞原因总结</a>、<a href="/read/database/redis/redis-cluster.html">Redis 集群详解</a>：把 Redis 放到生产环境里理解。</li>
+</ol>
+<h2 id="核心文章" tabindex="-1">核心文章</h2>
+<h3 id="缓存基础与读写策略" tabindex="-1">缓存基础与读写策略</h3>
+<ul>
+<li><a href="/read/database/redis/cache-basics.html">缓存基础常见面试题总结</a>：讲解缓存应用场景、缓存穿透、缓存击穿、缓存雪崩、缓存一致性和缓存淘汰。</li>
+<li><a href="/read/database/redis/3-commonly-used-cache-read-and-write-strategies.html">3 种常用的缓存读写策略详解</a>：对比 Cache Aside、Read/Write Through、Write Behind 等常见策略。</li>
+<li><a href="/read/database/redis/redis-questions-01.html">Redis 常见面试题总结（上）</a> 和 <a href="/read/database/redis/redis-questions-02.html">Redis 常见面试题总结（下）</a>：串联 Redis 基础、线程模型、数据结构、持久化、集群和生产问题。</li>
+</ul>
+<h3 id="数据结构与典型应用" tabindex="-1">数据结构与典型应用</h3>
+<ul>
+<li><a href="/read/database/redis/redis-data-structures-01.html">Redis 5 种基本数据类型详解</a>：理解 String、List、Hash、Set、Sorted Set 的底层结构和业务场景。</li>
+<li><a href="/read/database/redis/redis-data-structures-02.html">Redis 3 种特殊数据类型详解</a>：理解 Bitmap、HyperLogLog、Geospatial 的用法和适用场景。</li>
+<li><a href="/read/database/redis/redis-skiplist.html">Redis 为什么用跳表实现有序集合</a>：理解跳表结构、查询复杂度和 Sorted Set 的实现选择。</li>
+<li><a href="/read/database/redis/redis-delayed-task.html">如何基于 Redis 实现延时任务？</a>：对比过期事件、Sorted Set、Stream 等实现方式。</li>
+<li><a href="/read/database/redis/redis-stream-mq.html">如何基于 Redis 实现消息队列？</a>：理解 List、Pub/Sub、Stream 做消息队列的差异。</li>
+</ul>
+<h3 id="持久化内存与集群" tabindex="-1">持久化、内存与集群</h3>
+<ul>
+<li><a href="/read/database/redis/redis-persistence.html">Redis 持久化机制详解</a>：系统讲解 RDB、AOF、AOF 重写和混合持久化。</li>
+<li><a href="/read/database/redis/redis-memory-fragmentation.html">Redis 内存碎片详解</a>：理解内存碎片产生原因、指标观察和清理策略。</li>
+<li><a href="/read/database/redis/redis-common-blocking-problems-summary.html">Redis 常见阻塞原因总结</a>：整理慢命令、大 Key、持久化、主从同步、CPU 和网络等阻塞来源。</li>
+<li><a href="/read/database/redis/redis-cluster.html">Redis 集群详解</a>：理解主从复制、哨兵、Cluster、槽位迁移和故障转移。</li>
+</ul>
+<h2 id="高频问题" tabindex="-1">高频问题</h2>
+<ul>
+<li>Redis 为什么快？单线程为什么还能支撑高并发？</li>
+<li>Redis 常见数据类型分别适合哪些业务场景？</li>
+<li>Sorted Set 为什么使用跳表？</li>
+<li>缓存穿透、击穿、雪崩有什么区别，如何处理？</li>
+<li>缓存和数据库如何保证一致性？</li>
+<li>RDB 和 AOF 有什么区别？AOF 重写解决什么问题？</li>
+<li>Redis 常见阻塞原因有哪些？如何排查大 Key 和慢命令？</li>
+<li>Redis 主从复制、哨兵和 Cluster 有什么区别？</li>
+<li>Redis 如何实现延时任务？可靠性风险在哪里？</li>
+<li>Redis Stream 和传统消息队列相比有哪些边界？</li>
+</ul>
+<h2 id="相关专题" tabindex="-1">相关专题</h2>
+<ul>
+<li><a href="/read/database/README.html">数据库知识体系</a></li>
+<li><a href="/read/high-performance/README.html">高性能系统知识体系</a></li>
+<li><a href="/read/high-availability/README.html">高可用系统知识体系</a></li>
+<li><a href="/read/high-performance/message-queue/README.html">消息队列专题</a></li>
+</ul>
+<!-- @include: @article-footer.snippet.md -->
