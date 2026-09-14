@@ -93,13 +93,32 @@
   --hi: #f2e8a0;
   --hi-line: #ddce62;
 
-  /* 代码：整块墨底换成黑体二阶（#3a3d3b）。
-     纸→#17181a 的明度落差是 17.0:1，等于每看一段代码就闪一下黑屏；
-     换成 --ink-soft 后纸→代码块 10.2:1、代码文字 8.8:1，两处都还在 AAA 以上。 */
-  --code-bg: var(--ink-soft);
-  --code-fg: #e8e6dd;
+  /* 代码块：白昼不再压一块墨底。纸→#3a3d3b 的台阶是 10.2:1，一屏代码像闪了次黑屏；
+     改成贴一张更浅的纸（--paper-toc，与 mermaid 配图、便签目录同一支），台阶 1.02～1.07，
+     边界交给 1px --code-edge + 3px 章色顶边收，文字回到正文那支墨（16.75:1）。夜读仍走抬面。 */
+  --code-bg: var(--paper-toc);
+  --code-fg: var(--ink);
+  --code-edge: var(--paper-edge);   /* 浅底对浅纸分不出边界，夜里透明（明度台阶够） */
+  --code-thumb: var(--thumb);       /* 块内横滚条：夜读换回原来那支暖黄 */
   /* 行内 code 贴片：白昼是"比纸暗一档"的墨痕。夜里纸层翻面，这块跟着翻到最暗那层。 */
   --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 10%, var(--paper-2));
+
+  /* 语法色板：白昼 = VS Code 现代浅色（Light Modern）。类型 #267f99→#1f6b80、数字 #098658→#0a7a50
+     是有意偏离：原值在纯白上就只有 4.32 / 4.34，我们的纸是暖白 #fbf8f1，照搬会掉到 AA 线下。
+     operator / punctuation / params / meta 不入板，跟着 --code-fg 走墨——中性符号不跟语义色抢注意力。
+     夜读在两块 token 里把整套覆盖回原来那支纸感暖调。 */
+  --code-kw: #0000ff;     /* keyword / selector / section —— 8.10 */
+  --code-type: #1f6b80;   /* 类型、内建 —— 5.70 */
+  --code-fn: #795e26;     /* 函数名、标题 —— 5.75 */
+  --code-str: #a31515;    /* 字符串、正则 —— 7.40 */
+  --code-num: #0a7a50;    /* 数字、字面量 —— 5.06 */
+  --code-cmt: #008000;    /* 注释 —— 4.84 */
+  --code-prop: #0451a5;   /* 属性名 —— 7.26 */
+  --code-var: #001080;    /* 变量 —— 14.29 */
+  --code-tag: #800000;    /* 标签 —— 10.32 */
+  --code-sym: #811f3f;    /* 符号、列表符 —— 8.99 */
+  --code-del: #a31515;    /* diff 删除 —— 7.40 */
+  --code-add: #045104;    /* diff 新增 —— 9.07 */
 
   --cast: 64, 55, 36;       /* 投影的暖底色 */
 
@@ -1052,25 +1071,27 @@ a.crumb:hover { color: var(--ink); text-decoration: underline; }
   line-height: 1.75;
   color: var(--code-fg);
   background: var(--code-bg);
+  border: 1px solid var(--code-edge);
   border-top: 3px solid var(--ch, var(--ch-fallback));
   overflow-x: auto;
   box-shadow: 2px 5px 12px -5px rgba(var(--cast), .45);
 }
 .md-pre code { padding: 0; font-family: var(--mono); color: inherit; background: none; }
 
-/* highlight.js 纸感配色 */
-.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #ffd75e; }
-.hljs-string, .hljs-regexp { color: #9fd3a0; }
-.hljs-number, .hljs-literal { color: #e8a08f; }
-.hljs-title, .hljs-title.function_, .hljs-title.class_ { color: #8fc6ff; }
-.hljs-comment, .hljs-quote { color: #8b918a; }
-.hljs-attr, .hljs-property, .hljs-meta .hljs-keyword { color: #f0c674; }
-.hljs-tag, .hljs-name { color: #c8a6d8; }
-.hljs-variable, .hljs-template-variable { color: #d8c8a8; }
-.hljs-type, .hljs-class { color: #8fd0c8; }
-.hljs-symbol, .hljs-bullet { color: #f2e8a0; }
-.hljs-deletion { color: #ff9d8a; }
-.hljs-addition { color: #b5e0b0; }
+/* highlight.js：颜色全部走 --code-* token，白昼 = VS Code 现代浅色，夜读在 token 块里翻回纸感暖调。
+   function / selector / section 不入板——它们是包住一段完整语法的壳，上色会顺着继承染到 params。 */
+.hljs-keyword, .hljs-selector-tag { color: var(--code-kw); }
+.hljs-type, .hljs-class, .hljs-built_in { color: var(--code-type); }
+.hljs-title, .hljs-title.function_, .hljs-title.class_ { color: var(--code-fn); }
+.hljs-string, .hljs-regexp, .hljs-char { color: var(--code-str); }
+.hljs-number, .hljs-literal { color: var(--code-num); }
+.hljs-comment, .hljs-quote { color: var(--code-cmt); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-meta .hljs-keyword { color: var(--code-prop); }
+.hljs-variable, .hljs-template-variable, .hljs-subst { color: var(--code-var); }
+.hljs-tag, .hljs-name { color: var(--code-tag); }
+.hljs-symbol, .hljs-bullet { color: var(--code-sym); }
+.hljs-deletion { color: var(--code-del); }
+.hljs-addition { color: var(--code-add); }
 .hljs-emphasis { font-style: italic; }
 .hljs-strong { font-weight: 700; }
 
@@ -1289,8 +1310,8 @@ a.crumb:hover { color: var(--ink); text-decoration: underline; }
 ::-webkit-scrollbar-thumb { background: var(--thumb); border: 3px solid var(--desk-2); border-radius: 7px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--thumb-hov); }
 .md-pre::-webkit-scrollbar { height: 9px; }
-.md-pre::-webkit-scrollbar-track { background: rgba(255, 255, 255, .07); }
-.md-pre::-webkit-scrollbar-thumb { background: rgba(242, 232, 160, .35); border: 2px solid transparent; background-clip: content-box; }
+.md-pre::-webkit-scrollbar-track { background: var(--sk-1); }
+.md-pre::-webkit-scrollbar-thumb { background: var(--code-thumb); border: 2px solid transparent; background-clip: content-box; }
 
 /* 数据一律对齐 */
 .card-pct, .card-count, .score-num, .score-pct, .entry-when, .sheet-score b, .g-count, .read-sub, .toc-mark { font-variant-numeric: tabular-nums; }
@@ -1453,6 +1474,22 @@ html[data-mode="night"] {
   --code-fg: #e8e6dd;
   /* 夜里 --paper-2 比正文纸亮，沿用它贴片会"抬头"，压不住墨。翻到最暗那层。 */
   --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 6%, var(--paper-toc));
+  /* 语法色整套覆盖回原来那支纸感暖调：白昼的 VS Code 浅底色板在暗纸上最高的只有 4.3:1。
+     明度台阶够了，描边退回透明；块内横滚条换回原来那支暖黄。 */
+  --code-edge: transparent;
+  --code-thumb: rgba(242, 232, 160, .35);
+  --code-kw: #ffd75e;
+  --code-type: #8fd0c8;
+  --code-fn: #8fc6ff;
+  --code-str: #9fd3a0;
+  --code-num: #e8a08f;
+  --code-cmt: #8b918a;
+  --code-prop: #f0c674;
+  --code-var: #d8c8a8;
+  --code-tag: #c8a6d8;
+  --code-sym: #f2e8a0;
+  --code-del: #ff9d8a;
+  --code-add: #b5e0b0;
 
   /* 投影在夜里不成立，收成一贴地影 */
   --cast: 0, 0, 0;
@@ -1508,6 +1545,20 @@ html[data-mode="night"] {
     --code-bg: #26241e;
     --code-fg: #e8e6dd;
     --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 6%, var(--paper-toc));
+    --code-edge: transparent;
+    --code-thumb: rgba(242, 232, 160, .35);
+    --code-kw: #ffd75e;
+    --code-type: #8fd0c8;
+    --code-fn: #8fc6ff;
+    --code-str: #9fd3a0;
+    --code-num: #e8a08f;
+    --code-cmt: #8b918a;
+    --code-prop: #f0c674;
+    --code-var: #d8c8a8;
+    --code-tag: #c8a6d8;
+    --code-sym: #f2e8a0;
+    --code-del: #ff9d8a;
+    --code-add: #b5e0b0;
     --cast: 0, 0, 0;
   }
 }
