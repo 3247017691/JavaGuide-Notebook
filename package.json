@@ -2,11 +2,15 @@
   "name": "javaguide-report",
   "version": "1.0.0",
   "description": "JavaGuide 学习报告册 —— 已读划线 + 各科进度统计（Node.js + MySQL）",
-  "main": "server.js",
+  "main": "server/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
-    "init-db": "node db.js --seed-only",
+    "start": "node server/index.js",
+    "start:legacy": "node server.js",
+    "init-db": "node server/db.js",
+    "dev:server": "node server/index.js",
+    "dev:client": "npm --prefix client run dev",
+    "build:client": "npm --prefix client run build",
     "build": "node build-content.js",
     "verify": "node verify-links.js",
     "fetch-images": "node download-images.js"

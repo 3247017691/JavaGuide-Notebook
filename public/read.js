@@ -1,4 +1,7 @@
 const $ = (id) => document.getElementById(id);
+/* 「回桌面」的真实目标：独立打开时就是站点根 /；被桌面外壳装进 iframe 时，根 / 是外壳自己，
+   所以由 desk-bridge 的配置给出小抄首页。read.html 里 DESK_BRIDGE 先于本脚本执行才拿得到。 */
+const DESK_HOME = window.DESK_BRIDGE ? (window.DESK_BRIDGE.home || "/") : "/";
 let META = null; // /api/meta 缓存
 let CUR = null;  // 当前文章 meta
 
@@ -29,7 +32,7 @@ async function render() {
   CUR = meta.find((m) => m.out === out);
   if (!CUR) {
     $("r-title").textContent = "找不到这篇小抄";
-    $("r-body").innerHTML = `<p>目录里没有 <code>${esc(out || location.pathname)}</code>。回 <a href="/">桌面</a> 或 <a href="/chapter.html">章节卡</a> 看看。</p>`;
+    $("r-body").innerHTML = `<p>目录里没有 <code>${esc(out || location.pathname)}</code>。回 <a href="${DESK_HOME}">桌面</a> 或 <a href="/chapter.html">章节卡</a> 看看。</p>`;
     return;
   }
   // 延伸页：正文内链落到 330 篇之外的页面，只读，不进进度统计
@@ -107,15 +110,15 @@ async function render() {
   // 上一篇 / 下一篇（同章内按顺序；延伸页给"返回"）
   if (supp) {
     $("r-foot").innerHTML = `<a href="#" id="r-back">← 返回上一页</a>` +
-      `<span><a href="/">桌面</a> · <a href="/chapter.html">章节卡</a></span><span></span>`;
-    $("r-back").addEventListener("click", (e) => { e.preventDefault(); history.length > 1 ? history.back() : (location.href = "/"); });
+      `<span><a href="${DESK_HOME}">桌面</a> · <a href="/chapter.html">章节卡</a></span><span></span>`;
+    $("r-back").addEventListener("click", (e) => { e.preventDefault(); history.length > 1 ? history.back() : (location.href = DESK_HOME); });
   } else {
     const siblings = meta.filter((m) => m.code === CUR.code && m.local && !m.supplementary);
     const i = siblings.findIndex((m) => m.out === CUR.out);
     const prev = siblings[i - 1], next = siblings[i + 1];
     $("r-foot").innerHTML =
       (prev ? `<a href="${prev.out}">← ${esc(prev.title.replace("⭐", ""))}</a>` : "<span></span>") +
-      `<span><a href="/chapter.html?c=${CUR.code}">回本章目录</a> · <a href="/">桌面</a></span>` +
+      `<span><a href="/chapter.html?c=${CUR.code}">回本章目录</a> · <a href="${DESK_HOME}">桌面</a></span>` +
       (next ? `<a href="${next.out}">${esc(next.title.replace("⭐", ""))} →</a>` : "<span></span>");
   }
 
@@ -432,6 +435,11 @@ function renderMermaid(mode) {
   });
   runMermaid(nodes, mode);
 }
+/* 桌面外壳下发主题（走 desk-bridge.js，不经过本页的 toggleMode）：补齐示意图重画这一副作用。
+   没有 .mermaid-src 的页面 renderMermaid 自己判空返回；页内那颗按钮仍是原路（带 toast）。 */
+document.addEventListener("desk:applymode", (e) => {
+  try { renderMermaid(e.detail && e.detail.mode); } catch (err) { /* 图重画失败不该拖住换色 */ }
+});
 
 /* ------------------------------------------------------------ 右侧竖向导航
    回桌面 / 回上一级 / 回顶端。这三件半途想做的事，页面上原本要滚到顶部（面包屑）
@@ -442,12 +450,12 @@ function initRail() {
   if (!rail) return;
   const top = $("rail-top");
 
-  $("rail-home").addEventListener("click", () => { location.href = "/"; });
+  $("rail-home").addEventListener("click", () => { location.href = DESK_HOME; });
 
   $("rail-up").addEventListener("click", () => {
     if (CUR && CUR.code && !CUR.supplementary) location.href = "/chapter.html?c=" + CUR.code;
     else if (history.length > 1) history.back();
-    else location.href = "/";
+    else location.href = DESK_HOME;
   });
 
   top.addEventListener("click", () => {

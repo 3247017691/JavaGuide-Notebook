@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JBL 火箭题库 · 任务控制台</title>
+<meta name="description" content="《JBL常见面试题-火箭-持续更新》离线笔记本：14 个系统、308 项检查，掌握一题点亮一格，全部点亮即点火发射。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23060a12'/%3E%3Cpath d='M16 4c2.6 2.6 4 6.2 4 10.4 0 2.8-.7 5.4-2 7.6h-4c-1.3-2.2-2-4.8-2-7.6C12 10.2 13.4 6.6 16 4z' fill='%23101b30' stroke='%23dce6f6' stroke-width='1.2'/%3E%3Ccircle cx='16' cy='12' r='1.8' fill='%2359c2ff'/%3E%3Cpath d='M12.4 19.5 9.5 24l3.4-1.2M19.6 19.5 22.5 24l-3.4-1.2' fill='none' stroke='%23dce6f6' stroke-width='1.2'/%3E%3Cpath d='M15 22.6c.2 1.8.6 3 1 4.2.4-1.2.8-2.4 1-4.2z' fill='%23ff6a3d'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="notebook.css?v=20260915b">
+<script>
+(function () {
+  try {
+    var m = localStorage.getItem('jbl-rocket:mode');
+    document.documentElement.dataset.mode = (m === 'night') ? 'night' : 'day';
+  } catch (e) { document.documentElement.dataset.mode = 'day'; }
+})();
+</script>
+</head>
+<body>
+<a class="skip" href="#deck">跳到系统卡阵</a>
+
+<div id="masthead"></div>
+
+<main class="wrap hero" aria-label="发射准备度">
+  <section class="hero-panel" id="hero">
+    <div class="hero-grid">
+      <div class="readiness" id="readiness">
+        <div class="r-label">LAUNCH READINESS · 发射准备度</div>
+        <div class="r-num"><span id="r-pct">0</span><em>%</em></div>
+      </div>
+      <div class="gauges">
+        <div class="segbar" id="segbar" aria-hidden="true"></div>
+        <div class="hero-stats">
+          <div class="hstat ok">已掌握<b id="st-done">0</b></div>
+          <div class="hstat">检查项总数<b id="st-total">0</b></div>
+          <div class="hstat hl">剩余待检<b id="st-left">0</b></div>
+          <div class="hstat">系统就绪<b id="st-ready">0<small>/<span id="st-chapters">14</span></small></b></div>
+        </div>
+        <div class="mission-line" id="mission-line">系统待命 · 检查未开始</div>
+        <div class="liftoff">
+          <svg class="flame" width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)" aria-hidden="true"><path d="M12 2c2 3 3 5.5 3 8a3 3 0 1 1-6 0c0-1 .3-2.2.8-3.4C10.2 8 11 10 12 10c-.5-2.7-.3-5.3 0-8z"/></svg>
+          LIFTOFF · 全部系统验证通过，点火发射
+        </div>
+      </div>
+    </div>
+    <div class="search" id="search">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
+        <input id="search-input" type="search" placeholder="搜索检查项：如 红黑树 / 缓存雪崩 / 三次握手…" autocomplete="off" spellcheck="false" aria-label="搜索题目">
+        <kbd>/</kbd>
+      </div>
+      <div class="search-results" id="search-results" role="listbox" aria-label="搜索结果"></div>
+    </div>
+  </section>
+</main>
+
+<main class="wrap deck" id="deck" aria-label="系统检查单"></main>
+
+<footer class="desk-foot">
+  <div class="wrap">
+    <span>内容导出自飞书文档 <a href="https://j1wtmv7ajj.feishu.cn/wiki/DCGfwqQ1cinVrOkWVBQcIQisnrd" target="_blank" rel="noopener">《JBL常见面试题-火箭-持续更新》</a></span>
+    <span class="mono" id="export-date"></span>
+    <span class="grow"></span>
+    <button class="link-plain" id="reset-btn" type="button">重置全部进度</button>
+  </div>
+</footer>
+
+<nav class="rail" id="rail" aria-label="页面导航">
+  <button class="rail-btn" id="rail-top" type="button" title="回到顶部" aria-label="回到顶部">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5.6 3.7h12.8"/><path d="M12 20.3V7.6"/><path d="M6.7 12.9 12 7.6l5.3 5.3"/></svg>
+  </button>
+</nav>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="index.js"></script>
+<script>window.DESK_BRIDGE={modeKey:"jbl-rocket:mode",home:"index.html"};</script>
+<script src="desk-bridge.js?v=20260915" defer></script>
+</body>
+</html>

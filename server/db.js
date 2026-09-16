@@ -1,3 +1,5 @@
+/* 数据层：建库、建表、导入目录种子。原根目录 db.js 平移至此，
+   data/ 路径按新目录深度修正；`node server/db.js` 仍可单独初始化。 */
 const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
@@ -13,7 +15,6 @@ const DB_CONFIG = {
 const DB_NAME = "javaguide_report";
 
 async function createPool() {
-  // 先不带 database 连接，确保库存在，再建池
   const boot = await mysql.createConnection(DB_CONFIG);
   await boot.query(
     `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
@@ -71,7 +72,7 @@ async function createPool() {
 async function seedIfEmpty(pool) {
   const [[{ n }]] = await pool.query("SELECT COUNT(*) AS n FROM articles");
   if (n > 0) return 0;
-  const chapters = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "chapters.json"), "utf8"));
+  const chapters = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "data", "chapters.json"), "utf8"));
   let count = 0;
   for (let i = 0; i < chapters.length; i++) {
     const c = chapters[i];

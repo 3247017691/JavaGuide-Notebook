@@ -72,6 +72,10 @@
 
 <div class="toast" id="toast" role="status"></div>
 <script src="/colors.js"></script>
+<!-- DESK_BRIDGE 必须在 read.js 之前：read.js 不是 defer/module，解析到就跑，
+     它顶部的 const DESK_HOME 要在这里读到 home，否则三处程序化跳转拿不到改道目标。 -->
+<script>window.DESK_BRIDGE={modeKey:"read-mode",home:"/index.html"};</script>
 <script src="/read.js"></script>
+<script src="/desk-bridge.js" defer></script>
 </body>
 </html>

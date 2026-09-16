@@ -1,0 +1,109 @@
+/* ==========================================================================
+   Element Plus → macOS 液态玻璃 主题映射
+   只覆写 CSS 变量与少数结构样式；组件一律用 EP 的无障碍/焦点行为。
+   深色档由 html.dark（EP dark/css-vars.css）驱动，这里补玻璃面。
+   ========================================================================== */
+
+:root {
+  --el-color-primary: #0a60ff;
+  --el-color-primary-light-3: #4d8dff;
+  --el-color-primary-light-5: #85b0ff;
+  --el-color-primary-light-7: #bcd3ff;
+  --el-color-primary-light-8: #d6e4ff;
+  --el-color-primary-light-9: #eaf1ff;
+  --el-color-primary-dark-2: #0850d6;
+  --el-color-success: #2fa14e;
+  --el-color-danger: #d64541;
+  --el-color-error: #d64541;
+  --el-color-warning: #d68910;
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 999px;
+  --el-font-family: var(--sans);
+  --el-text-color-primary: var(--txt-1);
+  --el-text-color-regular: var(--txt-1);
+  --el-text-color-secondary: var(--txt-2);
+  --el-text-color-placeholder: var(--txt-3);
+  --el-border-color: var(--sep);
+  --el-border-color-light: var(--sep);
+  --el-border-color-lighter: var(--sep);
+  --el-fill-color-blank: transparent;
+  --el-bg-color: transparent;
+  --el-bg-color-overlay: transparent;
+  --el-box-shadow: var(--shadow-pop);
+  --el-box-shadow-light: var(--shadow-pop);
+}
+
+html.dark {
+  --el-color-primary: #409cff;
+  --el-color-primary-light-3: #6fb2ff;
+  --el-color-primary-light-5: #9cc8ff;
+  --el-color-primary-light-7: #c9e0ff;
+  --el-color-primary-light-8: #ddeafd;
+  --el-color-primary-light-9: #1d2a3d;
+  --el-color-primary-dark-2: #337ecc;
+  --el-text-color-primary: var(--txt-1);
+  --el-text-color-regular: var(--txt-1);
+  --el-text-color-secondary: var(--txt-2);
+  --el-text-color-placeholder: var(--txt-3);
+  --el-border-color: var(--sep);
+  --el-border-color-light: var(--sep);
+  --el-border-color-lighter: var(--sep);
+}
+
+/* MessageBox：玻璃大圆角面板 */
+.el-message-box {
+  border: .5px solid var(--glass-brd) !important;
+  border-radius: var(--r-panel) !important;
+  background: var(--glass-thick) !important;
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  box-shadow: var(--shadow-pop) !important;
+  padding: 20px 22px 16px !important;
+  max-width: min(440px, calc(100vw - 48px));
+}
+.el-message-box__title { color: var(--txt-1) !important; font-weight: 700 !important; font-size: 15px !important; }
+.el-message-box__content { color: var(--txt-1) !important; font-size: 13.5px !important; line-height: 1.75 !important; padding: 8px 0 4px !important; }
+.el-message-box__btns .el-button { border-radius: var(--r-ctl) !important; font-weight: 500 !important; }
+
+/* Message toast：玻璃胶囊 */
+.el-message {
+  border: .5px solid var(--glass-brd) !important;
+  border-radius: var(--r-pill) !important;
+  background: var(--glass-thick) !important;
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  box-shadow: var(--shadow-pop) !important;
+  color: var(--txt-1) !important;
+  font-size: 12.5px !important;
+  padding: 9px 16px !important;
+}
+.el-message .el-message__content { color: var(--txt-1) !important; }
+
+/* Tooltip：程序坞/工具栏提示 */
+.el-popper.is-dark {
+  background: var(--glass-thick) !important;
+  border: .5px solid var(--glass-brd) !important;
+  color: var(--txt-1) !important;
+  font-size: 12px !important;
+  border-radius: 7px !important;
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  box-shadow: var(--shadow-pop);
+}
+.el-popper.is-dark .el-popper__arrow::before {
+  background: var(--glass-thick) !important;
+  border: .5px solid var(--glass-brd) !important;
+}
+
+/* Dialog（Sheet 备用）：玻璃面板 */
+.el-dialog {
+  border: .5px solid var(--glass-brd) !important;
+  border-radius: var(--r-panel) !important;
+  background: var(--glass-thick) !important;
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
+  box-shadow: var(--shadow-pop) !important;
+}
+.el-dialog__title { color: var(--txt-1) !important; font-weight: 700 !important; }
+.el-overlay { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }

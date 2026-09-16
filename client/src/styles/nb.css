@@ -1,0 +1,1308 @@
+.nb-scope /* ==========================================================================
+   JavaGuide 离线小抄 · The Laminated Cheat Sheet  (v2)
+   --------------------------------------------------------------------------
+   深灰绿书桌 → 暖亚麻案面；一摞过塑索引卡摊在上面。
+   墨三阶锁死；朱砂只写「已读/划掉」，永不充当 UI 常态强调色；
+   荧光笔只给 hover 底、当前项与 .nb-scope ::selection；
+   12 支章色降级为「卡顶 3px 色线 + 编号 + 极淡纸染」，不再是大面积色块。
+   四种笔各司其职：楷体(手写) / 黑体(表头) / 宋体(正文) / 等宽(登记)。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- tokens */
+.nb-scope{
+  /* 案面：暖亚麻。比旧版更沉一档，卡片才有"浮起来"的余地 */
+  --desk: #e7e0cd;
+  --desk-2: #dbd3bf;
+  --desk-deep: #c7bda4;
+  --desk-ink: #565044;      /* 案面上的字（5.6:1 vs --desk-2） */
+  --desk-ink-2: #6f6859;    /* 案面上更弱一级，仅用于装饰性小字 */
+
+  /* 纸 */
+  --paper: #f9f6ee;
+  --paper-2: #f0e9d8;
+  /* 正文纸面的渐变终点单列一档：卡片仍用 --paper-2（1.12 的台阶在一张小卡上是纸感，
+     在一整页滚动正文里是背景漂移）。收进来后台阶 1.121 → 1.052。 */
+  --paper-read-2: #f6f0e3;
+  --paper-edge: #dcd3be;
+  --paper-back: #e2d8c0;    /* 折角露出的纸背 */
+  --paper-fold: #c9bfa2;    /* 折痕本体色 */
+  --paper-toc: #fbf8f1;     /* 第 2 层浅纸：便签目录底、配图衬底（比正文纸浅一档，不刺眼） */
+  --paper-hi: #ffffff;      /* 控件 hover 时"被灯照到"的那一面（按钮、返回链接） */
+
+  /* 案面织纹与暗角（P1-10 调强弱，夜读整块关掉，都只改这里）。
+     这层的强度原本照「一眼惊艳」定，盯四十分钟时高频细纹理会一直勾走周边视野。 */
+  --linen: 88, 76, 50;
+  --linen-a: .022;
+  --linen-a2: .014;
+  --vignette: 88, 74, 44;
+  --vignette-a: .10;
+
+  /* 纸上的"白"与"凹"：过塑反光、压印高光、内描边，夜读要一起翻成深色 */
+  --gloss: rgba(255, 255, 255, .62);
+  --gloss-soft: rgba(255, 255, 255, .14);
+  --emboss: rgba(255, 255, 255, .55);      /* 报头字下的压印高光 */
+  --inset-hi: rgba(255, 255, 255, .6);     /* 目录卡内圈的纸边高光 */
+  --ring-hi: rgba(255, 255, 255, .8);      /* 已读印章的内描边 */
+  --on-red: #ffffff;                       /* 朱砂底上的字 */
+  --tape-idle: rgba(23, 24, 26, .2);       /* 刻度尺未填的那一截 */
+  --rule-desk: rgba(23, 24, 26, .22);      /* 案面上的分隔细线 */
+  --sk-1: rgba(23, 24, 26, .07);
+  --sk-2: rgba(23, 24, 26, .12);
+
+  /* 浅一档的纸片：穿孔、进度片、目录勾选圈 */
+  --hole-line: #c3b89c;
+  --hole-bg: color-mix(in srgb, var(--paper) 60%, #fff);
+  --chip-bg: color-mix(in srgb, var(--paper) 70%, #fff);
+  --mark-line: #b8ab90;
+  --mark-bg: color-mix(in srgb, var(--paper) 72%, #fff);
+
+  /* 滚动条也是设计的一部分，两个尺度各一套 */
+  --thumb: #b3aa95;
+  --thumb-hov: #9a917c;
+  --toc-thumb: #cfc7b2;
+  --toc-thumb-hov: #b9b09a;
+
+  /* 章色缺省值：与 colors.js 里 chColor() 的兜底同一支笔 */
+  --ch-fallback: #55606a;
+  /* 章色↔墨的混合比：正文色用它，白昼 82%（章色主导），夜读压到 58% 让墨色托住对比度。
+     hover 档比常态更浅（章色更少 or 墨色更多），12 支章色实测：白昼 ≥8.8:1、夜读 ≥5.8:1。 */
+  --ch-mix: 82%;
+  --ch-mix-hov: 60%;
+
+  /* 提示容器底色 */
+  --warn-bg: #f6e3c8;
+  --danger-bg: #f3d9d2;
+  --info-bg: #dde8e2;
+
+  /* 正文字号：P2-13 三档，只由 html[data-size] 改写 */
+  --fs: 16.5px;
+
+  /* 原生控件（select、滚动条）跟随当前模式 */
+  color-scheme: light;
+
+  /* 墨三阶（锁死，不许发明第四种灰） */
+  --ink: #17181a;
+  --ink-soft: #3a3d3b;
+  --ink-faint: #5f625d;     /* 对纸 5.7:1 */
+
+  /* 朱砂：唯一的强调色，只属于"已读 / 划掉" */
+  --red: #b0492f;
+  --red-deep: #8c3520;
+
+  /* 荧光笔 */
+  --hi: #f2e8a0;
+  --hi-line: #ddce62;
+
+  /* 代码块：白昼不再压一块墨底。纸→#3a3d3b 的台阶是 10.2:1，一屏代码像闪了次黑屏；
+     改成贴一张更浅的纸（--paper-toc，与 mermaid 配图、便签目录同一支），台阶 1.02～1.07，
+     边界交给 1px --code-edge + 3px 章色顶边收，文字回到正文那支墨（16.75:1）。夜读仍走抬面。 */
+  --code-bg: var(--paper-toc);
+  --code-fg: var(--ink);
+  --code-edge: var(--paper-edge);   /* 浅底对浅纸分不出边界，夜里透明（明度台阶够） */
+  --code-thumb: var(--thumb);       /* 块内横滚条：夜读换回原来那支暖黄 */
+  /* 行内 code 贴片：白昼是"比纸暗一档"的墨痕。夜里纸层翻面，这块跟着翻到最暗那层。 */
+  --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 10%, var(--paper-2));
+
+  /* 语法色板：白昼 = VS Code 现代浅色（Light Modern）。类型 #267f99→#1f6b80、数字 #098658→#0a7a50
+     是有意偏离：原值在纯白上就只有 4.32 / 4.34，我们的纸是暖白 #fbf8f1，照搬会掉到 AA 线下。
+     operator / punctuation / params / meta 不入板，跟着 --code-fg 走墨——中性符号不跟语义色抢注意力。
+     夜读在两块 token 里把整套覆盖回原来那支纸感暖调。 */
+  --code-kw: #0000ff;     /* keyword / selector / section —— 8.10 */
+  --code-type: #1f6b80;   /* 类型、内建 —— 5.70 */
+  --code-fn: #795e26;     /* 函数名、标题 —— 5.75 */
+  --code-str: #a31515;    /* 字符串、正则 —— 7.40 */
+  --code-num: #0a7a50;    /* 数字、字面量 —— 5.06 */
+  --code-cmt: #008000;    /* 注释 —— 4.84 */
+  --code-prop: #0451a5;   /* 属性名 —— 7.26 */
+  --code-var: #001080;    /* 变量 —— 14.29 */
+  --code-tag: #800000;    /* 标签 —— 10.32 */
+  --code-sym: #811f3f;    /* 符号、列表符 —— 8.99 */
+  --code-del: #a31515;    /* diff 删除 —— 7.40 */
+  --code-add: #045104;    /* diff 新增 —— 9.07 */
+
+  --cast: 64, 55, 36;       /* 投影的暖底色 */
+
+  --sans: "PingFang SC", "Microsoft YaHei", "微软雅黑", "Heiti SC", sans-serif;
+  /* 西文交给 Georgia（骨架比宋体里的拉丁部分稳），中文按「思源宋体 → 宋体」排序。
+     旧栈把思源宋体排在 SimSun 之后 —— Windows 上装了它也永远命中不到。 */
+  --serif: Georgia, "Times New Roman", "Source Han Serif SC", "Noto Serif CJK SC", "Source Han Serif CN", "Songti SC", SimSun, "宋体", serif;
+  --pen: "Kaiti SC", KaiTi, STKaiti, "楷体", cursive;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+
+  --wrap: 1180px;
+  --pad-y: clamp(16px, 3.2vw, 38px);   /* 页面距视口上沿的距离 */
+  --ease: cubic-bezier(.22, .9, .28, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --fold: polygon(0 0, calc(100% - var(--foldpx, 20px)) 0, 100% var(--foldpx, 20px), 100% 100%, 0 100%);
+}.nb-scope *, .nb-scope *::before, .nb-scope *::after{ box-sizing: border-box; }.nb-scope{ scrollbar-gutter: stable; }.nb-scope .masthead, .nb-scope .deck, .nb-scope .sheet, .nb-scope .read-sheet, .nb-scope .read-clip, .nb-scope .desk-foot, .nb-scope .toast, .nb-scope .skip{ position: relative; z-index: 1; }.nb-scope ::selection{ background: var(--hi); color: var(--ink); }.nb-scope a{ color: inherit; }.nb-scope .skip{
+  position: fixed;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -130%);
+  padding: 11px 20px;
+  background: var(--ink);
+  color: var(--hi);
+  font: 700 13px/1 var(--pen);
+  letter-spacing: .14em;
+  text-decoration: none;
+  border-radius: 0 0 3px 3px;
+  transition: transform .2s var(--ease);
+  z-index: 30;
+}.nb-scope .skip:focus{ transform: translate(-50%, 0); }.nb-scope /* 只在键盘聚焦时出现的焦点环，全站统一 */
+:focus-visible{ outline: 2px solid var(--ink); outline-offset: 2px; }.nb-scope /* ============================================================ 首页 · 报头 */
+.masthead{
+  width: min(var(--wrap), 100%);
+  margin: 0 auto clamp(22px, 2.8vw, 36px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(20px, 3.4vw, 52px);
+  padding-bottom: clamp(14px, 1.7vw, 20px);
+  border-bottom: 2px solid var(--ink);
+}.nb-scope .masthead-title{
+  margin: 0;
+  font: 700 clamp(27px, 3.9vw, 41px)/1.1 var(--pen);
+  letter-spacing: .07em;
+  color: var(--ink);
+  text-shadow: 0 1px 0 var(--emboss);
+}.nb-scope /* 报头直接坐在桌面上，所以这里的字取"案面墨"，不取纸上的弱灰 */
+.masthead-title .sep{ color: var(--red-deep); font-weight: 400; margin: 0 .2em; }.nb-scope .masthead-sub{
+  margin: 9px 0 0;
+  font: 400 13px/1.65 var(--serif);
+  color: var(--desk-ink);
+  max-width: 46em;
+}.nb-scope .masthead-sub b{ font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }.nb-scope /* 总评：12 段刻度尺 —— 段宽 = 该章篇数，填充 = 该章完成率 */
+.score{
+  display: grid;
+  gap: 9px;
+  justify-items: end;
+  min-width: min(380px, 44vw);
+}.nb-scope .score-line{ display: flex; align-items: baseline; gap: 14px; }.nb-scope .score-num{
+  font: 700 clamp(26px, 3.1vw, 34px)/1 var(--pen);
+  letter-spacing: .02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .score-num b{ color: var(--red-deep); }.nb-scope .score-num i{ font-style: normal; font-size: 15px; color: var(--ink-soft); margin: 0 .2em; }.nb-scope .score-num em{ font-style: normal; font-size: 20px; color: var(--ink-soft); }.nb-scope .score-pct{
+  font: 700 13px/1 var(--mono);
+  letter-spacing: .06em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .tape{
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 13px;
+}.nb-scope .tape i{
+  position: relative;
+  flex: var(--n, 1) 1 0;
+  min-width: 3px;
+  background: var(--tape-idle);
+  border-radius: 1px;
+  overflow: hidden;
+}.nb-scope .tape i::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--red);
+  transform: scaleX(var(--f, 0));
+  transform-origin: left center;
+  transition: transform .7s var(--ease-out);
+}.nb-scope .score-when{
+  margin: 0;
+  font: 400 12px/1.5 var(--mono);
+  color: var(--desk-ink);
+  letter-spacing: .03em;
+}.nb-scope /* ======================================================== 首页 · 卡阵 */
+.deck{
+  width: min(var(--wrap), 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(14px, 1.5vw, 20px);
+  align-items: stretch;
+}.nb-scope /* 卡：<a> 只负责投影（drop-shadow 认裁剪后的轮廓），.card-paper 负责纸与折角 */
+.card{
+  position: relative;
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+  filter: drop-shadow(0 1px 1px rgba(var(--cast), .15)) drop-shadow(0 13px 20px -11px rgba(var(--cast), .32));
+  transition: filter .24s var(--ease), transform .24s var(--ease);
+  animation: card-in .52s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 46ms);
+  cursor: pointer;
+}
+@keyframes card-in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }.nb-scope /* 版面由 --col / --row 驱动：
+   同一套「按篇幅定版面」的格子，骨架卡与真卡共用 —— 加载前后不跳版。 */
+.card{ grid-column: span var(--col, 3); grid-row: span var(--row, 1); }.nb-scope /* 抬起幅度 5px → 2px：这是摊在案面上的纸片，不是可点击的浮层；
+   5px 是营销页幅度，悬停时的抖动也把注意力从内容上拽走。 */
+.card:hover, .nb-scope .card:focus-visible{ transform: translateY(-2px); }.nb-scope .card:hover{
+  filter: drop-shadow(0 1px 1px rgba(var(--cast), .18)) drop-shadow(0 22px 30px -12px rgba(var(--cast), .42));
+}.nb-scope .card:focus-visible{ outline: 2px solid var(--ink); outline-offset: -5px; }.nb-scope .card-paper{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 18px 15px;
+  background: linear-gradient(166deg, var(--paper) 0%, var(--paper-2) 100%);
+  /* 章色顶线走 inset 阴影：不占 border，折角才能跟裁剪边严丝合缝 */
+  box-shadow: inset 0 3px 0 var(--ch, var(--ch-fallback));
+  clip-path: var(--fold);
+  overflow: hidden;
+}.nb-scope /* 极淡的章色纸染：让 12 张卡开口就能分辨，又不至于变成一盒蜡笔 */
+.card-paper::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(184deg, color-mix(in srgb, var(--ch, var(--ch-fallback)) 7%, transparent) 0%, transparent 42%);
+  pointer-events: none;
+}.nb-scope /* 折角（狗耳朵）：折过来的纸背 + 折痕投影 */
+.fold{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--foldpx, 20px);
+  height: var(--foldpx, 20px);
+  background: linear-gradient(228deg, var(--paper-fold) 0%, var(--paper-edge) 34%, var(--paper-2) 100%);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  filter: drop-shadow(-1px 1px 1.4px rgba(var(--cast), .40));
+  pointer-events: none;
+}.nb-scope /* 抬起时掠过卡面的过塑反光 */
+.card-paper::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(112deg, transparent 28%, var(--gloss) 44%, var(--gloss-soft) 54%, transparent 64%);
+  transform: translateX(-38%);
+  opacity: 0;
+  transition: opacity .26s var(--ease), transform .46s var(--ease);
+  pointer-events: none;
+}.nb-scope .card:hover .card-paper::after, .nb-scope .card:focus-visible .card-paper::after{ opacity: 1; transform: translateX(0); }.nb-scope /* 卡头：编号 + 章名。窄卡上编号独占一行，免得章名伸进折角底下 */
+.card-head{ display: flex; align-items: baseline; gap: 9px; min-width: 0; }.nb-scope .card-code{
+  font: 700 12px/1 var(--mono);
+  letter-spacing: .08em;
+  color: color-mix(in srgb, var(--ch, var(--ch-fallback)) 88%, var(--ink));
+  transform: translateY(-1px);
+  flex: none;
+}.nb-scope .card-name{
+  font: 800 1em/1.25 var(--sans);
+  letter-spacing: .05em;
+  color: var(--ink);
+  min-width: 0;
+}.nb-scope .card[data-size="xl"] .card-name{ font-size: clamp(20px, 2.1vw, 26px); letter-spacing: .04em; }.nb-scope .card[data-size="md"] .card-name{ font-size: clamp(15.5px, 1.35vw, 18px); }.nb-scope .card[data-size="sm"] .card-name{ font-size: 15px; }.nb-scope .card[data-size="sm"] .card-head{ display: block; }.nb-scope .card[data-size="sm"] .card-code{ display: block; margin-bottom: 4px; }.nb-scope .card[data-size="sm"] .card-paper{ padding: 14px 14px 13px; }.nb-scope .card[data-size="sm"] .card-name{ font-size: 15px; }.nb-scope .card-blurb{
+  margin: 7px 0 0;
+  font: 400 12.5px/1.62 var(--serif);
+  color: var(--ink-faint);
+  min-width: 0;
+}.nb-scope .card[data-size="xl"] .card-blurb{ font-size: 14px; }.nb-scope .card[data-size="sm"] .card-blurb{
+  font-size: 12px;
+  line-height: 1.55;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}.nb-scope /* 尾部：刻度阵 + 计数 */
+.card-tail{ margin-top: auto; padding-top: 14px; }.nb-scope .card[data-size="xl"] .card-tail{ padding-top: 20px; }.nb-scope .card[data-size="sm"] .card-tail{ padding-top: 10px; }.nb-scope /* 刻度阵：一篇一道细竖线，已读的落墨 —— 332 篇的"格"就在这儿 */
+.card-ticks{ display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; }.nb-scope .card-ticks i{
+  display: block;
+  /* 3px → 4px：在 12px 高的小竖线上，一像素之差就是"看得见"与"糊成灰条"。
+     仍是一篇一道的刻度，不是进度条。 */
+  width: 4px;
+  height: 12px;
+  border-radius: .5px;
+  background: color-mix(in srgb, var(--ch, var(--ch-fallback)) 32%, transparent);
+}.nb-scope .card[data-size="sm"] .card-ticks i{ height: 10px; }.nb-scope .card-ticks i.on{ background: var(--ink); }.nb-scope /* 读了一部分：按小节完成率从下往上涂，像个微进度条 ——
+   阅读页悬浮目录里划掉的小节，在这一页落成"半墨"。 */
+.card-ticks i.mid{
+  background: linear-gradient(to top,
+    var(--ink) 0,
+    var(--ink) calc(var(--f, 0) * 100%),
+    color-mix(in srgb, var(--ch, var(--ch-fallback)) 32%, transparent) calc(var(--f, 0) * 100%),
+    color-mix(in srgb, var(--ch, var(--ch-fallback)) 32%, transparent) 100%);
+}.nb-scope /* 「读了一部分」的小结汇总。
+   只在真有半读篇时才渲染 —— 否则与上面的篇数说的是同一件事，纯属重复。
+   不做进度条：全章小节基数上千，0.5% 的条看起来是空的，反而像坏了。 */
+.card-secs{
+  display: block;
+  margin-top: 9px;
+  font: 400 12px/1.45 var(--mono);
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}.nb-scope .card-secs b{ font-weight: 700; color: var(--ink-soft); }.nb-scope .card[data-size="sm"] .card-secs{ display: none; }.nb-scope .card-foot{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+}.nb-scope .card[data-size="sm"] .card-foot{ gap: 8px; }.nb-scope .card-count{
+  font: 700 16px/1 var(--pen);
+  letter-spacing: .03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .card-count i{ font-style: normal; font-size: .72em; color: var(--ink-faint); margin: 0 .16em; }.nb-scope .card[data-size="xl"] .card-count{ font-size: 19px; }.nb-scope .card[data-size="md"] .card-count{ font-size: 16px; }.nb-scope .card[data-size="sm"] .card-count{ font-size: 15px; }.nb-scope .card-pct{
+  font: 400 12px/1 var(--mono);
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .card[data-size="xl"] .card-pct{ font-size: 12.5px; }.nb-scope /* 两行高的主课卡：刻度阵放大到两排、计数放大 —— 让"篇幅"真的占满版面 */
+.card[data-rows="2"] .card-paper{ padding-bottom: 17px; justify-content: center; }.nb-scope .card[data-rows="2"] .card-tail{ margin-top: 0; padding-top: 24px; }.nb-scope .card[data-rows="2"] .card-blurb{ font-size: 14px; margin-top: 9px; }.nb-scope .card[data-rows="2"] .card-ticks{ gap: 7px; min-height: 42px; align-content: center; }.nb-scope .card[data-rows="2"] .card-ticks i{ width: 6px; height: 17px; border-radius: 1px; }.nb-scope .card[data-rows="2"] .card-count{ font-size: 30px; }.nb-scope .card[data-rows="2"] .card-count i{ font-size: .55em; margin: 0 .2em; }.nb-scope .card[data-rows="2"] .card-pct{ font-size: 13px; }.nb-scope .card[data-rows="2"] .card-secs{ font-size: 12px; margin-top: 13px; }.nb-scope /* 整章读完：右下压一枚「背完」朱章 */
+.card-stamp{
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  padding: 1px 8px;
+  font: 700 15px/1.35 var(--pen);
+  letter-spacing: .14em;
+  color: var(--red);
+  border: 2.5px solid var(--red);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  transform: rotate(-9deg);
+  opacity: 0;
+  transition: opacity .3s var(--ease);
+  pointer-events: none;
+}.nb-scope .card.done .card-stamp{ opacity: .88; animation: stamp-in .5s var(--ease-out) both; }.nb-scope /* 100% 由「背完」章说，百分比不再重复一遍，也让出印章的位置 */
+.card.done .card-pct{ display: none; }
+@keyframes stamp-in { from { transform: rotate(-9deg) scale(2.2); opacity: 0; } to { transform: rotate(-9deg) scale(1); opacity: .88; } }.nb-scope /* ==================================================== 首页 · 骨架与兜底 */
+.card.is-skeleton{ pointer-events: none; animation: none; }.nb-scope .card.is-skeleton .card-paper{ border-top-color: var(--sk-2); }.nb-scope .sk{
+  display: block;
+  background: linear-gradient(90deg, var(--sk-1) 0%, var(--sk-2) 50%, var(--sk-1) 100%);
+  background-size: 220% 100%;
+  animation: sk-shimmer 1.5s linear infinite;
+  border-radius: 2px;
+}
+@keyframes sk-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }.nb-scope .sk-code{ width: 22px; height: 11px; }.nb-scope .sk-name{ width: 62%; height: 20px; margin-top: 2px; }.nb-scope .sk-line{ width: 86%; height: 11px; margin-top: 12px; }.nb-scope .sk-ticks{ width: 100%; height: 13px; margin-top: auto; }.nb-scope .sk-foot{ width: 46%; height: 15px; margin-top: 12px; }.nb-scope .deck-note{
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 34px 0;
+  text-align: center;
+  font: 400 15px/1.8 var(--pen);
+  letter-spacing: .12em;
+  color: var(--desk-ink);
+}.nb-scope .deck-note a{ color: var(--red-deep); text-underline-offset: 3px; }.nb-scope .deck-note b{ font-weight: 700; font-family: var(--mono); font-size: .92em; }.nb-scope .sheet-note{
+  margin: 0;
+  padding: 40px 0;
+  text-align: center;
+  font: 400 15px/1.9 var(--pen);
+  letter-spacing: .1em;
+  color: var(--ink-faint);
+}.nb-scope .sheet-note a{ color: var(--red); text-underline-offset: 3px; }.nb-scope .desk-foot{
+  width: min(var(--wrap), 100%);
+  margin: clamp(28px, 3.2vw, 44px) auto 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule-desk);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  font: 400 12px/1.6 var(--mono);
+  color: var(--desk-ink);
+  letter-spacing: .02em;
+}.nb-scope .desk-foot b{ font-weight: 400; color: var(--ink); }.nb-scope /* =========================================================== 章节卡页 */
+.sheet{
+  width: min(920px, 100%);
+  margin: 0 auto;
+  --foldpx: 26px;
+  padding: 0 clamp(18px, 4vw, 46px) 32px;
+  background: linear-gradient(170deg, var(--paper) 0%, var(--paper-2) 100%);
+  box-shadow: inset 0 4px 0 var(--ch, var(--ch-fallback));
+  clip-path: var(--fold);
+  filter: drop-shadow(0 1px 1px rgba(var(--cast), .15)) drop-shadow(0 22px 40px -20px rgba(var(--cast), .42));
+}.nb-scope .sheet-band{
+  position: relative;
+  margin: 0 calc(-1 * clamp(18px, 4vw, 46px));
+  padding: 18px clamp(18px, 4vw, 46px) 15px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--paper-edge);
+}.nb-scope .sheet-band .code{
+  font: 700 13px/1 var(--mono);
+  letter-spacing: .1em;
+  color: var(--ch, var(--ch-fallback));
+  flex: none;
+}.nb-scope .sheet-band h1{
+  margin: 0;
+  /* 900 → 700：系统黑体最粗只到 Bold(700)，写 900 等于要浏览器描边造假粗，
+     长时间看边缘发糊发脏。700 是真实存在的那一档。 */
+  font: 700 clamp(21px, 3.2vw, 29px)/1.24 var(--sans);
+  letter-spacing: .07em;
+  color: var(--ink);
+  min-width: 0;
+}.nb-scope .sheet-band .back{
+  margin-left: auto;
+  padding: 4px 13px;
+  font: 700 14px/1.5 var(--pen);
+  letter-spacing: .1em;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+}.nb-scope .sheet-band .back:hover{ border-color: var(--ch, var(--ch-fallback)); color: var(--ch, var(--ch-fallback)); background: var(--paper-hi); }.nb-scope .sheet-meta{
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 17px 2px 14px;
+  border-bottom: 2px solid var(--ink);
+}.nb-scope /* 那条墨线会随完成率从左往右被朱砂填掉 —— 全站进度语言的第二种写法 */
+.sheet-meta::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 2px;
+  width: 100%;
+  background: var(--red);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+  transition: transform .7s var(--ease-out);
+}.nb-scope .sheet-score{
+  font: 400 14px/1.7 var(--pen);
+  color: var(--ink-soft);
+  letter-spacing: .03em;
+}.nb-scope .sheet-score b{ color: var(--ink); font-size: 21px; }.nb-scope .sheet-score .pct{ color: var(--red); font-weight: 700; }.nb-scope /* 小节级进度：和篇级并排，中间一道细竖线分开 */
+.score-secs{
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--paper-edge);
+  font-size: .92em;
+  color: var(--ink-faint);
+}.nb-scope .score-secs b{ font-size: 15px; color: var(--ink-soft); }.nb-scope .sheet-tools{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }.nb-scope .btn{
+  padding: 5px 13px;
+  font: 400 12.5px/1.5 var(--sans);
+  letter-spacing: .1em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease), transform .12s var(--ease);
+}.nb-scope .btn:hover{ border-color: var(--ch, var(--ch-fallback)); color: var(--ch, var(--ch-fallback)); background: var(--paper-hi); }.nb-scope .btn:active{ transform: translateY(1px); }.nb-scope .btn:focus-visible{ outline: 2px solid var(--ch, var(--ch-fallback)); outline-offset: 2px; }.nb-scope .ch-switch{
+  padding: 5px 9px;
+  font: 400 13px/1.5 var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  cursor: pointer;
+  max-width: 100%;
+}.nb-scope .ch-switch:hover{ border-color: var(--ch, var(--ch-fallback)); }.nb-scope .ch-switch:focus-visible{ outline: 2px solid var(--ch, var(--ch-fallback)); outline-offset: 2px; }.nb-scope .grp{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 28px 0 4px;
+  padding-bottom: 4px;
+  font: 800 16px/1.4 var(--sans);
+  letter-spacing: .09em;
+  color: var(--ink);
+  border-bottom: 3px solid var(--ch, var(--ch-fallback));
+}.nb-scope .grp .g-count{
+  font: 700 14px/1 var(--pen);
+  letter-spacing: .03em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}.nb-scope /* 这一组里"读了一部分"的篇数（和「已读」分开报，别让人以为整组都读完了） */
+.grp .g-count em{
+  font-style: normal;
+  font-weight: 400;
+  font-size: .86em;
+  color: var(--red-deep);
+  margin-left: .3em;
+}.nb-scope ul.entries{ list-style: none; margin: 4px 0 0; padding: 0; }.nb-scope .entry{ position: relative; border-bottom: 1px dashed var(--paper-edge); }.nb-scope .entry-link{
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 104px 10px 2px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s var(--ease);
+}.nb-scope .entry-link:focus-visible{ outline: 2px solid var(--ch, var(--ch-fallback)); outline-offset: -2px; }.nb-scope .entry:hover .entry-link{ background: color-mix(in srgb, var(--ch, var(--ch-fallback)) 7%, transparent); }.nb-scope /* 穿孔：已读的形状记号 */
+.hole{
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px dashed var(--hole-line);
+  border-radius: 50%;
+  background: var(--hole-bg);
+  font: 700 14px/1 var(--pen);
+  color: transparent;
+  transition: color .18s .08s var(--ease), border-color .18s var(--ease), border-style .18s var(--ease), background .18s var(--ease);
+}.nb-scope .entry.read .hole{ border: 1.5px solid var(--red); background: var(--paper); color: var(--red); }.nb-scope /* 读了一部分：穿孔只打了虚线的半圈 —— 比"没碰过"进了一步，但还没盖章 */
+.entry.part .hole{
+  border: 1.5px dashed var(--red);
+  background: var(--paper);
+  color: color-mix(in srgb, var(--red) 58%, transparent);
+}.nb-scope .entry-title{
+  position: relative;
+  justify-self: start;      /* 不拉伸 —— 朱线只画到文字的宽度 */
+  display: inline-block;
+  padding: 1px 3px 0;
+  min-width: 0;
+  font-size: 16.5px;
+  transition: color .2s var(--ease);
+}.nb-scope .entry.read .entry-title, .nb-scope .entry.part .entry-title{ color: var(--ink-faint); }.nb-scope /* 朱线长度 = 小节完成率：读了一半就只画一半，整篇读完才是完整的一道波浪。
+   阅读页悬浮目录里划掉的小节，在这一页直接看得见长度。
+   （旧版是整条背景图 + 滑入动画，画不出"半条"；改挂 ::after，用 clip-path 从右往左揭出） */
+.entry-title::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 8px;
+  margin-top: -4px;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 8%27 preserveAspectRatio=%27none%27><path d=%27M0,4 C10,2.4 20,5.6 30,4 S50,2.4 60,4 S80,5.6 90,4 S110,2.4 120,4%27 fill=%27none%27 stroke=%27%23b0492f%27 stroke-width=%272.2%27 stroke-linecap=%27round%27/></svg>");
+  background-repeat: repeat-x;
+  background-position: 0 50%;
+  background-size: 120px 8px;
+  clip-path: inset(0 calc((1 - var(--secp, 0)) * 100%) 0 0);
+  transition: clip-path .42s cubic-bezier(.3, .9, .3, 1);
+}.nb-scope .entry.part .entry-title::after{ opacity: .7; }
+@media (prefers-reduced-motion: reduce) {.nb-scope .entry-title::after{ transition: none; } }
+@keyframes strike-slide { from { background-position: -120px 50%; } to { background-position: 0 50%; } }.nb-scope .entry-when{
+  font: 400 12px/1 var(--mono);
+  color: var(--ink-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}.nb-scope /* 第三列：小节进度 + 批阅时间，右对齐 */
+.entry-meta{
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  white-space: nowrap;
+}.nb-scope /* 小节进度 —— 就是阅读页悬浮目录里划掉的那几条 */
+.entry-secs{
+  padding: 2px 7px;
+  font: 400 12px/1.4 var(--mono);
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+  background: var(--chip-bg);
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}.nb-scope .entry-secs.none{ border-style: dashed; opacity: .7; }.nb-scope .entry-secs.is-off{ display: none; }.nb-scope .entry.part .entry-secs{
+  color: var(--red-deep);
+  border-color: color-mix(in srgb, var(--red) 38%, var(--paper-edge));
+}.nb-scope .entry.read .entry-secs{
+  color: var(--red-deep);
+  border-color: color-mix(in srgb, var(--red) 30%, var(--paper-edge));
+}.nb-scope /* 半读态的按钮保持中性：染色会跟「已读态按钮」撞脸，让人以为已经读完了。
+   半读本身已由虚线穿孔、半划朱线、进度片三处说清。 */
+
+.entry-toggle{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  padding: 4px 11px;
+  font: 400 12.5px/1.5 var(--sans);
+  letter-spacing: .05em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease), transform .12s var(--ease);
+}.nb-scope .entry-toggle:hover{ border-color: var(--red); color: var(--red); }.nb-scope .entry-toggle:active{ transform: translateY(-50%) scale(.97); }.nb-scope .entry-toggle:focus-visible{ outline: 2px solid var(--red); outline-offset: 2px; }.nb-scope .entry.read .entry-toggle{
+  color: var(--red);
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 9%, var(--paper));
+}.nb-scope .sheet-foot{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px 20px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+  padding-top: 13px;
+  font: 400 12px/1.6 var(--mono);
+  color: var(--ink-faint);
+  border-top: 2px solid var(--ink);
+}.nb-scope .star{ color: var(--red); font-size: .86em; padding-right: .1em; }.nb-scope /* ============================================================ 阅读页 */
+.read-sheet{
+  --toc-w: clamp(238px, 22vw, 330px);
+  --toc-gap: 26px;
+  width: min(calc(1010px + var(--toc-w) + var(--toc-gap)), calc(var(--nb-w, 100vw) - 28px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: var(--toc-w) minmax(0, 1fr);
+  gap: var(--toc-gap);
+  align-items: start;
+}.nb-scope .read-clip{
+  grid-area: 1 / 2;
+  --foldpx: 26px;
+  /* 正文这面纸用单列一档的渐变终点：长读时眼睛不用跟着背景一起调曝光 */
+  background: linear-gradient(172deg, var(--paper) 0%, var(--paper-read-2) 100%);
+  box-shadow: inset 0 4px 0 var(--ch, var(--ch-fallback));
+  clip-path: var(--fold);
+  filter: drop-shadow(0 1px 1px rgba(var(--cast), .14)) drop-shadow(0 22px 40px -20px rgba(var(--cast), .40));
+}.nb-scope .read-band{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px clamp(16px, 3.2vw, 40px) 13px;
+  border-bottom: 1px solid var(--paper-edge);
+}.nb-scope .crumb{
+  font: 700 14px/1.5 var(--pen);
+  letter-spacing: .07em;
+  color: var(--ink-soft);
+  text-decoration: none;
+}.nb-scope a.crumb:hover{ color: var(--ink); text-decoration: underline; }.nb-scope .crumb .sep{ color: var(--ink-faint); margin: 0 7px; font-weight: 400; }.nb-scope .crumb--dim{ color: var(--ink-faint); }.nb-scope .read-band .spacer{ flex: 1; }.nb-scope .stamp-btn{
+  padding: 5px 16px;
+  font: 700 15px/1.4 var(--pen);
+  letter-spacing: .16em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 2px solid var(--paper-edge);
+  border-radius: 3px;
+  transform: rotate(-2deg);
+  cursor: pointer;
+  transition: border-color .15s var(--ease), color .15s var(--ease), background .15s var(--ease);
+}.nb-scope .stamp-btn:hover{ border-color: var(--red); color: var(--red); }.nb-scope .stamp-btn:focus-visible{ outline: 2px solid var(--red); outline-offset: 2px; }.nb-scope .stamp-btn.on{
+  color: var(--on-red);
+  background: var(--red-deep);
+  border-color: var(--red-deep);
+  box-shadow: inset 0 0 0 1.5px var(--ring-hi);
+}.nb-scope .read-wrap{ padding: clamp(22px, 3.6vw, 42px) clamp(16px, 3.2vw, 40px) 42px; }.nb-scope .read-head{ margin-bottom: 20px; }.nb-scope .read-title{
+  margin: 0 0 8px;
+  font: 700 clamp(24px, 3.6vw, 34px)/1.42 var(--pen);
+  letter-spacing: .04em;
+  color: var(--ink);
+  text-wrap: pretty;
+}.nb-scope .read-title .star{ font-size: .8em; }.nb-scope .read-sub{
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font: 400 12px/1.6 var(--mono);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .read-sub .ch-tag{
+  font: 700 13px/1.6 var(--pen);
+  letter-spacing: .08em;
+  color: color-mix(in srgb, var(--ch, var(--ch-fallback)) 88%, var(--ink));
+}.nb-scope /* 单栏正文。行长用 em 锁「几个汉字」而不是锁像素：
+   780px ÷ 16px = 48.75 字，超出 CJK 舒适区间（20~40 字）上限，一行扫完回不了眼。
+   40em 在 16.5px 下 = 660px = 整 40 字；字号三档改变时行长自动跟着走。 */
+.article{
+  max-width: 40em;
+  margin-inline: auto;
+  font-size: var(--fs);
+  line-height: 1.92;
+  text-align: justify;
+  /* CJK 的 justify 按语素间隙分摊，比默认按空格分摊均匀得多 */
+  text-justify: inter-ideograph;
+  /* 渐进增强：不支持的浏览器直接忽略这一行，不会产生副作用 */
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}.nb-scope /* justify 只留给正文段落。标题、列表项、代码块一律左对齐：
+   短行被拉成两端对齐时，词间空隙会白成一条河。 */
+.article h2, .nb-scope .article h3, .nb-scope .article h4, .nb-scope .article li, .nb-scope .md-pre{ text-align: left; }.nb-scope .article h2, .nb-scope .article h3, .nb-scope .article h4{
+  break-after: avoid;
+  /* 标题从「糊掉的粗宋体」换成「干净的粗黑体」：黑体的 700 是真实字重，
+     楷体笔就此交棒给刊头、印章、.md-c 容器标题，正文区不再出现第三种字族。 */
+  font-family: var(--sans);
+  font-weight: 700;
+  /* 防回归：拒绝浏览器替我们造字重 */
+  font-synthesis-weight: none;
+  scroll-margin-top: 22px;
+  text-wrap: balance;
+}.nb-scope /* 纵向节奏全部用 em：留白与字号同源，切档 / 缩放时比例不塌。
+   段落边界（.95em ≈ 31px）必须明显高过一行本身（1.92em ≈ 32px 的行距里
+   真正的"空隙感"来自段前段后之和），旧的 9px 让正文糊成一整块灰。 */
+.article h2{
+  margin: 2.2em 0 .9em;
+  padding: 3px 0 5px;
+  font-size: 19.5px;
+  letter-spacing: .04em;
+  color: var(--ink);
+  border-bottom: 2.5px solid var(--ch, var(--ch-fallback));
+}.nb-scope .article h3{ margin: 1.7em 0 .6em; font-size: var(--fs); color: var(--ink); }.nb-scope .article h3::before{
+  content: "";
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 7px;
+  /* 勾线走 mask 而不是 background：SVG 里只留形状，墨色由 --ink 决定，
+     夜读换墨时不必再反相一层。 */
+  background: var(--ink);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M1.5,7 C3,7.5 4,9 5,10.5 C6,7 8,3.5 10.5,1.5' fill='none' stroke='%2317181a' stroke-width='1.8' stroke-linecap='round'/></svg>") no-repeat center / contain;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M1.5,7 C3,7.5 4,9 5,10.5 C6,7 8,3.5 10.5,1.5' fill='none' stroke='%2317181a' stroke-width='1.8' stroke-linecap='round'/></svg>") no-repeat center / contain;
+  transform: translateY(1px);
+}.nb-scope .article h4{ margin: 1.3em 0 .4em; font-size: 15.5px; }.nb-scope .article p{ margin: .95em 0; }.nb-scope .article a{ color: color-mix(in srgb, var(--ch, var(--ch-fallback)) var(--ch-mix), var(--ink)); text-underline-offset: 3px; }.nb-scope /* 悬停不再闪朱砂：红笔一旦当鼠标指针用，真正被圈出的重点就失效了。
+   反馈改由「色更浅 + 下划线加粗到 2px」承担，不引入新色值。 */
+.article a:hover{
+  color: color-mix(in srgb, var(--ch, var(--ch-fallback)) var(--ch-mix-hov), var(--ink));
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}.nb-scope .article ul, .nb-scope .article ol{ margin: .95em 0; padding-left: 22px; }.nb-scope .article li{ margin: .35em 0; }.nb-scope .article img{
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 14px 0;
+  padding: 4px;
+  /* 纯白衬底在暖纸上是全页最亮的一块，看久了眼睛先落到图上而不是字上 */
+  background: var(--paper-toc);
+  border: 1px solid var(--paper-edge);
+}.nb-scope .article table{ width: 100%; margin: 14px 0; border-collapse: collapse; font-size: 14px; }.nb-scope /* 宽表格的横滑壳（由 read.js 就地包上）：窄屏不再顶破纸面。
+   外边距从表格挪到壳上，纵向节奏与从前一致。 */
+.md-table-wrap{
+  max-width: 100%;
+  margin: 14px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}.nb-scope .md-table-wrap > table{ margin: 0; }.nb-scope /* 表格降噪（P1-7）：竖线全去掉，每行只留一条 --paper-edge 细线。
+   八股对比、参数速查这类表既有竖线又有隔行底，一张表就是一道视觉栅栏，
+   读者要横穿六条线才能对上列。表头继续靠线宽 + 字重分离，不铺底色（不新增表面）。 */
+.article th, .nb-scope .article td{
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--paper-edge);
+  text-align: left;
+}.nb-scope .article th{
+  font: 700 14px/1.5 var(--sans);
+  border-bottom: 2px solid var(--ink-faint);
+}.nb-scope .article blockquote{
+  margin: 14px 0;
+  padding: 9px 15px;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--ch, var(--ch-fallback)) 8%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--ch, var(--ch-fallback)) 40%, transparent);
+}.nb-scope .article hr{ margin: 24px 0; border: 0; border-top: 2px solid var(--ink); }.nb-scope .article code:not(pre code){
+  padding: 1px 5px;
+  font: 400 .86em/1.6 var(--mono);
+  color: var(--ink);
+  background: var(--code-chip);
+  border-radius: 2px;
+}.nb-scope /* 代码块：等宽 12.5px 太小（一屏 Java 看得人往前凑），提到 13.5px / 1.75。
+   -.22° 倾斜是给"卡片"用的手写感，用在等宽文本上只会让字形亚像素发虚，去掉。 */
+.md-pre{
+  margin: 1.2em 0;
+  padding: 13px 15px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--code-fg);
+  background: var(--code-bg);
+  border: 1px solid var(--code-edge);
+  border-top: 3px solid var(--ch, var(--ch-fallback));
+  overflow-x: auto;
+  box-shadow: 2px 5px 12px -5px rgba(var(--cast), .45);
+}.nb-scope .md-pre code{ padding: 0; font-family: var(--mono); color: inherit; background: none; }.nb-scope /* highlight.js：颜色全部走 --code-* token，白昼 = VS Code 现代浅色，夜读在 token 块里翻回纸感暖调。
+   function / selector / section 不入板——它们是包住一段完整语法的壳，上色会顺着继承染到 params。 */
+.hljs-keyword, .nb-scope .hljs-selector-tag{ color: var(--code-kw); }.nb-scope .hljs-type, .nb-scope .hljs-class, .nb-scope .hljs-built_in{ color: var(--code-type); }.nb-scope .hljs-title, .nb-scope .hljs-title.function_, .nb-scope .hljs-title.class_{ color: var(--code-fn); }.nb-scope .hljs-string, .nb-scope .hljs-regexp, .nb-scope .hljs-char{ color: var(--code-str); }.nb-scope .hljs-number, .nb-scope .hljs-literal{ color: var(--code-num); }.nb-scope .hljs-comment, .nb-scope .hljs-quote{ color: var(--code-cmt); }.nb-scope .hljs-attr, .nb-scope .hljs-attribute, .nb-scope .hljs-property, .nb-scope .hljs-meta .hljs-keyword{ color: var(--code-prop); }.nb-scope .hljs-variable, .nb-scope .hljs-template-variable, .nb-scope .hljs-subst{ color: var(--code-var); }.nb-scope .hljs-tag, .nb-scope .hljs-name{ color: var(--code-tag); }.nb-scope .hljs-symbol, .nb-scope .hljs-bullet{ color: var(--code-sym); }.nb-scope .hljs-deletion{ color: var(--code-del); }.nb-scope .hljs-addition{ color: var(--code-add); }.nb-scope .hljs-emphasis{ font-style: italic; }.nb-scope .hljs-strong{ font-weight: 700; }.nb-scope /* 提示容器：荧光笔只给 tip，其余用纸底 + 楷体粗题，无侧条 */
+.md-c{ margin: 14px 0; padding: 10px 14px; font-size: 14px; }.nb-scope .md-c-tip{ background: var(--hi); }.nb-scope .md-c-warning{ background: var(--warn-bg); }.nb-scope .md-c-danger{ background: var(--danger-bg); }.nb-scope .md-c-info{ background: var(--info-bg); }.nb-scope .md-c-center{ text-align: center; }.nb-scope .md-c-title{
+  margin: 0 0 3px;
+  font: 700 15px/1.5 var(--pen);
+  letter-spacing: .06em;
+  color: var(--ink);
+}.nb-scope .md-mermaid{ margin: 16px 0; padding: 10px; background: var(--paper-toc); border: 1px solid var(--paper-edge); }.nb-scope .md-mermaid svg{ max-width: 100%; height: auto; }.nb-scope .md-mermaid .mermaid-src{ margin: 0; font: 400 12px/1.6 var(--mono); color: var(--ink-faint); white-space: pre-wrap; }.nb-scope /* 便签目录卡：钉在纸面左边的第 1 列 */
+.toc{
+  grid-area: 1 / 1;
+  --toc-bg: var(--paper-toc);
+  position: sticky;
+  top: var(--pad-y);
+  align-self: start;
+  max-height: calc(var(--nb-h, 100vh) - var(--pad-y) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0 12px 12px;
+  font-size: 13.5px;
+  background: var(--toc-bg);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 4px;
+  box-shadow: 0 18px 34px -22px rgba(var(--cast), .62), inset 0 0 0 3px var(--inset-hi);
+}.nb-scope .toc:empty{ display: none; }.nb-scope .toc::-webkit-scrollbar{ width: 9px; }.nb-scope .toc::-webkit-scrollbar-track{ background: transparent; }.nb-scope .toc::-webkit-scrollbar-thumb{ background: var(--toc-thumb); border: 2px solid var(--toc-bg); border-radius: 5px; }.nb-scope .toc::-webkit-scrollbar-thumb:hover{ background: var(--toc-thumb-hov); }.nb-scope .toc h2{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 -4px 8px;
+  padding: 12px 4px 8px;
+  font: 700 12.5px/1.5 var(--sans);
+  letter-spacing: .2em;
+  color: var(--ink-faint);
+  background: var(--toc-bg);
+  border-bottom: 1.5px solid var(--paper-edge);
+}.nb-scope /* 那条分隔线随小节完成率被朱砂填掉 —— 和章节页进度条同一种写法 */
+.toc h2::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1.5px;
+  height: 1.5px;
+  background: var(--red);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+  transition: transform .5s var(--ease-out);
+}.nb-scope /* 目录里的小节进度：这一页自己的"进度环" */
+.toc-prog{
+  margin-left: 9px;
+  font: 400 12px/1 var(--mono);
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}.nb-scope .toc.toc-done .toc-prog{ color: var(--red-deep); }
+@media (prefers-reduced-motion: reduce) {.nb-scope .toc h2::after{ transition: none; } }.nb-scope .toc-toggle-all{
+  padding: 2px 7px;
+  font: 400 12px/1.5 var(--sans);
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  background: none;
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), color .15s var(--ease);
+}.nb-scope .toc-toggle-all:hover{ border-color: var(--ink-soft); color: var(--ink); }.nb-scope .toc-row{ display: flex; align-items: center; gap: 8px; margin: 4px 0; }.nb-scope .toc-row.hidden{ display: none; }.nb-scope .toc-slot{ flex: none; width: 13px; height: 15px; display: grid; place-items: center; }.nb-scope .toc-caret{
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 15px;
+  padding: 0;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transform: rotate(90deg);
+  transition: transform .16s var(--ease), color .15s var(--ease);
+}.nb-scope .toc-caret::before{
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}.nb-scope .toc-caret:hover{ color: var(--ink); }.nb-scope .toc-caret:focus-visible{ outline: 2px solid var(--ink); outline-offset: 1px; }.nb-scope .toc-row.collapsed .toc-caret{ transform: rotate(0deg); }.nb-scope .toc-mark{
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
+  font: 700 12px/1 var(--pen);
+  color: transparent;
+  background: var(--mark-bg);
+  border: 1.5px dashed var(--mark-line);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color .15s var(--ease), border-color .15s var(--ease), border-style .15s var(--ease);
+}.nb-scope .toc-mark:hover{ border-color: var(--red); border-style: solid; color: color-mix(in srgb, var(--red) 50%, transparent); }.nb-scope .toc-mark:focus-visible{ outline: 2px solid var(--red); outline-offset: 2px; }.nb-scope .toc-row.read .toc-mark{ border: 1.5px solid var(--red); background: var(--paper); color: var(--red); }.nb-scope .toc a{
+  flex: 1;
+  min-width: 0;
+  display: block;
+  min-height: 30px;
+  padding: 7px 10px 7px 12px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--ch, var(--ch-fallback)) 8%, var(--paper));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 8px));
+  transition: background .15s var(--ease), color .15s var(--ease);
+}.nb-scope .toc a:hover{ background: var(--hi); color: var(--ink); }.nb-scope .toc a.cur{ background: var(--hi); font-weight: 700; }.nb-scope .toc-row.lv3{ padding-left: 15px; }.nb-scope .toc-row.lv3 a{ font-size: 12.5px; opacity: 1; color: var(--ink-faint); }.nb-scope .toc-row.read a{
+  color: var(--ink-faint);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 8%27 preserveAspectRatio=%27none%27><path d=%27M0,4 C10,2.4 20,5.6 30,4 S50,2.4 60,4 S80,5.6 90,4 S110,2.4 120,4%27 fill=%27none%27 stroke=%27%23b0492f%27 stroke-width=%272%27 stroke-linecap=%27round%27/></svg>");
+  background-repeat: repeat-x;
+  background-position: 0 50%;
+  background-size: 120px 7px;
+  animation: strike-slide .45s cubic-bezier(.3, .9, .3, 1);
+}.nb-scope .read-foot{
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 15px;
+  font: 400 14px/1.7 var(--pen);
+  color: var(--ink-soft);
+  border-top: 2px solid var(--ink);
+}.nb-scope .read-foot a{ color: color-mix(in srgb, var(--ch, var(--ch-fallback)) 85%, var(--ink)); text-decoration: none; border-bottom: 1px dashed currentColor; }.nb-scope .read-foot a:hover{ color: var(--ink); border-bottom-style: solid; }.nb-scope /* ============================================================ 通用件 */
+.toast{
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 20;
+  padding: 9px 22px;
+  font: 700 15px/1.5 var(--pen);
+  letter-spacing: .08em;
+  color: var(--hi);
+  background: var(--ink);
+  border-radius: 3px;
+  box-shadow: 0 14px 28px -10px rgba(0, 0, 0, .62);
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+  transition: opacity .22s var(--ease), transform .22s var(--ease);
+  pointer-events: none;
+}.nb-scope .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }.nb-scope .loading-line{
+  padding: 40px 0;
+  text-align: center;
+  font: 400 15px/1.8 var(--pen);
+  letter-spacing: .2em;
+  color: var(--ink-soft);
+}.nb-scope .loading-line::after{ content: "……"; animation: dots 1.4s steps(4, end) infinite; }
+@keyframes dots { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }.nb-scope /* 浏览器自带的表面也归设计管 */
+.nb-scope ::-webkit-scrollbar, .nb-scope::-webkit-scrollbar{ width: 12px; height: 12px; }.nb-scope ::-webkit-scrollbar-track, .nb-scope::-webkit-scrollbar-track{ background: var(--desk-2); }.nb-scope ::-webkit-scrollbar-thumb, .nb-scope::-webkit-scrollbar-thumb{ background: var(--thumb); border: 3px solid var(--desk-2); border-radius: 7px; }.nb-scope ::-webkit-scrollbar-thumb:hover{ background: var(--thumb-hov); }.nb-scope .md-pre::-webkit-scrollbar{ height: 9px; }.nb-scope .md-pre::-webkit-scrollbar-track{ background: var(--sk-1); }.nb-scope .md-pre::-webkit-scrollbar-thumb{ background: var(--code-thumb); border: 2px solid transparent; background-clip: content-box; }.nb-scope /* 数据一律对齐 */
+.card-pct, .nb-scope .card-count, .nb-scope .score-num, .nb-scope .score-pct, .nb-scope .entry-when, .nb-scope .sheet-score b, .nb-scope .g-count, .nb-scope .read-sub, .nb-scope .toc-mark{ font-variant-numeric: tabular-nums; }.nb-scope /* ------------------------------------------------- 右侧留白里的竖向导航
+   三个圆形按钮（圆 = 穿孔在全站一贯的形状），钉在纸面右侧那条留白里。
+   宽屏（≥1280px）它是 .read-sheet 的第三列 —— 位置由版面算出来，纸面怎么变都
+   正好贴着纸边，不用猜偏移量（用 fixed + 手写 right 会在 1200~1360 这段压到正文）。
+   窄屏（<1280px）没有这条留白，改成右下角一小摞。
+   两种版位共享下面这段，靠媒体查询只改"怎么定位"。 */
+.rail{
+  position: fixed;          /* 窄屏默认：脱离文档流，固定右下角 */
+  z-index: 15;              /* fixed/sticky 的 grid 子元素都不占轨道，不会挤出隐式列 */
+  right: 10px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: rail-in .5s var(--ease-out) .15s backwards;
+}.nb-scope /* 只淡入，不动 transform —— 两种版位的 transform 不同，塞进 keyframes 会互相覆盖，
+   也会和 reduced-motion 的 animation:none 打架。 */
+@keyframes rail-in{ from { opacity: 0; } }.nb-scope .rail-btn{
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 50%;
+  cursor: pointer;
+  /* 收紧的投影：小控件不做大投影（纸面才配那一次大 lift），够把它从案面/纸面上托起来就行 */
+  box-shadow: 0 4px 9px -4px rgba(var(--cast), .58);
+  transition: color .16s var(--ease), border-color .16s var(--ease), background .16s var(--ease), transform .16s var(--ease), opacity .2s var(--ease);
+}.nb-scope .rail-btn svg{
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}.nb-scope /* 悬停与聚焦一律用墨：导轨是「位置」控件不是「批注」控件，红笔一当鼠标指针用，
+   真正被圈出的重点就失效了（DESIGN.md · Pen-Red Rule）。反馈靠三件事叠加：
+   墨色加深 + 纸面被灯照到（--paper-hi）+ 那一次 2px 抬起。 */
+.rail-btn:hover{ color: var(--ink); border-color: var(--ink-soft); background: var(--paper-hi); transform: translateY(-2px); }.nb-scope .rail-btn:active{ transform: translateY(0) scale(.95); }.nb-scope .rail-btn:focus-visible{ outline: 2px solid var(--ink); outline-offset: 2px; }.nb-scope /* 已经在顶端：「回顶端」收起来。用 opacity 不用 display ——
+   导轨高度不变，另外两个按钮就不会跟着跳。 */
+.rail.at-top .rail-top{ opacity: 0; transform: translateY(7px); pointer-events: none; }.nb-scope /* 宽屏：成为纸面右边的第三列（纸面右侧的留白就是它的位置）。
+   门槛跟阅读页塌成单栏的 1024px 对齐 —— 1025px 起版面还是「左目录 + 右纸面」，
+   第三列就能挂上去；再窄就整页塌成 block，改走右下角那一档。 */
+@container nb (min-width: 1025px){
+  .read-sheet {
+    --rail-w: 40px;
+    width: min(calc(1010px + var(--toc-w) + var(--toc-gap) + var(--rail-w) + var(--toc-gap)), calc(var(--nb-w, 100vw) - 28px));
+    grid-template-columns: var(--toc-w) minmax(0, 1fr) var(--rail-w);
+  }
+  .rail {
+    grid-area: 1 / 3;
+    position: sticky;
+    top: var(--pad-y);
+    align-self: start;
+    right: auto;
+    bottom: auto;
+    gap: 10px;
+  }
+  .rail-btn { width: 40px; height: 40px; }
+  .rail-btn svg { width: 18px; height: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {.nb-scope .rail{ animation: none; }.nb-scope .rail-btn{ transition: color .16s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }.nb-scope .rail-btn:hover, .nb-scope .rail-btn:active{ transform: none; }.nb-scope .rail.at-top .rail-top{ transform: none; }
+}.nb-scope /* ============================================================ 夜读 / 字号
+   夜读是本仓第一次有第二套表面值，风险全在漏项——一个没被覆盖的 #fff 或 #c3b89c
+   就足以毁掉整页的暗适应。所以全站规则只允许引用 token，覆盖只需改这两块。
+   两块内容必须逐字一致：第一块由页面 <head> 里的 bootstrap 显式挂上（偏好一旦手动
+   选择就跨页、跨重启生效），第二块只在「系统深色 + 从没手动选过」时兜底。
+   墨三阶的口径不变，只是整体翻面：最暗的纸仍是 #1b1a16 而不是纯黑（纯黑底配浅字
+   会在眼里拖影），代码块比纸面略亮一档——抬面，不挖洞。朱砂与荧光笔仍是同两支笔，
+   夜读只让它们换底，不让它们换语义。 */
+.nb-scope[data-mode="night"]{
+  color-scheme: dark;
+
+  /* 案面：暖亚麻压成夜里同一张桌子 */
+  --desk: #121110;
+  --desk-2: #171613;
+  --desk-deep: #1d1b17;
+  --desk-ink: #8e8878;
+  --desk-ink-2: #7a7466;
+
+  /* 纸：四层深浅关系（toc < paper < paper-2 < back）原样搬过来，不许塌陷 */
+  --paper: #1b1a16;
+  --paper-2: #1f1e19;
+  --paper-read-2: #1f1e19;
+  --paper-toc: #191813;
+  --paper-edge: #33302a;
+  --paper-fold: #2a2822;
+  --paper-back: #222019;
+  --paper-hi: #2a2823;
+
+  /* 织纹留着（桌子还是桌子），暗角关掉：夜里不需要再往边缘压黑 */
+  --linen: 0, 0, 0;
+  --linen-a: .22;
+  --linen-a2: .14;
+  --vignette-a: 0;
+
+  /* 过塑反光减弱而不取消：纸依然过塑，只是灯关了 */
+  --gloss: rgba(255, 255, 255, .1);
+  --gloss-soft: rgba(255, 255, 255, .05);
+  --emboss: rgba(255, 255, 255, .07);
+  --inset-hi: rgba(255, 255, 255, .07);
+  --ring-hi: rgba(255, 255, 255, .7);
+  --on-red: #f7f2e7;
+  --tape-idle: rgba(222, 216, 200, .2);
+  --rule-desk: rgba(222, 216, 200, .24);
+  --sk-1: rgba(255, 255, 255, .06);
+  --sk-2: rgba(255, 255, 255, .1);
+
+  /* 浅一档的纸片在夜里改成"暗一档的纸片"：穿孔、进度片、勾选圈 */
+  --hole-line: #2f2c26;
+  --hole-bg: #23211c;
+  --chip-bg: #26241f;
+  --mark-line: #443f35;
+  --mark-bg: #24221d;
+
+  --thumb: #4a463e;
+  --thumb-hov: #5d584c;
+  --toc-thumb: #3b3830;
+  --toc-thumb-hov: #4d493e;
+
+  --warn-bg: #33291a;
+  --danger-bg: #34211c;
+  --info-bg: #1e2b26;
+
+  /* 墨三阶翻面：正文 12.2:1（渐变终点 11.7:1）、次级 8.2:1、弱级 4.9:1，仍只有这三阶 */
+  --ink: #ded8c8;
+  --ink-soft: #b8b2a3;
+  --ink-faint: #8d8779;
+  --hi: #4d4526;
+
+  --ch-mix: 58%;
+  --ch-mix-hov: 48%;
+
+  /* 代码块 #26241e 比纸面 #1b1a16 略亮（台阶 1.12），其上文字 #e8e6dd 12.4:1 */
+  --code-bg: #26241e;
+  --code-fg: #e8e6dd;
+  /* 夜里 --paper-2 比正文纸亮，沿用它贴片会"抬头"，压不住墨。翻到最暗那层。 */
+  --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 6%, var(--paper-toc));
+  /* 语法色整套覆盖回原来那支纸感暖调：白昼的 VS Code 浅底色板在暗纸上最高的只有 4.3:1。
+     明度台阶够了，描边退回透明；块内横滚条换回原来那支暖黄。 */
+  --code-edge: transparent;
+  --code-thumb: rgba(242, 232, 160, .35);
+  --code-kw: #ffd75e;
+  --code-type: #8fd0c8;
+  --code-fn: #8fc6ff;
+  --code-str: #9fd3a0;
+  --code-num: #e8a08f;
+  --code-cmt: #8b918a;
+  --code-prop: #f0c674;
+  --code-var: #d8c8a8;
+  --code-tag: #c8a6d8;
+  --code-sym: #f2e8a0;
+  --code-del: #ff9d8a;
+  --code-add: #b5e0b0;
+
+  /* 投影在夜里不成立，收成一贴地影 */
+  --cast: 0, 0, 0;
+}
+@media (prefers-color-scheme: dark) {.nb-scope:not([data-mode="day"]){
+    color-scheme: dark;
+    --desk: #121110;
+    --desk-2: #171613;
+    --desk-deep: #1d1b17;
+    --desk-ink: #8e8878;
+    --desk-ink-2: #7a7466;
+    --paper: #1b1a16;
+    --paper-2: #1f1e19;
+    --paper-read-2: #1f1e19;
+    --paper-toc: #191813;
+    --paper-edge: #33302a;
+    --paper-fold: #2a2822;
+    --paper-back: #222019;
+    --paper-hi: #2a2823;
+    --linen: 0, 0, 0;
+    --linen-a: .22;
+    --linen-a2: .14;
+    --vignette-a: 0;
+    --gloss: rgba(255, 255, 255, .1);
+    --gloss-soft: rgba(255, 255, 255, .05);
+    --emboss: rgba(255, 255, 255, .07);
+    --inset-hi: rgba(255, 255, 255, .07);
+    --ring-hi: rgba(255, 255, 255, .7);
+    --on-red: #f7f2e7;
+    --tape-idle: rgba(222, 216, 200, .2);
+    --rule-desk: rgba(222, 216, 200, .24);
+    --sk-1: rgba(255, 255, 255, .06);
+    --sk-2: rgba(255, 255, 255, .1);
+    --hole-line: #2f2c26;
+    --hole-bg: #23211c;
+    --chip-bg: #26241f;
+    --mark-line: #443f35;
+    --mark-bg: #24221d;
+    --thumb: #4a463e;
+    --thumb-hov: #5d584c;
+    --toc-thumb: #3b3830;
+    --toc-thumb-hov: #4d493e;
+    --warn-bg: #33291a;
+    --danger-bg: #34211c;
+    --info-bg: #1e2b26;
+    --ink: #ded8c8;
+    --ink-soft: #b8b2a3;
+    --ink-faint: #8d8779;
+    --hi: #4d4526;
+    --ch-mix: 58%;
+    --ch-mix-hov: 48%;
+    --code-bg: #26241e;
+    --code-fg: #e8e6dd;
+    --code-chip: color-mix(in srgb, var(--ch, var(--ch-fallback)) 6%, var(--paper-toc));
+    --code-edge: transparent;
+    --code-thumb: rgba(242, 232, 160, .35);
+    --code-kw: #ffd75e;
+    --code-type: #8fd0c8;
+    --code-fn: #8fc6ff;
+    --code-str: #9fd3a0;
+    --code-num: #e8a08f;
+    --code-cmt: #8b918a;
+    --code-prop: #f0c674;
+    --code-var: #d8c8a8;
+    --code-tag: #c8a6d8;
+    --code-sym: #f2e8a0;
+    --code-del: #ff9d8a;
+    --code-add: #b5e0b0;
+    --cast: 0, 0, 0;
+  }
+}.nb-scope /* 夜读开关的两个图标：太阳/月亮同一颗按钮，靠状态换脸，不新增DOM 层级 */
+.rail-mode{ margin-top: 9px; }.nb-scope .rail-mode .ico-moon{ display: none; }.nb-scope[data-mode="night"] .rail-mode .ico-sun{ display: none; }.nb-scope[data-mode="night"] .rail-mode .ico-moon{ display: block; }.nb-scope /* 没手动选过时，图标要跟上面那块 token 兜底走同一个条件，否则夜读页会亮着太阳 */
+@media (prefers-color-scheme: dark){
+  .nb-scope:not([data-mode="day"]) .rail-mode .ico-sun { display: none; }
+  .nb-scope:not([data-mode="day"]) .rail-mode .ico-moon { display: block; }
+}.nb-scope /* P2-13 字号三档：版心是 em，换档时行长恒定 40 字，只有字在长大。
+   按钮里那颗 A 跟着当前档位缩放，档位即所见。 */
+.nb-scope[data-size="s"]{ --fs: 15.5px; }.nb-scope[data-size="m"]{ --fs: 16.5px; }.nb-scope[data-size="l"]{ --fs: 17.5px; }.nb-scope[data-size="s"] .rail-size{ font-size: 12.5px; }.nb-scope[data-size="m"] .rail-size{ font-size: 15px; }.nb-scope[data-size="l"] .rail-size{ font-size: 17.5px; }.nb-scope .rail-size{ font: 800 1em/1 var(--sans); letter-spacing: 0; }.nb-scope /* ============================================================ 响应式 */
+@container nb (max-width: 1080px){
+  /* 窄屏放弃 bento：两列等宽，一行两张，不再按篇幅拼版 */
+  .deck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { grid-column: span 1; grid-row: span 1; }
+  .card[data-size="xl"] .card-name { font-size: 21px; }
+  .card[data-rows="2"] .card-ticks { gap: 3px; min-height: 0; }
+  /* 基准已加宽到 4px（P2-16），这里的覆写必须跟着抬：
+     两行主课卡的刻度本来要比普通卡粗一档，写成 3.5px 会反过来比 4px 还细。 */
+  .card[data-rows="2"] .card-ticks i { width: 4.5px; height: 14px; }
+  .card[data-rows="2"] .card-count { font-size: 19px; }
+}
+
+@container nb (max-width: 1024px) {.nb-scope .read-sheet{ display: block; width: auto; }.nb-scope .toc{
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: none;
+    /* 这里曾经是 overflow: visible —— 长标题的条目不可收缩又不裁切，
+       溢出一路传给 documentElement.scrollWidth，整页横向可拖；布局视口被撑宽后，
+       fixed; right:10px 的 .rail 被钉到拓宽后的右缘，整条跑出屏幕（390px 实测溢出 459px）。
+       clip 只做兜底，真正的修法是下面让条目能收缩、能在内部断行。 */
+    overflow-x: clip;
+    overflow-y: visible;
+    margin-top: 22px;
+    padding: 12px;
+    box-shadow: none;
+  }.nb-scope .toc h2{ width: 100%; position: static; margin: 0 0 4px; padding: 0 0 6px; }.nb-scope .toc-row{ margin: 0; }.nb-scope /* flex: 0 1 auto —— 保持原来的「按内容定宽的小标签」外观（不 grow），
+     但允许在放不下时收缩（原来是 flex:none，放不下就直接顶出去）。
+     配合 min-width:0 / max-width:100% / overflow-wrap 让超长标题在条目内部换行。 */
+  .toc a{
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }.nb-scope .toc-slot, .nb-scope .toc-caret, .nb-scope .toc-toggle-all{ display: none; }.nb-scope .toc-row.hidden{ display: flex; }
+}
+
+@container nb (max-width: 760px) {.nb-scope /* fixed 背景在移动端每次滚动都整层重绘；织纹层在 6~7 英寸屏上
+     已经是"贴着看"的高频纹理，两头都不划算，直接关掉。 */
+  body{
+    padding-left: 12px;
+    padding-right: 12px;
+    background-attachment: scroll;
+  }.nb-scope body::before{ display: none; }.nb-scope .masthead{ grid-template-columns: minmax(0, 1fr); align-items: start; gap: 20px; }.nb-scope .score{ justify-items: start; min-width: 0; width: 100%; }.nb-scope .deck{ grid-template-columns: minmax(0, 1fr); }.nb-scope .card{ grid-column: span 1; grid-row: span 1; }.nb-scope .card[data-size="xl"] .card-name, .nb-scope .card[data-size="md"] .card-name{ font-size: 19px; }.nb-scope .card[data-size="sm"] .card-blurb{ white-space: normal; }.nb-scope .entry-link{ grid-template-columns: 28px minmax(0, 1fr); align-items: start; padding-right: 96px; }.nb-scope .entry-link .hole{ margin-top: 2px; }.nb-scope /* 小节进度在窄屏掉到标题下一行：挤在 3 列里会把纸面顶破 */
+  .entry-link .entry-meta{ grid-column: 1 / -1; justify-content: flex-start; margin-top: 5px; padding-left: 40px; }.nb-scope .entry-when{ display: none; }.nb-scope .read-title{ font-size: clamp(22px, 6.6vw, 28px); }
+}.nb-scope /* 390px 视口去掉导轨与内衬后，正文实测只有 24em 左右：
+   行长不足时 justify 拉的是"词与词"，两端对齐转负收益，回到左对齐。 */
+@container nb (max-width: 600px){
+  .article { text-align: left; }
+}
+
+@container nb (max-width: 460px) {.nb-scope .card[data-size="xl"] .card-blurb, .nb-scope .card[data-size="md"] .card-blurb{ display: none; }.nb-scope .sheet-band .back{ margin-left: 0; }.nb-scope .desk-foot{ flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {.nb-scope *, .nb-scope *::before, .nb-scope *::after{
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }.nb-scope .card{ opacity: 1 !important; transform: none !important; }
+}
+
+/* ============================================================ nb 容器基座（Vue 移植补丁）
+   .nb-host  带 translateZ：让 .rail/.toast 的 position:fixed 以容器为包含块
+             —— 同一份样式在「窗口内」与「全页深链」两种宿主里都钉在正确位置。
+   .nb-scope 滚动容器 + 设计令牌作用域 + container nb（宽度媒体查询的查询对象）。
+             案面 = 多层 background：暗角 → 织纹×2 → 桌面径向，attachment 默认 scroll
+             （内容滚、桌子不滚，等价于原 body 的 fixed 层叠）。
+   --nb-h / --nb-w 由 NotebookRoot 的 ResizeObserver 写入（px 实测值）。 */
+.nb-host {
+  transform: translateZ(0);
+  height: 100%;
+  min-height: 0;
+}
+.nb-scope {
+  container-type: inline-size;
+  container-name: nb;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  color: var(--ink);
+  font: 400 16px/1.8 var(--serif);
+  color-scheme: light;
+  --nb-h: 100vh;
+  --nb-w: 100vw;
+  background-color: var(--desk-2);
+  background-image:
+    radial-gradient(120% 100% at 50% 40%, transparent 55%, rgba(var(--vignette), var(--vignette-a)) 100%),
+    repeating-linear-gradient(90deg, rgba(var(--linen), var(--linen-a)) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(var(--linen), var(--linen-a2)) 0 1px, transparent 1px 3px),
+    radial-gradient(1500px 950px at 50% -20%, var(--desk) 0%, var(--desk-2) 55%, var(--desk-deep) 128%);
+}
+.nb-page {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  padding: var(--pad-y) 14px 60px;
+}
+/* 夜读跟随 .nb-scope[data-mode="night"]（token 块已在上方整体覆盖） */
+.nb-scope[data-mode="night"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  .nb-scope:not([data-mode="day"]) { color-scheme: dark; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-scope { scroll-behavior: auto; }
+}
