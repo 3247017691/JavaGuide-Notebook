@@ -1,5 +1,5 @@
 /* 静态资源与页面路由。
-   优先级：/desktop（旧壳留档）→ /jbl（纯静态题库）→ /img（魔数嗅探）→
+   优先级：/jbl（纯静态题库）→ /img（魔数嗅探）→
    client/dist（SPA 壳 + 构建资产）→ /content /vendor（构建产物正文）→
    SPA fallback（/index.html、/chapter.html、/read/*.html 等全部落到 SPA，
    由 vue-router 的同名路由接住）。 */
@@ -19,8 +19,6 @@ function sniffImageType(b) {
 }
 
 function mountStatics(app, { clientDist }) {
-  // 旧桌面外壳留档在 /legacy（新外壳由 SPA 的 / 接管），便于回退比对
-  app.use("/legacy", express.static(path.join(__dirname, "..", "desktop"), { index: "index.html" }));
   app.use("/jbl", express.static(path.join(__dirname, "..", "JBL火箭题库"), { extensions: ["html"] }));
 
   // 图片 Content-Type 纠正：data/image-map.json 的文件名按原始 URL 扩展名落盘，

@@ -6,16 +6,26 @@
    ========================================================================== */
 
 :root {
-  /* ---- 玻璃三档：浅色 ---- */
-  --glass-thin: rgba(250, 248, 244, .55);
-  --glass-med: rgba(252, 250, 246, .72);
-  --glass-thick: rgba(253, 251, 247, .86);
-  --glass-blur: 28px;
-  --glass-blur-thick: 44px;
-  --glass-sat: 1.7;
-  --glass-brd: rgba(255, 255, 255, .58);
+  /* ---- 玻璃三档：浅色 ----
+     这里alpha 和 blur 是一对：blur 越大，背后的东西被抹得越平，玻璃就越像一块
+     纯色塑料。所以厚档只给 26px 而不是 44px —— 菜单背后若是窗口纸面，26px 还能
+     留住卡片边界与文字块的明暗结构，那才是「毛玻璃」；44px 出来只剩一块米色。
+     （对照 参考/macOS27.jpg：那里之所以通透，是因为背后是深色照片，有结构可透。） */
+  --glass-thin: rgba(252, 251, 249, .44);
+  --glass-med: rgba(253, 252, 250, .6);
+  --glass-thick: rgba(254, 253, 251, .72);
+  --glass-blur: 22px;
+  --glass-blur-thick: 32px;
+  --glass-sat: 1.8;
+  --glass-brd: rgba(255, 255, 255, .8);
   --glass-brd-dark: rgba(0, 0, 0, .10);
-  --glass-inner: rgba(255, 255, 255, .62);
+  --glass-inner: rgba(255, 255, 255, .78);
+  /* 右键菜单/下拉：高透 vibrancy，能透出背后内容色（参考图 macOS27.jpg） */
+  --glass-menu: rgba(251, 250, 248, .46);
+  /* 窗口正文底色。**只给 .frames 用** —— .win 自己是透明的，
+     否则工具栏 / 侧栏的 backdrop-filter 采样到的是窗口自己的底，永远透不到壁纸，
+     玻璃就等于白做（这是浅色主题「看着不透」的根因）。 */
+  --win-bg: #f7f5f1;
 
   /* ---- 墨色 ---- */
   --txt-1: #1d1d1f;
@@ -32,9 +42,9 @@
   --warn: #d68910;
 
   /* ---- 圆角刻度 ---- */
-  --r-win: 20px;
-  --r-panel: 24px;
-  --r-menu: 10px;
+  --r-win: 12px;
+  --r-panel: 14px;
+  --r-menu: 8px;
   --r-ctl: 8px;
   --r-pill: 999px;
 
@@ -78,12 +88,14 @@
 
 /* ============================ 深色档：只换值 ============================ */
 html.dark {
-  --glass-thin: rgba(32, 30, 27, .55);
-  --glass-med: rgba(34, 31, 28, .68);
-  --glass-thick: rgba(38, 35, 31, .84);
-  --glass-brd: rgba(255, 255, 255, .12);
+  --glass-thin: rgba(30, 28, 26, .46);
+  --glass-med: rgba(32, 30, 27, .6);
+  --glass-thick: rgba(36, 33, 30, .72);
+  --glass-menu: rgba(38, 35, 31, .48);
+  --win-bg: #23201b;
+  --glass-brd: rgba(255, 255, 255, .16);
   --glass-brd-dark: rgba(0, 0, 0, .42);
-  --glass-inner: rgba(255, 255, 255, .09);
+  --glass-inner: rgba(255, 255, 255, .12);
 
   --txt-1: #f5f5f7;
   --txt-2: rgba(235, 235, 245, .62);
@@ -110,22 +122,26 @@ html[data-desk-opaque="1"] {
   --glass-thin: #efece6;
   --glass-med: #f7f5f0;
   --glass-thick: #fbfaf7;
+  --glass-menu: #fbfaf7;
 }
 html[data-desk-opaque="1"].dark {
   --glass-thin: #211f1c;
   --glass-med: #26231f;
   --glass-thick: #2b2823;
+  --glass-menu: #2b2823;
 }
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --glass-thin: #efece6;
     --glass-med: #f7f5f0;
     --glass-thick: #fbfaf7;
+    --glass-menu: #fbfaf7;
   }
   html.dark {
     --glass-thin: #211f1c;
     --glass-med: #26231f;
     --glass-thick: #2b2823;
+    --glass-menu: #2b2823;
   }
 }
 
@@ -169,20 +185,23 @@ html[data-desk-opaque="1"] .glass-thick {
   -webkit-backdrop-filter: none;
 }
 
-/* ---------------- 壁纸：暖贝折叠绸（参考图同款气质） ---------------- */
+/* ---------------- 壁纸：暖贝折叠绸（参考图同款气质） ----------------
+   顶部压一条暗棕 scrim：Tahoe 的菜单栏全透明 + 白字，靠壁纸顶部够暗来保证可读。 */
 .wallpaper {
   position: fixed;
   inset: -40px;
   z-index: 0;
   background:
-    radial-gradient(120% 90% at 78% 12%, rgba(255, 244, 224, .55), transparent 52%),
-    radial-gradient(150% 110% at 12% 88%, rgba(56, 44, 28, .5), transparent 56%),
-    linear-gradient(158deg, #cbb692 0%, #b29a75 34%, #8f7a5c 66%, #6d5c44 100%);
+    linear-gradient(180deg, rgba(36, 26, 16, .62), rgba(36, 26, 16, 0) 130px),
+    radial-gradient(95% 75% at 74% 44%, rgba(255, 246, 226, .52), transparent 56%),
+    radial-gradient(150% 110% at 8% 94%, rgba(34, 25, 15, .6), transparent 58%),
+    linear-gradient(158deg, #a8906a 0%, #8f7a5c 36%, #6b5a42 68%, #463a29 100%);
 }
 html.dark .wallpaper {
   background:
-    radial-gradient(120% 90% at 78% 12%, rgba(120, 96, 62, .4), transparent 52%),
-    radial-gradient(150% 110% at 12% 88%, rgba(0, 0, 0, .6), transparent 58%),
+    linear-gradient(180deg, rgba(0, 0, 0, .66), rgba(0, 0, 0, 0) 130px),
+    radial-gradient(95% 75% at 74% 44%, rgba(120, 96, 62, .38), transparent 56%),
+    radial-gradient(150% 110% at 8% 94%, rgba(0, 0, 0, .66), transparent 58%),
     linear-gradient(158deg, #3d3524 0%, #2b251a 40%, #1a1712 74%, #100e0b 100%);
 }
 /* 缎带：两层大曲率曲面对比出「折叠」的光 */
@@ -220,7 +239,8 @@ html.dark .wallpaper::after {
       rgba(150, 118, 74, .24) 224deg, transparent 300deg);
 }
 
-/* ============================ 菜单栏 ============================ */
+/* ============================ 菜单栏 ============================
+   Tahoe 式全透明菜单栏：无填充无边框，白字 + 轻投影，靠壁纸顶部 scrim 保证对比。 */
 .menubar {
   position: fixed;
   inset: 0 0 auto 0;
@@ -230,9 +250,16 @@ html.dark .wallpaper::after {
   align-items: stretch;
   gap: 2px;
   padding: 0 8px;
+  background: transparent;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .42);
+}
+html[data-desk-opaque="1"] .menubar {
   background: var(--glass-thin);
   border-bottom: .5px solid var(--glass-brd-dark);
   box-shadow: inset 0 -.5px 0 var(--glass-brd);
+  color: var(--txt-1);
+  text-shadow: none;
 }
 .mb-item {
   display: inline-flex;
@@ -241,22 +268,27 @@ html.dark .wallpaper::after {
   padding: 0 9px;
   border: 0;
   background: none;
-  color: var(--txt-1);
+  color: inherit;
   font: 500 12.5px/1 var(--sans);
   border-radius: 6px;
   cursor: default;
   white-space: nowrap;
 }
-.mb-item:hover { background: var(--hover); }
-.mb-item.open { background: var(--hover-2); }
+.mb-item:hover { background: rgba(255, 255, 255, .17); }
+.mb-item.open { background: rgba(255, 255, 255, .26); }
+html[data-desk-opaque="1"] .mb-item:hover { background: var(--hover); }
+html[data-desk-opaque="1"] .mb-item.open { background: var(--hover-2); }
 .mb-item svg { width: 15px; height: 15px; }
 .mb-logo svg { width: 16px; height: 16px; }
 .mb-app { font-weight: 700; }
 .mb-grow { flex: 1; }
-.mb-clock { font-variant-numeric: tabular-nums; color: var(--txt-1); }
+.mb-clock { font-variant-numeric: tabular-nums; }
+.mb-stat { padding: 0 5px; }
+.mb-stat svg { width: 16px; height: 16px; opacity: .95; }
 
 /* 进度库状态芯片 */
-.db-chip { gap: 6px; color: var(--txt-2); }
+.db-chip { gap: 6px; color: rgba(255, 255, 255, .92); }
+html[data-desk-opaque="1"] .db-chip { color: var(--txt-2); }
 .db-chip .led {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--txt-3);
@@ -278,15 +310,14 @@ html.dark .wallpaper::after {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 7px;
-  height: calc(var(--dock-h) - 12px);
-  padding: 0 10px;
-  border-radius: 22px;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 24px;
   background: var(--glass-thin);
   border: .5px solid var(--glass-brd);
   box-shadow: var(--shadow-dock), inset 0 .5px 0 var(--glass-inner);
 }
-.dock-item { position: relative; width: 48px; height: 48px; }
+.dock-item { position: relative; width: 54px; height: 54px; }
 .dock-btn {
   display: block; width: 100%; height: 100%;
   padding: 0; border: 0; background: none; cursor: pointer;
@@ -361,18 +392,66 @@ html.dark .wallpaper::after {
 .desk-icon.sel { background: rgba(255, 255, 255, .18); outline: .5px solid rgba(255,255,255,.35); }
 .desk-icon:focus-visible { outline: 2px solid #fff; }
 
+/* ============================ 桌面 widgets（参考图左列） ============================ */
+.widgets {
+  position: fixed;
+  left: 18px;
+  top: calc(var(--mb-h) + 16px);
+  z-index: 5;
+  display: flex; flex-direction: column; gap: 14px;
+  pointer-events: none;
+}
+@media (max-width: 1180px) { .widgets { display: none; } }
+.widget {
+  width: 176px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--glass-med);
+  border: .5px solid var(--glass-brd);
+  box-shadow: 0 10px 26px -12px rgba(0, 0, 0, .4), inset 0 .5px 0 var(--glass-inner);
+  color: var(--txt-1);
+}
+.w-clock svg { display: block; width: 116px; height: 116px; margin: 2px auto 0; }
+.w-clock .wc-date { margin-top: 9px; text-align: center; font: 500 12px/1 var(--sans); color: var(--txt-2); }
+.w-cal .wc-wk {
+  font: 700 11px/1 var(--sans); letter-spacing: .1em;
+  color: #ff453a;
+}
+html:not(.dark) .w-cal .wc-wk { color: #d64541; }
+.w-cal .wc-d { margin-top: 3px; font: 700 44px/1.05 var(--sans); font-variant-numeric: tabular-nums; }
+.w-cal .wc-m { margin-top: 3px; font: 500 12px/1 var(--sans); color: var(--txt-2); }
+.w-prog .wp-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 10px;
+  font: 500 12px/1 var(--sans); color: var(--txt-2);
+}
+.w-prog .wp-row:first-child { margin-top: 0; }
+.w-prog .wp-row b { font: 700 15px/1 var(--sans); color: var(--txt-1); font-variant-numeric: tabular-nums; }
+.w-prog .wp-bar { margin-top: 6px; height: 4px; border-radius: 2px; background: var(--hover-2); overflow: hidden; }
+.w-prog .wp-bar i {
+  display: block; height: 100%; border-radius: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform .5s var(--ease);
+}
+.w-prog .wp-bar.ok i { background: var(--ok); }
+
 /* ============================ 窗口 ============================ */
 .stage { position: fixed; left: 0; right: 0; top: var(--mb-h); bottom: 0; z-index: 10; }
 .win-layer { position: absolute; inset: 0; }
+/* 窗口体是**透明**的：只有工具栏 / 侧栏做玻璃，正文自己铺不透明纸面（见 .frames）。
+   这不是省事，是前提 —— backdrop-filter 采样的是「元素背后已绘制的内容」，
+   若 .win 自带不透明底色，工具栏与侧栏采到的永远只是这层底色，
+   壁纸和流动底衬一点都透不上来，玻璃就退化成纯装饰（浅色主题尤其明显）。 */
 .win {
   position: absolute;
   display: flex; flex-direction: column;
   border-radius: var(--r-win);
-  background: var(--glass-med);
+  background: transparent;
   border: .5px solid var(--glass-brd);
   box-shadow: var(--shadow-win-idle);
   overflow: hidden;
-  transition: box-shadow .25s var(--ease), background .25s var(--ease);
+  transition: box-shadow .25s var(--ease);
 }
 .win.active { box-shadow: var(--shadow-win); }
 .win.opening { animation: win-in var(--dur-open) var(--spring); }
@@ -437,17 +516,16 @@ html.dark .wallpaper::after {
 }
 .tb-title {
   flex: 1; min-width: 0;
-  display: flex; align-items: baseline; gap: 8px;
-  justify-content: center;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
 }
-.tb-ico { width: 17px; height: 17px; flex: none; align-self: center; }
-.tb-ico svg { width: 100%; height: 100%; display: block; }
 .tb-title .t {
-  font: 600 13px/1.2 var(--sans); color: var(--txt-1);
+  max-width: 100%;
+  font: 600 12.5px/1.2 var(--sans); color: var(--txt-1);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tb-title .s {
-  font: 400 11.5px/1.2 var(--sans); color: var(--txt-3);
+  max-width: 100%;
+  font: 400 10.5px/1.2 var(--sans); color: var(--txt-3);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -482,7 +560,7 @@ html.dark .wallpaper::after {
   cursor: pointer; text-align: left;
 }
 .side-row:hover:not(:disabled) { background: var(--hover); }
-.side-row.on { background: color-mix(in srgb, var(--acc, var(--accent)) 14%, transparent); font-weight: 600; }
+.side-row.on { background: var(--hover-2); font-weight: 600; }
 .side-row:disabled { color: var(--txt-3); cursor: default; }
 .side-row .sr-g { display: grid; place-items: center; width: 16px; height: 16px; flex: none; color: var(--acc, var(--txt-2)); }
 .side-row .sr-g svg { width: 15px; height: 15px; }
@@ -535,7 +613,7 @@ html.dark .wallpaper::after {
 }
 .tab:hover { background: var(--hover); }
 .tab.on {
-  background: var(--glass-med);
+  background: var(--win-bg);
   color: var(--txt-1);
   box-shadow: 0 .5px 0 var(--glass-brd);
 }
@@ -562,7 +640,7 @@ html.dark .wallpaper::after {
 .tabbar-end { width: 4px; flex: none; }
 
 /* ---- 内容宿主 ---- */
-.frames { flex: 1; min-height: 0; position: relative; background: var(--glass-med); }
+.frames { flex: 1; min-height: 0; position: relative; background: var(--win-bg); }
 .frame { position: absolute; inset: 0; display: none; }
 .frame.on { display: block; }
 .frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
@@ -571,7 +649,7 @@ html.dark .frame iframe { background: #1e1c19; }
   position: absolute; inset: 0;
   display: grid; place-content: center; gap: 12px;
   justify-items: center;
-  background: var(--glass-med);
+  background: var(--win-bg);
   color: var(--txt-2);
   font: 400 13px/1.6 var(--sans);
 }
@@ -602,24 +680,27 @@ html.dark .frame iframe { background: #1e1c19; }
 .ctx-pop {
   position: fixed;
   z-index: 960;
-  min-width: 210px;
+  min-width: 200px;
   max-width: 320px;
-  padding: 5px;
+  padding: 4px;
   border-radius: var(--r-menu);
-  background: var(--glass-thick);
+  background: var(--glass-menu);
   border: .5px solid var(--glass-brd);
   box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(1.9);
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(1.9);
   animation: pop-in .14s var(--ease);
 }
+html[data-desk-opaque="1"] .ctx-pop { backdrop-filter: none; -webkit-backdrop-filter: none; }
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(4px) scale(.98); }
   to { opacity: 1; transform: none; }
 }
 .menu-item {
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; gap: 8px;
   width: 100%;
-  height: 30px; padding: 0 9px;
-  border: 0; border-radius: 6px;
+  height: 25px; padding: 0 8px;
+  border: 0; border-radius: 5px;
   background: none; color: var(--txt-1);
   font: 400 13px/1 var(--sans);
   cursor: pointer; text-align: left;
@@ -635,9 +716,9 @@ html.dark .frame iframe { background: #1e1c19; }
 .menu-item .mi-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu-item .tick { width: 16px; flex: none; text-align: center; font-size: 12px; }
 .menu-item .kbd { font: 400 11.5px/1 var(--mono); color: var(--txt-3); }
-.menu-sep { height: .5px; background: var(--sep); margin: 5px 9px; }
+.menu-sep { height: .5px; background: var(--sep); margin: 4px 10px; }
 .menu-title {
-  padding: 7px 9px 4px;
+  padding: 6px 10px 3px;
   font: 600 11px/1 var(--sans);
   color: var(--txt-3);
   letter-spacing: .03em;
@@ -953,3 +1034,194 @@ html.dark .sw[aria-checked="true"]::after { background: #fff; }
   transition: transform .2s var(--ease);
 }
 .skip:focus { transform: translate(-50%, 0); }
+
+/* ==========================================================================
+   液玻璃增强：流动底衬 + 追踪高光 + 边缘色散 + 点击涟漪
+   --------------------------------------------------------------------------
+   整段只挂在 html[data-desk-liquid="1"] 下，这个属性由 src/lib/liquid.js 写入，
+   而它只在「系统未要求减少动效」时才写。于是退化是自动的、零分支：
+     · 无 JS / 老浏览器      → 整段不匹配，回到原来的静态玻璃
+     · prefers-reduced-motion → 属性不写，动画 / 高光 / 涟漪都不存在
+     · 触屏 / 强制高对比色    → 段末媒体块把装饰层摘掉，只留材质本身
+
+   边界说清楚：只认外壳自己的玻璃面。菜单栏是 Tahoe 式全透明（没有材质可言）、
+   窗口正文是不透明纸面（--win-bg，本来就该压住下层保证可读），两者都不在列。
+   强度统一压在「能看出这是块材质、但看不出这里做了效果」这一档。
+   ========================================================================== */
+html[data-desk-liquid="1"] {
+  /* 底衬球：四个色相分开走。壁纸是暖贝色的折叠绸，所以暖色占主位、冷色只做辅，
+     否则四个球一叠就糊成一团脏灰。
+     这几个 alpha 与 blur 一并决定「玻璃透上来多少颜色」—— 玻璃背后若没有色彩，
+     透出来就还是纸色，看着就不透。 */
+  --blob-1: rgba(255, 178, 102, .6);    /* 暖金，接壁纸的高光面 */
+  --blob-2: rgba(112, 158, 255, .5);    /* 天蓝，压住暗部 */
+  --blob-3: rgba(255, 124, 144, .4);    /* 薄红，给中景一点温度 */
+  --blob-4: rgba(84, 212, 192, .36);    /* 青绿，只在折叠的暗槽里透气 */
+  --blob-blur: 46px;
+  --blob-a: .88;
+
+  /* 追踪高光：峰值 alpha 就这一档，宁淡勿浓 —— 它只是「玻璃在反光」的证据 */
+  --spec-strength: .15;
+  /* 边缘色散彩环的整体不透明度 */
+  --disp-a: .55;
+
+  /* 涟漪 */
+  --rip: 255, 255, 255;
+  --rip-a: .34;
+}
+/* 深色：球要更透（深底上彩色一浓就显脏），高光要更弱（暗玻璃上白光扎眼） */
+html.dark[data-desk-liquid="1"] {
+  --blob-1: rgba(255, 146, 66, .46);
+  --blob-2: rgba(66, 112, 255, .4);
+  --blob-3: rgba(212, 88, 128, .3);
+  --blob-4: rgba(36, 194, 176, .26);
+  --blob-a: .92;
+  --spec-strength: .11;
+  --disp-a: .46;
+  --rip-a: .3;
+}
+
+/* ---------------- 一、流动底衬 ----------------
+   .wallpaper 的 ::before / ::after 已经给了折叠绸的两条缎带，球只能挂成真子元素；
+   又因为定位元素里 ::after 在绘制顺序上排在所有子元素之后，球必须显式抬到 z-index:1
+   才在缎带之上。球用 vmax 定尺寸，任何屏幕比例都盖得住整张桌面。 */
+html[data-desk-liquid="1"] .wallpaper .blob {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 42vmax;
+  height: 42vmax;
+  border-radius: 50%;
+  filter: blur(var(--blob-blur));
+  opacity: var(--blob-a);
+  will-change: transform, border-radius;
+  animation: blob-morph 34s ease-in-out infinite;
+}
+/* border-radius 四角必须两两配平（对角相等）才不会退化成椭圆；
+   0% 与 100% 都是正圆 —— 于是动画一旦被掐掉（减少动效给 0.01ms 且只跑一次），
+   元素停在 100% 这一帧：正圆、无位移，是个干净的静止态。 */
+@keyframes blob-morph {
+  0%, 100% { border-radius: 50%; transform: translate3d(0, 0, 0) scale(1); }
+  25% { border-radius: 63% 37% 42% 58% / 41% 62% 38% 59%; transform: translate3d(7%, -6%, 0) scale(1.12); }
+  50% { border-radius: 38% 62% 57% 43% / 59% 40% 60% 41%; transform: translate3d(-5%, 8%, 0) scale(.93); }
+  75% { border-radius: 57% 43% 36% 64% / 44% 57% 43% 56%; transform: translate3d(-8%, -5%, 0) scale(1.06); }
+}
+/* 负 delay = 一开场就各自动在半路上，四个球不会一起起步 */
+html[data-desk-liquid="1"] .wallpaper .b1 { left: -10%; top: -18%; background: radial-gradient(circle at 34% 34%, var(--blob-1), transparent 70%); animation-duration: 30s; }
+html[data-desk-liquid="1"] .wallpaper .b2 { right: -12%; top: -14%; background: radial-gradient(circle at 62% 38%, var(--blob-2), transparent 70%); animation-duration: 38s; animation-delay: -9s; }
+html[data-desk-liquid="1"] .wallpaper .b3 { left: 8%; bottom: -26%; background: radial-gradient(circle at 42% 64%, var(--blob-3), transparent 70%); animation-duration: 44s; animation-delay: -19s; }
+html[data-desk-liquid="1"] .wallpaper .b4 { right: 2%; bottom: -22%; background: radial-gradient(circle at 56% 56%, var(--blob-4), transparent 72%); animation-duration: 35s; animation-delay: -27s; }
+
+/* ---------------- 二、追踪高光 ----------------
+   --mx / --my 由 liquid.js 写成「相对该玻璃面」的局部像素坐标。没被指针进入过的面
+   拿不到这两个值，回退 -999px —— 光斑圆心落在元素外 999px、半径才 240px，
+   元素内一点都取不到，等于不显示，不需要额外的开关变量。
+   用 background-image 而不是伪元素：背景天然被 border-radius 裁切，而且永远画在
+   内容之下，压不到任何文字。 */
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip) {
+  background-image: radial-gradient(
+    240px circle at var(--mx, -999px) var(--my, -999px),
+    rgba(255, 255, 255, var(--spec-strength)) 0%,
+    rgba(255, 255, 255, calc(var(--spec-strength) * .4)) 36%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+
+/* ---------------- 三、边缘色散 ----------------
+   真折射采样做不了：backdrop-filter 不能被伪元素继承，伪元素里没有「背后的内容」。
+   所以色散只做在玻璃的切边上 —— 而这正好是色差最该出现的地方（厚边 + 掠射角）。
+   画法是标准的渐变描边：padding 撑出环厚，两层 mask 求差把中间挖空，只剩一圈彩环。
+   两个伪元素共用同一条彩环，各自 hue-rotate 反向、再反向平移 0.6px，合起来就是分光。
+   z-index:-1 让彩环落在材质之上、内容之下。
+
+   注意：下面补 position:relative 的五个，原先都不是定位元素 ——
+   不补的话绝对定位的伪元素会去找更外层祖先，彩环会画满整个窗口。 */
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .sheet-scrim .sheet, .widget, .lp-panel) { position: relative; }
+
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::before,
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 210deg, #7ab8ff, #ffb27a, #e08cff, #6fd8c4, #7ab8ff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: var(--disp-a);
+  pointer-events: none;
+}
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::before {
+  filter: blur(2px) hue-rotate(90deg);
+  transform: translate(.6px, -.6px);
+}
+html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::after {
+  filter: blur(2px) hue-rotate(-90deg);
+  transform: translate(-.6px, .6px);
+}
+
+/* ---------------- 四、点击涟漪 ----------------
+   涟漪不直接挂在宿主玻璃面上，而是挂进 .rip-layer 这层中间层：
+   宿主不能设 overflow:hidden（比如菜单栏的弹出菜单是它的后代表，会被一起裁掉），
+   所以拿一层自裁剪的中间层来接 border-radius、把水波关在圆角之内。
+   z-index:-1 同理，是为了让水波从内容底下过，不糊住字。 */
+html[data-desk-liquid="1"] .rip-layer {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+html[data-desk-liquid="1"] .ripple {
+  display: block;
+  position: absolute;
+  left: var(--rx, 50%);
+  top: var(--ry, 50%);
+  width: var(--rd, 120px);
+  height: var(--rd, 120px);
+  margin: calc(var(--rd, 120px) / -2) 0 0 calc(var(--rd, 120px) / -2);
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--rip), var(--rip-a));
+  animation: ripple-out var(--dur-open) var(--ease) forwards;
+  will-change: transform, opacity;
+}
+/* 扩散只动 transform（scale），不动 width —— 缩放走合成，改尺寸要逐帧重排。
+   --rd 是 JS 按「点击点到最远那个角」的两倍给的，所以 scale(1) 正好铺满容器。 */
+@keyframes ripple-out {
+  0% { transform: scale(.04); opacity: .85; }
+  60% { opacity: .35; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ---------------- 五、这一段自己的退化 ----------------
+   三个装饰层的兜底：默认连盒子都不生成。
+   这样即使 data-desk-liquid 中途被摘掉（系统偏好临时改成减少动效），
+   它们也立刻退回 display:none，而不会降级成无样式的裸元素 ——
+   .dock / .win-bar / .sheet 全是 flex 容器，一个裸 <span> 插进去就是多一个 flex item，
+   版面会当场歪掉，而且没有任何报错。 */
+.wallpaper .blob, .rip-layer, .ripple { display: none; }
+
+/* 「降低透明度」模式（见文件头）会把玻璃拉成实面并摘掉 backdrop-filter，
+   宿主随之不再是层叠上下文 —— z-index:-1 会被挤到实色背景之下、彻底看不见。
+   这时把两个装饰层抬回 0；实色底上的彩边与涟漪反而比半透明时更清楚。 */
+html[data-desk-opaque="1"][data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::before,
+html[data-desk-opaque="1"][data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::after,
+html[data-desk-opaque="1"][data-desk-liquid="1"] .rip-layer { z-index: 0; }
+
+/* 触屏没有「指针悬停」，追踪高光无从谈起，摘掉高光层；
+   底衬与涟漪留着 —— 按下有反馈是触摸唯一能感知的那一维。 */
+@media (hover: none) {
+  html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip) { background-image: none; }
+}
+/* 强制高对比色：配色交给系统托管，装饰一律让位，连底衬也收掉 */
+@media (forced-colors: active) {
+  html[data-desk-liquid="1"] .wallpaper .blob { display: none; }
+  html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::before,
+  html[data-desk-liquid="1"] :is(.dock, .win-bar, .win-side, .ctx-pop, .palette, .sheet-scrim .sheet, .desk-toast, .widget, .lp-panel, .lp-search, .d-tip)::after,
+  html[data-desk-liquid="1"] .ripple { display: none; }
+}

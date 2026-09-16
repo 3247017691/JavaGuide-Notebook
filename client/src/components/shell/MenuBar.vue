@@ -18,6 +18,19 @@
             @click="onDbClick" @pointerenter="hot(null)">
       <span class="led" /><span>{{ dbText }}</span>
     </button>
+    <span class="mb-item mb-stat" aria-hidden="true" title="Wi-Fi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M2.8 9.6a15 15 0 0 1 18.4 0M5.7 12.6a10.4 10.4 0 0 1 12.6 0M8.6 15.6a5.8 5.8 0 0 1 6.8 0"/>
+        <circle cx="12" cy="18.6" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </span>
+    <span class="mb-item mb-stat" aria-hidden="true" title="电池">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="2.6" y="8" width="16.8" height="8.4" rx="2.4"/>
+        <path d="M21.4 10.8v2.8" stroke-linecap="round"/>
+        <rect x="4.3" y="9.7" width="11.2" height="5" rx="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+    </span>
     <button class="mb-item mb-theme" type="button" data-ctx-anchor aria-label="外观"
             @click.stop="toggle('view', $event)" @pointerenter="hot(null)" v-html="gl(resolved === 'dark' ? 'moon' : 'sun')" />
     <button class="mb-item mb-clock" type="button" title="关于本机" @click="run('about')" @pointerenter="hot(null)">

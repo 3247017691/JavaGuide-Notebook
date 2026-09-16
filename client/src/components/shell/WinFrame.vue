@@ -30,9 +30,8 @@
                 :disabled="!canForward" @click="wins.tabForward(win.id)" v-html="gl('arrow-right')" />
       </div>
       <div class="tb-title" :title="tab ? (tab.title || '') : ''">
-        <span class="tb-ico" v-html="icons[app.icon]()" />
-        <span class="t">{{ tab ? (tab.title || app.name) : app.name }}</span>
-        <span class="s">{{ app.name }}</span>
+        <span class="t">{{ titleText }}</span>
+        <span v-if="subtitle && subtitle !== titleText" class="s">{{ subtitle }}</span>
       </div>
       <div class="tb-group">
         <button class="tb-search" type="button" :aria-label="'在' + app.name + '中搜索'" @click="ui.openPalette(app.id)">
@@ -115,7 +114,7 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from "vue";
-import { gl, APP_ICONS } from "../../lib/icons";
+import { gl } from "../../lib/icons";
 import { appById, MOD, MODK } from "../../lib/apps";
 import { chapterOf, shortTitle as st } from "../../lib/nburl";
 import { useWins, SIDE_DEF } from "../../stores/windows";
@@ -132,11 +131,20 @@ const wins = useWins();
 const desk = useDesk();
 const ui = useUi();
 const app = computed(() => appById[props.win.appId]);
-const icons = APP_ICONS;
 const opening = ref(true);
 setTimeout(() => { opening.value = false; }, 400);
 
 const tab = computed(() => props.win.tabs[props.win.i]);
+const titleText = computed(() => (tab.value && (tab.value.title || app.value.name)) || app.value.name);
+const subtitle = computed(() => {
+  const t = tab.value;
+  if (!t) return app.value.name;
+  const routes = desk.catalog && !desk.catalog.__fail && desk.catalog.javaguide && desk.catalog.javaguide.routes;
+  const code = chapterOf(t.url, routes);
+  const toc = code ? desk.toc(props.win.appId) : null;
+  const ch = toc && toc.chapters && toc.chapters.find((c) => c.code === code);
+  return (ch && ch.name) || app.value.name;
+});
 const canBack = computed(() => !!(tab.value && tab.value.hi > 0));
 const canForward = computed(() => !!(tab.value && tab.value.hi < tab.value.hist.length - 1));
 const progress = computed(() => desk.progress[props.win.appId]);
@@ -266,17 +274,21 @@ function dragDown(ev) {
   const S = wins.stage();
   const sx = ev.clientX, sy = ev.clientY;
   let ox = w.rect.x, oy = w.rect.y, moved = false;
-  el.value.setPointerCapture(ev.pointerId);
-  el.value.classList.add("dragging");
   const move = (e) => {
-    if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4) return;
-    moved = true;
-    if (w.max || w.tile) {
-      const ww = w.rect.w, hh = Math.max(w.rect.h - 40, 320);
-      wins.unmax(w.id);
-      const stageEl = el.value.parentElement.getBoundingClientRect();
-      w.rect = { x: e.clientX - stageEl.left - ww / 2, y: Math.max(oy, 0), w: ww, h: hh };
-      ox = w.rect.x; oy = w.rect.y;
+    if (!moved) {
+      // 位移过阈值才算拖拽：此刻才捕获指针。立即捕获会把 dblclick 重定向到窗口根，
+      // 标题栏的双击最大化就永远收不到了
+      if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4) return;
+      moved = true;
+      try { el.value.setPointerCapture(e.pointerId); } catch { /* 指针已失效时退化：不捕获也能拖 */ }
+      el.value.classList.add("dragging");
+      if (w.max || w.tile) {
+        const ww = w.rect.w, hh = Math.max(w.rect.h - 40, 320);
+        wins.unmax(w.id);
+        const stageEl = el.value.parentElement.getBoundingClientRect();
+        w.rect = { x: e.clientX - stageEl.left - ww / 2, y: Math.max(oy, 0), w: ww, h: hh };
+        ox = w.rect.x; oy = w.rect.y;
+      }
     }
     w.rect.x = Math.max(ox + e.clientX - sx, -w.rect.w + 90);
     w.rect.x = Math.min(w.rect.x, S.w - 90);

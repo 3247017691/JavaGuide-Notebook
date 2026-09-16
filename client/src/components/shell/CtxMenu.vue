@@ -51,8 +51,8 @@ function place() {
   if (y + r.height > window.innerHeight - 8) y = Math.max(8, y - r.height - 8);
   pos.x = Math.round(x);
   pos.y = Math.round(y);
-  const first = ctx.items.findIndex((it) => it && !it.sep && !it.title && !it.disabled);
-  hi.value = first;
+  // macOS 右键弹出不预高亮任何行：高亮只来自悬停 / 方向键
+  hi.value = -1;
 }
 
 function onPick(it) {

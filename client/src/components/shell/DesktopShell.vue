@@ -1,9 +1,16 @@
 <template>
   <div>
     <a class="skip" href="#stage">跳到主区域</a>
-    <div class="wallpaper" aria-hidden="true" />
+    <!-- 壁纸：折叠绸（两条缎带在 desk.css 的 .wallpaper::before/::after 上）
+         + 四个缓慢形变的色球。球是液玻璃的「底衬」—— 玻璃面做 backdrop-filter 时
+         背后得有东西在动，模糊 + 加饱和才看得出是玻璃；静态渐变太均匀，
+         看过去就是一块磨砂塑料。球是纯装饰，随 data-desk-liquid 一起开关。 -->
+    <div class="wallpaper" aria-hidden="true">
+      <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="blob b4"></i>
+    </div>
 
     <MenuBar />
+    <DeskWidgets />
 
     <main id="stage" class="stage" @contextmenu="onDeskContext">
       <DeskIcons />
@@ -38,7 +45,9 @@ import { useDesk } from "../../stores/desk";
 import { useWins } from "../../stores/windows";
 import { useUi } from "../../stores/ui";
 import { openCtx, closeCtx } from "./ctx";
+import { initLiquid } from "../../lib/liquid";
 import MenuBar from "./MenuBar.vue";
+import DeskWidgets from "./DeskWidgets.vue";
 import Dock from "./Dock.vue";
 import DeskIcons from "./DeskIcons.vue";
 import WinFrame from "./WinFrame.vue";
@@ -199,6 +208,7 @@ function onResize() {
 
 onMounted(() => {
   prefs.init();
+  initLiquid();          /* 液玻璃：底衬开关 + 追踪高光 + 点击涟漪 */
   desk.startPolling();
   wins.restoreSession();
   document.addEventListener("keydown", onKey, true);
