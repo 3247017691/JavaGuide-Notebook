@@ -26,8 +26,16 @@ Thumbs.db
 
 # WorkBuddy / 本地工作区状态
 .workbuddy/
-.zcode/
 .impeccable/
+
+# .zcode 是本地工作区状态，但 skills/workbench-buildkit 是**项目知识**（构建方法 /
+# 新增子应用的方法），要入库。注意 git 的规则：父目录被排除后子文件无法再放行，
+# 所以这里用 `.zcode/*` 逐层放行，而不是直接写 `.zcode/`。
+# 其余内容（impeccable、tasteskill-main 等第三方技能包）保持忽略。
+.zcode/*
+!.zcode/skills/
+.zcode/skills/*
+!.zcode/skills/workbench-buildkit/
 
 # 本地环境覆盖
 .env
