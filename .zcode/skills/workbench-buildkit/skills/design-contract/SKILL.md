@@ -9,7 +9,7 @@ description: 「面试工作台」的视觉契约 —— 样式、CSS、设计�
 
 | | 外壳 | 小抄 / 应用正文 |
 | --- | --- | --- |
-| 文件 | `client/src/styles/desk.css`（1346 行） | `client/src/styles/nb.css`（全在 `.nb-scope` 内） |
+| 文件 | `client/src/styles/desk.css`（约 1350 行） | `client/src/styles/nb.css`（全在 `.nb-scope` 内） |
 | 世界观 | macOS 27 **液态玻璃**：菜单栏 / Dock / 窗口外壳 / 弹层 | **暖亚麻案面 + 一摞过塑索引卡** |
 | 气质 | 通透、折射、弹簧动效 | 纸、墨、朱线、荧光笔 |
 | 圆角 | `--r-win: 12px` / `--r-panel: 14px` | **≤ 4px** |

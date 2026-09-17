@@ -2,7 +2,9 @@
 REM === JavaGuide-Notebook HTTP push (cmd-safe, English only) ===
 setlocal
 
-cd /d "D:\AAA-????\????"
+REM Locate repo root relative to this script (survives Chinese/non-ASCII paths
+REM that cmd's codepage would otherwise mangle into "?").
+cd /d "%~dp0.."
 
 REM --- pick a running bridge proxy port (try 7893, 7894, 7895, 7896) ---
 set "PROXY_PORT="

@@ -67,6 +67,8 @@
 | 34 | 新应用窗口开出空白 | `WinFrame` 是**二元分发**（`app.native` → 小抄，`else` → JBL） | 改宿主表 + `<component :is>`（`new-subapp` 第 4.1） |
 | 35 | 快捷键 / 最近打开跳不到新应用 | `nburl.appOfHref`、`windows.gotoModule/openRecent` 写死 `/jbl/` 前缀 | 泛化成按 `APPS.src` 最长前缀匹配（第 4.2） |
 | 36 | 新应用进度条不显示 | `desk.progress` 写死 `{ javaguide, jbl }` | 改成按 `APPS` 生成的 map + 探针表（第 4.3） |
+| 36a | 命令面板把新应用的搜索结果 / 模块归到旧应用（分组名、图标、开窗目标全错） | `Palette.vue` 有 3 处 `h.app === "jbl"` / `/jbl/` 三元，藏在面板逻辑里平时看不见 | `tabNew` 走 `appOfHref()`；分组名与图标改查 `appById[app]`（`new-subapp` 第 4 步表第 7 项） |
+| 36b | 「整章标记已读」对新应用行为不对 | `windows.bulkChapter()` 写死 `catalog[appId === "jbl" ? … : …]` | 改走 `desk.toc(w.appId)`；该动作只对小抄有意义，用注册表的 `bulk` 开关判断（表第 8 项） |
 | 37 | iframe 应用点链接后「回不来」 | 外链没加 `target="_blank"`，在 iframe 里打开了 | 外链一律 `target="_blank" rel="noopener"` |
 | 38 | iframe 应用的标签标题 / 前进后退失效 | 跨域（没挂在本服务下），拿不到 `contentWindow.location` | **必须同源** |
 | 39 | 子应用独立打开就报错 | 删了桥开头的 `if (window.top === window.self) return;` | 别删 —— 独立可跑是形态 B 的价值 |
@@ -132,6 +134,7 @@
 | 76 | `git status` 显示 `main...origin/main [gone]`，以为推送失败了 | **沙箱/自动化环境不持久化 `.git/refs/remotes/**`** —— `git update-ref` 与 `git fetch` 都报成功，但引用文件不出现（对照实验：`refs/heads/` 与 `refs/tags/` 正常） | 判断「推上去了没有」**只看 `git ls-remote origin refs/heads/main`**（服务端权威）。本地跟踪引用在这里不可信 |
 | 77 | 想「修一下」上面那个 `[gone]` | 重建也会被吞掉（实测 `update-ref` 报成功、文件从不出现） | 不是你仓库的问题，别折腾。在**自己的终端**里 `git fetch` 就正常了 |
 | 78 | 公开仓库推之前担心夹带密钥 | 扫描命中 12 处 `token="…"` | 那是 `JBL火箭题库/tools/source.md` 里飞书文档的 `<sheet token>` / `<whiteboard token>` —— **内嵌资源的对象 ID，不是凭据**（没有该文档授权就用不了）。真正的 PAT/私钥/AKIA 一个都没有 |
+| 79 | cmd 批处理里的中文路径变成 `???`、从别处调用 cd 失败 | 批处理**写死了**含中文的路径，保存时的编码转换把它毁成字面 `?` 字节（`tools/push.bat` 真发生过） | 路径一律 `cd /d "%~dp0.."` 按脚本自身位置相对推导，**别写死** |
 
 ## 八、一句总结
 

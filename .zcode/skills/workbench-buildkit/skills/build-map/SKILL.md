@@ -46,6 +46,7 @@ description: 「面试工作台」项目的全部构建方法 —— 构建、�
 
 ```bash
 npm install                  # 根：express / mysql2 / undici + 构建期 markdown-it / highlight.js / mermaid
+                             # ↑ 装完会经 prepare 生命周期自动把 git 钩子装进 .git/hooks/
 npm --prefix client install  # 前端：vue / vite / pinia / vue-router / element-plus
 ```
 
@@ -167,7 +168,7 @@ git push origin main     # 不需要 PAT，也不需要 SOCKS 桥
 2. **PAT 交互输入、不落盘**：临时 `HOME` + `credential.helper=store`，推完即清。**绝不把 token 写进文件**。
 3. **`http.version=HTTP/1.1` + `postBuffer=500MB` 是必需的**：schannel 与 HTTP/2 在 GFW 下握手会炸。
 4. 耗时随数据量走：**首次全量 265MB 约 30–40 分钟；增量小得多**（实测 6 提交 / 97 文件 = 20.4MB，分钟内完成）。
-5. 脚本第 5 行 `cd /d "D:\AAA-????\????"` 的中文路径已被 cmd 编码毁成 `?`；修法是 `cd /d "%~dp0.."`。
+5. ~~脚本里写死的中文路径被 cmd 编码毁成 `?`~~ **已修复**：现用 `cd /d "%~dp0.."` 按脚本自身位置定位仓库根，从任何 cwd 调用都能跑。教训：cmd 批处理别写死含中文的路径（保存时的编码转换就会毁掉它），一律 `%~dp0` 相对推导。
 
 **推送前**：`pre-push` 会拦「改了前端没构建」；公开仓库另需扫一遍凭据
 （已知非凭据命中：`JBL火箭题库/tools/source.md` 里的飞书 `<sheet token>` / `<whiteboard token>` 是内嵌资源 ID，不是密钥）。
@@ -176,7 +177,7 @@ git push origin main     # 不需要 PAT，也不需要 SOCKS 桥
 本地 `origin/main` 可能不可靠 —— 在沙箱/自动化环境里 `.git/refs/remotes/**` 不被持久化，
 `git status` 会显示 `main...origin/main [gone]`，与推送是否成功无关。
 
-> `.git/hooks/post-commit` 与 `post-checkout` 是 **Qoder（另一个 AI IDE）的追踪器**，不是本项目的 CI。别误认，也别删。
+> `.git/hooks` 里现在有**两类**钩子：本项目的 `pre-commit` / `pre-push`（源码在 `tools/hooks/`），以及 **Qoder 的 `post-commit` / `post-checkout` 追踪器**（不是本项目的 CI，别误认，也别删）。
 
 ---
 

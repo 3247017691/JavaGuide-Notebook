@@ -58,7 +58,8 @@ const SEED = `try{localStorage.setItem('desk:session',JSON.stringify({
 
 await send("Page.enable");
 await send("Page.addScriptToEvaluateOnNewDocument", { source: SEED });
-await send("Page.navigate", { url: "http://localhost:5173/" });
+// 验收走 :3000 的构建产物（dist 与 dev 行为不总等价）；要截 dev 态手动改成 5173
+await send("Page.navigate", { url: "http://localhost:3000/" });
 await sleep(6000);
 
 let shot = await send("Page.captureScreenshot", { format: "png" });

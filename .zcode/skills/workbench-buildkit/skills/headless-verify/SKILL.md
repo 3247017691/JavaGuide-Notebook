@@ -7,7 +7,7 @@ description: 用无头 Chrome + CDP 验证「面试工作台」的前端改动 �
 
 **原则**：**数字对不代表好看，好看不代表对。** 两者都要 —— 先跑断言拿事实，再截图看观感。
 
-本项目没装 Playwright / Puppeteer / jsdom（jsdom 无 layout，验不了滚动与 `backdrop-filter`），所以走**本机 Chrome + 裸 CDP**。参考实现就在仓库里：`tools/cdp-shot.mjs`（105 行，读它比读本文更快）。
+本项目没装 Playwright / Puppeteer / jsdom（jsdom 无 layout，验不了滚动与 `backdrop-filter`），所以走**本机 Chrome + 裸 CDP**。参考实现就在仓库里：`tools/cdp-shot.mjs`（约 90 行，读它比读本文更快；它固定截 `http://localhost:3000/` 的构建产物）。
 
 ---
 

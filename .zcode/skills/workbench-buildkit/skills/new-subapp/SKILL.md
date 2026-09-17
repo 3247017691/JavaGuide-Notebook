@@ -223,7 +223,7 @@ app.use("/mynotes", express.static(path.join(__dirname, "..", "我的笔记"), {
 
 ## 第 4 步 · ★ 泛化硬编码（**这一步不能跳**）
 
-外壳当前把「只有两个应用」写死在 **6 处代码 + 1 处数据契约**（下表第 7 行不需要改代码，只需在服务端加一个键）。加第三个应用前，**先把它们改造成数据驱动**；否则会出现「窗口开出空白」「侧栏文案错」「进度探针不认」「快捷键切不到」这类**不报错的静默故障**。
+外壳当前把「只有两个应用」写死在 **8 个文件 11 处代码 + 1 处数据契约**（下表第 8 行不需要改代码，只需在服务端加一个键）。加第三个应用前，**先把它们改造成数据驱动**；否则会出现「窗口开出空白」「侧栏文案错」「进度探针不认」「快捷键切不到」「命令面板归错应用」这类**不报错的静默故障**。
 
 | # | 位置 | 现状（写死了二） | 泛化方式 |
 | --- | --- | --- | --- |
@@ -232,8 +232,12 @@ app.use("/mynotes", express.static(path.join(__dirname, "..", "我的笔记"), {
 | 3 | `stores/windows.js` `gotoModule()` / `openRecent()` | **又各自写了一遍** `/jbl/` 前缀判断 | 两处都改为调用第 2 项的统一函数（见 4.2） |
 | 4 | `stores/desk.js` `state.progress` + `probeDb()` | `progress: { javaguide, jbl }`，只探这两个接口 | 改成按 `APPS` 生成的 map + 探针表（见 4.3） |
 | 5 | `components/shell/DesktopShell.vue` `onMessage` / `pushJblTheme` | `if (w.appId !== "jbl") return;` —— 只把主题推给 jbl | 按应用查 `modeKey` 决定推给谁（`apps.js` 里已有该字段） |
-| 6 | `components/shell/WinFrame.vue` `sideItems` / `subtitle` | 侧栏标题 `appId === "jbl" ? "检查系统" : "章节"`（两处） | 把文案放进 `apps.js`（例如加 `sideTitle` 字段），组件只读不算 |
-| 7 | `stores/desk.js` `toc` getter —— **数据契约，非代码** | `c[appId]` 本身没问题，但 `/api/desk` 只返回 `javaguide`/`jbl` 两键 | 第 5.3 步在 `server/context.js` 的 `DESK_TOC` 里加你的键即可 |
+| 6 | `components/shell/WinFrame.vue` `sideItems` / 底部进度文案 | 侧栏标题 `appId === "jbl" ? "检查系统" : "章节"`（两处）、进度行 `=== "jbl" ? "已掌握" : "已划线"` | 把文案放进 `apps.js`（例如加 `sideTitle` / `progressWord` 字段），组件只读不算 |
+| 7 | `components/shell/Palette.vue` | 3 处：`tabNew` 的 `/jbl/` 前缀判断、`h.app === "jbl"` 的分组名与图标三元 | 一律改走 `appOfHref()` / 按 `app` 反查 `appById`，分组名用 `appById[app].name` |
+| 8 | `stores/windows.js` `bulkChapter()` | `desk.catalog[w.appId === "jbl" ? "jbl" : "javaguide"]` —— 整章确认框的目录归属 | 改成 `desk.toc(w.appId)`；注意该函数本身只对小抄有意义，可在应用表里加 `bulk` 开关判断 |
+| 9 | `stores/desk.js` `toc` getter —— **数据契约，非代码** | `c[appId]` 本身没问题，但 `/api/desk` 只返回 `javaguide`/`jbl` 两键 | 第 5.3 步在 `server/context.js` 的 `DESK_TOC` 里加你的键即可 |
+
+> 快速自查命令见 4.4；`Palette.vue` 与 `bulkChapter` 是最容易被漏的两处 —— 前者藏在命令面板里，平时不搜不到；后者只在「整章划线」时走到。
 
 ### 4.1 宿主表（第 1 项，改法）
 
@@ -513,8 +517,7 @@ git push origin main          # 就这一条。实测 20MB / 189 对象，分钟
 2. **PAT 交互输入、不落盘**：临时 `HOME` + `credential.helper=store`，推完 `rd /s /q` 清掉。**永远不要把 token 写进文件**（GitHub 推送保护会拦，且历史里清了也麻烦）。
 3. **`http.version=HTTP/1.1` + `postBuffer=500MB` 是必需的**，不是随手调的：schannel 与 HTTP/2 在 GFW 下握手会炸。`core.bigFileThreshold=2g` 同理。
 4. **耗时随数据量走**：首次全量 265MB 时是 30–40 分钟；**增量推送小得多**（本次 6 提交 / 97 文件仅 20.4MB）。中途断了直接重跑（push 是增量的）。
-5. **脚本第 5 行 `cd /d "D:\AAA-????\????"` 的中文路径已被 cmd 编码毁成 `?`** —— 从别处调用会 cd 失败。
-   修法是别写死中文路径：`cd /d "%~dp0.."`（按脚本自身位置定位）。
+5. ~~脚本里写死的中文路径被 cmd 编码毁成 `?`~~ **已修复**：脚本现用 `cd /d "%~dp0.."` 按自身位置定位仓库根，不依赖中文路径、从任何 cwd 调用都能跑。**新增的教训**：cmd 批处理里写死含中文的路径，保存时的编码转换就会把它毁掉 —— 路径一律用 `%~dp0` 相对推导，别写死。
 
 #### 推送前的三件事
 
@@ -533,9 +536,10 @@ git push origin main          # 就这一条。实测 20MB / 189 对象，分钟
    `main...origin/main [gone]`。判断「推上去了没有」一律以 **`git ls-remote origin refs/heads/main`** 为准，
    那是服务端权威值。）
 
-### 9.6 别把 `.git/hooks` 当成 CI
+### 9.6 `.git/hooks` 里现在有两类钩子，别搞混
 
-`.git/hooks/post-commit` 与 `post-checkout` 是 **Qoder（另一个 AI IDE）装的代码追踪器**，与构建/验证无关。看到它们**不要误认成本项目的 CI，也不要为「清理」删掉**（不影响本项目，但会破坏那个工具的统计）。
+- **本项目自己的**：`pre-commit`（静态预检闸）与 `pre-push`（拦「改了前端没构建」），由 `tools/install-hooks.mjs` 安装、源码在 `tools/hooks/` 受版本控制 —— 详见 9.9。
+- **Qoder（另一个 AI IDE）的**：`post-commit` 与 `post-checkout` 是它的代码追踪器，与构建/验证无关。**不要误认成本项目的 CI，也不要为「清理」删掉**（不影响本项目，但会破坏那个工具的统计）。
 
 ### 9.7 要不要上云 CI？
 
@@ -602,9 +606,10 @@ client/src/lib/icons.js                         GLYPHS + APP_ICONS 各加一键
 client/src/components/<app>/XxxRoot.vue         新建（令牌作用域 + 尺寸探测）
 client/src/components/<app>/XxxWindow.vue       新建（URL → 视图）
 client/src/components/<app>/XxxHome.vue …       新建（各视图）
-client/src/components/shell/WinFrame.vue        ★ 宿主表（第 4.1）
+client/src/components/shell/WinFrame.vue        ★ 宿主表 + 侧栏/进度文案（第 4.1、表第 6 项）
 client/src/lib/nburl.js                         ★ appOfHref 泛化（第 4.2）
-client/src/stores/windows.js                    ★ gotoModule/openRecent 改用统一函数
+client/src/components/shell/Palette.vue         ★ tabNew/分组归属改走 appOfHref + appById（表第 7 项）
+client/src/stores/windows.js                    ★ gotoModule/openRecent/bulkChapter 改用统一函数
 client/src/stores/desk.js                       ★ progress 探针表（第 4.3）
 server/index.js                                 路由 require + register + API_ROUTES
 server/routes/<app>.js                          新建 API
