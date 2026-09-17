@@ -57,7 +57,7 @@ npm run ci                      # 或 npm run ci:e2e 追加上无头浏览器验
 | CI（提交前预检） | `npm run ci` · `npm run ci:fast`（跳过构建）· `npm run ci:e2e`（加无头验证）· `npm run ci:hook`（离线静态） |
 | 自动化 | **两条 git 钩子由 `npm install` 自动装好**：`pre-commit` 跑静态闸（≈4s），`pre-push` 拦「改了前端没构建」。绕过 `--no-verify`，重装 `npm run prepare` |
 | CD · 本地（= 上线） | `npm run ci && npm start` —— 本机 `:3000` 就是生产环境 |
-| CD · 远端 | `tools/push.bat` —— GFW 下走 SOCKS 桥推 GitHub，见 `new-subapp` 第 9.5 节 |
+| CD · 远端 | **`git push origin main`（SSH，不需要 PAT/代理）**；HTTPS 不通时才走 `tools/push.bat`（SOCKS 桥 + PAT），见 `new-subapp` 第 9.5 节 |
 
 ⚠️ **`npm run ci` ≠ `npm ci`** —— 后者是 npm 自己的「按 lockfile 装依赖」。
 ⚠️ 钩子**绝不能**用 `core.hooksPath` 管理 —— 那会让 `.git/hooks` 里 Qoder 的 `post-commit` / `post-checkout` 失效。

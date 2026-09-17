@@ -128,6 +128,10 @@
 | 72 | `git push` 被拦「client/src 有文件比 dist 新」 | 改了前端没构建（服务端只读 dist，推上去是旧页面且不报错） | `npm run build:client`；故意的则 `git push --no-verify` |
 | 73 | 装钩子时看到「已备份为 pre-commit.bak-…」 | `.git/hooks/pre-commit` 原先是个**非本工具**的钩子 | 备份保留了。要恢复：把 `.bak-*` 改回 `pre-commit` 覆盖掉我们的即可 |
 | 74 | 以为 `pre-commit` 会替我做完整预检 | 它**故意**不构建、不连服务、不开浏览器 | 完整预检是 `npm run ci` / `npm run ci:e2e`（提交后 / 推送前跑） |
+| 75 | 推送前先起了 SOCKS 桥、准备输 PAT，结果根本不需要 | `github.com:22` **直连可用**，远端是 SSH（`~/.ssh/javaguide_deploy`） | 首选就一条：`git push origin main`。HTTPS（443）反而超时，`push.bat` 是备用路线 |
+| 76 | `git status` 显示 `main...origin/main [gone]`，以为推送失败了 | **沙箱/自动化环境不持久化 `.git/refs/remotes/**`** —— `git update-ref` 与 `git fetch` 都报成功，但引用文件不出现（对照实验：`refs/heads/` 与 `refs/tags/` 正常） | 判断「推上去了没有」**只看 `git ls-remote origin refs/heads/main`**（服务端权威）。本地跟踪引用在这里不可信 |
+| 77 | 想「修一下」上面那个 `[gone]` | 重建也会被吞掉（实测 `update-ref` 报成功、文件从不出现） | 不是你仓库的问题，别折腾。在**自己的终端**里 `git fetch` 就正常了 |
+| 78 | 公开仓库推之前担心夹带密钥 | 扫描命中 12 处 `token="…"` | 那是 `JBL火箭题库/tools/source.md` 里飞书文档的 `<sheet token>` / `<whiteboard token>` —— **内嵌资源的对象 ID，不是凭据**（没有该文档授权就用不了）。真正的 PAT/私钥/AKIA 一个都没有 |
 
 ## 八、一句总结
 

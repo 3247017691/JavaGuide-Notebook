@@ -488,17 +488,50 @@ npm run ci:fast       # ③ 冒烟：闸 E 会把所有入口和 API 再点一�
 
 **「上线」= 构建 + 重启**，本机 `:3000` 就是生产环境。改前端后不重启也行（`dist` 被重新读了），改 `server/**` 必须重启。
 
-### 9.5 CD · 推远端（`tools/push.bat`，GFW 下的现实）
+### 9.5 CD · 推远端
 
-远端 `https://github.com/3247017691/JavaGuide-Notebook.git`，分支 `main`。**改这个脚本前必读的五条**：
+远端 `git@github.com:3247017691/JavaGuide-Notebook.git`，分支 `main`。
+
+#### 首选：SSH（不需要 PAT、不需要代理）
+
+**2026-09-17 实测**：`github.com:22` **直连可用**（443 反而超时），且 `~/.ssh/config` 已把 github.com 指向
+`~/.ssh/javaguide_deploy` 这把部署密钥。所以：
+
+```bash
+git push origin main          # 就这一条。实测 20MB / 189 对象，分钟内完成
+```
+
+- **不用起 SOCKS 桥，不用输 PAT** —— SSH 走 22 端口，绕开了 HTTPS 那套 GFW 麻烦。
+- 只在**推小批量增量**时这么用。首次全量（含 `public/content` 444 页）会到 265MB 量级，见下面 push.bat 的耗时说明。
+
+#### 备用：`tools/push.bat`（HTTPS 路线，HTTPS 不通时才需要）
+
+远端若改回 HTTPS 才走这条。**改这个脚本前必读的五条**：
 
 1. **必须先起 SOCKS→HTTP 桥**：`node tools/socks-http-proxy.js 7893`。`push.bat` 会探 `7893–7896`，一个都没起就直接退。
-   为什么要桥：本机只有 SOCKS5 出口，而 git 认 HTTP 代理 —— `tools/socks-http-proxy.js` 就是那个 CONNECT→SOCKS5 适配层。
+   为什么要桥：`github.com:443` 直连超时，而本机只有 SOCKS5 出口 —— `tools/socks-http-proxy.js` 就是那个 CONNECT→SOCKS5 适配层。
 2. **PAT 交互输入、不落盘**：临时 `HOME` + `credential.helper=store`，推完 `rd /s /q` 清掉。**永远不要把 token 写进文件**（GitHub 推送保护会拦，且历史里清了也麻烦）。
 3. **`http.version=HTTP/1.1` + `postBuffer=500MB` 是必需的**，不是随手调的：schannel 与 HTTP/2 在 GFW 下握手会炸。`core.bigFileThreshold=2g` 同理。
-4. **265MB / 30–40 分钟是正常耗时**。中途断了直接重跑（push 是增量的）。
+4. **耗时随数据量走**：首次全量 265MB 时是 30–40 分钟；**增量推送小得多**（本次 6 提交 / 97 文件仅 20.4MB）。中途断了直接重跑（push 是增量的）。
 5. **脚本第 5 行 `cd /d "D:\AAA-????\????"` 的中文路径已被 cmd 编码毁成 `?`** —— 从别处调用会 cd 失败。
    修法是别写死中文路径：`cd /d "%~dp0.."`（按脚本自身位置定位）。
+
+#### 推送前的三件事
+
+1. **`pre-push` 钩子会拦**「改了 `client/src` 却没重新构建」（见 9.9）。
+2. **公开仓库：先扫一遍要推的内容有没有夹带凭据**。
+   ```bash
+   git diff origin/main..HEAD | grep -nEi 'ghp_|github_pat_|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}'
+   ```
+   注意已知的**非凭据命中**：`JBL火箭题库/tools/source.md` 里有飞书文档的 `<sheet token="…">` /
+   `<whiteboard token="…">` —— 那是**内嵌资源的对象 ID**，没有该文档授权就用不了，不是密钥。
+3. **别信本地的 `origin/main`** —— 先量一下真实数据量：
+   ```bash
+   git rev-list --objects origin/main..HEAD | git cat-file --batch-check='%(objectsize)' 
+   ```
+   （在**沙箱/自动化环境**里 `.git/refs/remotes/**` 可能不被持久化 → `git status` 会显示
+   `main...origin/main [gone]`。判断「推上去了没有」一律以 **`git ls-remote origin refs/heads/main`** 为准，
+   那是服务端权威值。）
 
 ### 9.6 别把 `.git/hooks` 当成 CI
 

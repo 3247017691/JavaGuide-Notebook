@@ -151,15 +151,30 @@ npm run ci && npm start        # 预检 → 重启。本机 :3000 就是生产�
 
 改前端不重启也能生效（`dist` 被重新读）；**改 `server/**` 必须重启**。重启后可用 `npm run ci:fast` 再冒烟一遍（闸 E 会把所有入口和 API 点一次）。
 
-### CD · 远端（`tools/push.bat`）
+### CD · 远端
 
-远端 `https://github.com/3247017691/JavaGuide-Notebook.git`（`main`）。五条硬约束：
+**首选 SSH**（2026-09-17 实测）：远端是 `git@github.com:3247017691/JavaGuide-Notebook.git`，
+`github.com:22` **直连可用**，`~/.ssh/config` 已指向 `~/.ssh/javaguide_deploy`。
 
-1. **先起 SOCKS→HTTP 桥**：`node tools/socks-http-proxy.js 7893`（探 7893–7896，都没起就直接退）。本机只有 SOCKS5 出口，git 认 HTTP 代理，这个脚本就是适配层。
+```bash
+git push origin main     # 不需要 PAT，也不需要 SOCKS 桥
+```
+
+**HTTPS 备用路线** `tools/push.bat`（`github.com:443` 直连超时时才需要）。五条硬约束：
+
+1. **先起 SOCKS→HTTP 桥**：`node tools/socks-http-proxy.js 7893`（探 7893–7896，都没起就直接退）。
+   本机只有 SOCKS5 出口，git 认 HTTP 代理，这个脚本就是适配层。
 2. **PAT 交互输入、不落盘**：临时 `HOME` + `credential.helper=store`，推完即清。**绝不把 token 写进文件**。
 3. **`http.version=HTTP/1.1` + `postBuffer=500MB` 是必需的**：schannel 与 HTTP/2 在 GFW 下握手会炸。
-4. **265MB / 30–40 分钟是正常耗时**，断了直接重跑（push 是增量的）。
+4. 耗时随数据量走：**首次全量 265MB 约 30–40 分钟；增量小得多**（实测 6 提交 / 97 文件 = 20.4MB，分钟内完成）。
 5. 脚本第 5 行 `cd /d "D:\AAA-????\????"` 的中文路径已被 cmd 编码毁成 `?`；修法是 `cd /d "%~dp0.."`。
+
+**推送前**：`pre-push` 会拦「改了前端没构建」；公开仓库另需扫一遍凭据
+（已知非凭据命中：`JBL火箭题库/tools/source.md` 里的飞书 `<sheet token>` / `<whiteboard token>` 是内嵌资源 ID，不是密钥）。
+
+**判断推没推上去，一律看 `git ls-remote origin refs/heads/main`（服务端权威）。**
+本地 `origin/main` 可能不可靠 —— 在沙箱/自动化环境里 `.git/refs/remotes/**` 不被持久化，
+`git status` 会显示 `main...origin/main [gone]`，与推送是否成功无关。
 
 > `.git/hooks/post-commit` 与 `post-checkout` 是 **Qoder（另一个 AI IDE）的追踪器**，不是本项目的 CI。别误认，也别删。
 
