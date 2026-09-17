@@ -39,6 +39,16 @@
               </div>
             </div>
             <div class="pref-row">
+              <div class="pf-t"><b>桌面壁纸</b><span>玻璃面会透出壁纸的颜色 —— 越暗、明暗跨度越大，玻璃的通透感越明显</span></div>
+              <div class="wall-pick" role="group" aria-label="桌面壁纸">
+                <button v-for="w in WALLS" :key="w.id" type="button"
+                        :title="w.name" :aria-label="w.name"
+                        :aria-pressed="String(prefs.wall === w.id)"
+                        :style="{ background: w.chip }"
+                        @click="prefs.setWall(w.id)" />
+              </div>
+            </div>
+            <div class="pref-row">
               <div class="pf-t"><b>降低透明度</b><span>材质退成实面，玻璃不再透出下层内容（等同系统的「减少透明度」）</span></div>
               <button type="button" class="sw" role="switch" :aria-checked="String(prefs.opaque === 1)" @click="prefs.toggleOpaque()" />
             </div>
@@ -110,7 +120,7 @@ import { computed, watch, nextTick } from "vue";
 import { APP_ICONS } from "../../lib/icons";
 import { APPS, MOD } from "../../lib/apps";
 import { useUi } from "../../stores/ui";
-import { usePrefs } from "../../stores/prefs";
+import { usePrefs, WALLS } from "../../stores/prefs";
 import { useWins } from "../../stores/windows";
 
 const icons = APP_ICONS;

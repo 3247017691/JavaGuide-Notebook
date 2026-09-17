@@ -196,26 +196,133 @@ html[data-desk-opaque="1"] .win-side {
   -webkit-backdrop-filter: none;
 }
 
-/* ---------------- 壁纸：暖贝折叠绸（参考图同款气质） ----------------
-   顶部压一条暗棕 scrim：Tahoe 的菜单栏全透明 + 白字，靠壁纸顶部够暗来保证可读。 */
+/* ---------------- 壁纸：可切换（html[data-desk-wall]） ----------------
+   每套壁纸 = 一组 token：顶部 scrim + 两团光 + 4 段底色 + 5 支缎带色。
+   浅色档写在下面这个 :root（默认「暖贝」），深色档在 html.dark；
+   某套的覆盖块**只重写值、不碰任何选择器** —— 加一套新壁纸 = 加两块 token。
+
+   两处硬前提：
+   ① 顶部 scrim 不能省 —— Tahoe 式菜单栏是全透明 + 白字，全靠壁纸顶部够暗来保对比。
+   ② 底色必须是**有明暗/色相跨度**的渐变，不能接近纯色。玻璃的通透感来自「背后有东西」：
+      壁纸越平，玻璃越像一块塑料板。这正是 `参考/macOS27.jpg` 之所以通透的物理前提
+      —— 那里背后是深色照片，不是白纸。 */
+:root {
+  /* 暖贝（默认）：与纸面世界同一族的暖色，白天最舒服 */
+  --wp-scrim: rgba(36, 26, 16, .62);
+  --wp-halo: rgba(255, 246, 226, .52);
+  --wp-shade: rgba(34, 25, 15, .6);
+  --wp-halo-pos: 74% 44%;
+  --wp-shade-pos: 8% 94%;
+  --wp-b1: #a8906a; --wp-b2: #8f7a5c; --wp-b3: #6b5a42; --wp-b4: #463a29;
+  --wp-rib-a: rgba(255, 250, 238, .5);    /* 主亮带 */
+  --wp-rib-b: rgba(84, 68, 44, .42);      /* 主暗带 */
+  --wp-rib-c: rgba(255, 246, 228, .32);   /* 次亮带 */
+  --wp-rib-d: rgba(58, 46, 28, .4);       /* 二层暗带 */
+  --wp-rib-e: rgba(255, 248, 234, .34);   /* 二层亮带 */
+}
+html.dark {
+  --wp-scrim: rgba(0, 0, 0, .66);
+  --wp-halo: rgba(120, 96, 62, .38);
+  --wp-shade: rgba(0, 0, 0, .66);
+  --wp-halo-pos: 74% 44%;
+  --wp-shade-pos: 8% 94%;
+  --wp-b1: #3d3524; --wp-b2: #2b251a; --wp-b3: #1a1712; --wp-b4: #100e0b;
+  --wp-rib-a: rgba(150, 118, 74, .34);
+  --wp-rib-b: rgba(0, 0, 0, .5);
+  --wp-rib-c: rgba(170, 134, 84, .22);
+  --wp-rib-d: rgba(0, 0, 0, .55);
+  --wp-rib-e: rgba(150, 118, 74, .24);
+}
+
+/* ---- 深海：冷、暗、明暗跨度大。玻璃在这一套下通透感最强 ---- */
+html[data-desk-wall="abyss"] {
+  --wp-scrim: rgba(6, 16, 30, .62);
+  --wp-halo: rgba(150, 198, 255, .4);
+  --wp-shade: rgba(4, 10, 20, .64);
+  --wp-halo-pos: 70% 38%;
+  --wp-shade-pos: 10% 92%;
+  --wp-b1: #5a7ea6; --wp-b2: #33506f; --wp-b3: #182b42; --wp-b4: #08131f;
+  --wp-rib-a: rgba(198, 226, 255, .44);
+  --wp-rib-b: rgba(10, 24, 42, .5);
+  --wp-rib-c: rgba(170, 212, 255, .26);
+  --wp-rib-d: rgba(4, 16, 30, .52);
+  --wp-rib-e: rgba(188, 222, 255, .28);
+}
+html.dark[data-desk-wall="abyss"] {
+  --wp-scrim: rgba(0, 0, 0, .72);
+  --wp-halo: rgba(64, 126, 196, .3);
+  --wp-shade: rgba(0, 0, 0, .72);
+  --wp-b1: #16283f; --wp-b2: #0d1a2b; --wp-b3: #06101d; --wp-b4: #02060c;
+  --wp-rib-a: rgba(70, 128, 190, .3);
+  --wp-rib-b: rgba(0, 0, 0, .6);
+  --wp-rib-c: rgba(90, 150, 210, .2);
+  --wp-rib-d: rgba(0, 0, 0, .6);
+  --wp-rib-e: rgba(70, 128, 190, .22);
+}
+
+/* ---- 暮山：紫橙日落，暖冷对冲，中段最花 ---- */
+html[data-desk-wall="dusk"] {
+  --wp-scrim: rgba(44, 18, 28, .58);
+  --wp-halo: rgba(255, 202, 148, .5);
+  --wp-shade: rgba(38, 14, 38, .58);
+  --wp-halo-pos: 76% 36%;
+  --wp-shade-pos: 6% 90%;
+  --wp-b1: #e2a468; --wp-b2: #c4737c; --wp-b3: #7d4a70; --wp-b4: #37234a;
+  --wp-rib-a: rgba(255, 228, 196, .5);
+  --wp-rib-b: rgba(68, 30, 52, .44);
+  --wp-rib-c: rgba(255, 206, 168, .3);
+  --wp-rib-d: rgba(48, 22, 40, .44);
+  --wp-rib-e: rgba(255, 220, 190, .34);
+}
+html.dark[data-desk-wall="dusk"] {
+  --wp-scrim: rgba(0, 0, 0, .68);
+  --wp-halo: rgba(178, 96, 104, .34);
+  --wp-shade: rgba(0, 0, 0, .68);
+  --wp-b1: #4a2b3a; --wp-b2: #331d2e; --wp-b3: #1f1220; --wp-b4: #0d0810;
+  --wp-rib-a: rgba(196, 116, 118, .3);
+  --wp-rib-b: rgba(0, 0, 0, .58);
+  --wp-rib-c: rgba(214, 140, 140, .2);
+  --wp-rib-d: rgba(0, 0, 0, .58);
+  --wp-rib-e: rgba(196, 116, 118, .22);
+}
+
+/* ---- 苔原：墨绿苔藓，安静、低饱和，长时间看不累 ---- */
+html[data-desk-wall="moss"] {
+  --wp-scrim: rgba(18, 32, 22, .6);
+  --wp-halo: rgba(222, 240, 200, .42);
+  --wp-shade: rgba(14, 28, 20, .6);
+  --wp-halo-pos: 72% 40%;
+  --wp-shade-pos: 10% 92%;
+  --wp-b1: #a8b892; --wp-b2: #6d8468; --wp-b3: #405744; --wp-b4: #1c2a22;
+  --wp-rib-a: rgba(238, 248, 224, .44);
+  --wp-rib-b: rgba(36, 52, 38, .44);
+  --wp-rib-c: rgba(226, 242, 208, .28);
+  --wp-rib-d: rgba(26, 42, 30, .44);
+  --wp-rib-e: rgba(232, 246, 214, .3);
+}
+html.dark[data-desk-wall="moss"] {
+  --wp-scrim: rgba(0, 0, 0, .7);
+  --wp-halo: rgba(96, 130, 96, .3);
+  --wp-shade: rgba(0, 0, 0, .7);
+  --wp-b1: #24322a; --wp-b2: #18241e; --wp-b3: #0e1713; --wp-b4: #050907;
+  --wp-rib-a: rgba(126, 166, 122, .28);
+  --wp-rib-b: rgba(0, 0, 0, .58);
+  --wp-rib-c: rgba(146, 184, 138, .18);
+  --wp-rib-d: rgba(0, 0, 0, .58);
+  --wp-rib-e: rgba(126, 166, 122, .2);
+}
+
 .wallpaper {
   position: fixed;
   inset: -40px;
   z-index: 0;
   background:
-    linear-gradient(180deg, rgba(36, 26, 16, .62), rgba(36, 26, 16, 0) 130px),
-    radial-gradient(95% 75% at 74% 44%, rgba(255, 246, 226, .52), transparent 56%),
-    radial-gradient(150% 110% at 8% 94%, rgba(34, 25, 15, .6), transparent 58%),
-    linear-gradient(158deg, #a8906a 0%, #8f7a5c 36%, #6b5a42 68%, #463a29 100%);
+    linear-gradient(180deg, var(--wp-scrim), transparent 130px),
+    radial-gradient(95% 75% at var(--wp-halo-pos), var(--wp-halo), transparent 56%),
+    radial-gradient(150% 110% at var(--wp-shade-pos), var(--wp-shade), transparent 58%),
+    linear-gradient(158deg, var(--wp-b1) 0%, var(--wp-b2) 36%, var(--wp-b3) 68%, var(--wp-b4) 100%);
 }
-html.dark .wallpaper {
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, .66), rgba(0, 0, 0, 0) 130px),
-    radial-gradient(95% 75% at 74% 44%, rgba(120, 96, 62, .38), transparent 56%),
-    radial-gradient(150% 110% at 8% 94%, rgba(0, 0, 0, .66), transparent 58%),
-    linear-gradient(158deg, #3d3524 0%, #2b251a 40%, #1a1712 74%, #100e0b 100%);
-}
-/* 缎带：两层大曲率曲面对比出「折叠」的光 */
+/* 缎带：两层大曲率曲面对比出「折叠」的光。换壁纸时只换这五支色，几何不动 */
 .wallpaper::before, .wallpaper::after {
   content: "";
   position: absolute;
@@ -226,28 +333,16 @@ html.dark .wallpaper {
 .wallpaper::before {
   background:
     conic-gradient(from 210deg at 62% 34%,
-      transparent 0deg, rgba(255, 250, 238, .5) 58deg, transparent 128deg,
-      rgba(84, 68, 44, .42) 190deg, transparent 250deg, rgba(255, 246, 228, .32) 312deg, transparent 360deg);
+      transparent 0deg, var(--wp-rib-a) 58deg, transparent 128deg,
+      var(--wp-rib-b) 190deg, transparent 250deg, var(--wp-rib-c) 312deg, transparent 360deg);
   transform: translate(calc(var(--px) * 10px), calc(var(--py) * 8px));
 }
 .wallpaper::after {
   background:
     conic-gradient(from 30deg at 30% 72%,
-      transparent 0deg, rgba(58, 46, 28, .4) 70deg, transparent 150deg,
-      rgba(255, 248, 234, .34) 224deg, transparent 300deg);
+      transparent 0deg, var(--wp-rib-d) 70deg, transparent 150deg,
+      var(--wp-rib-e) 224deg, transparent 300deg);
   transform: translate(calc(var(--px) * -14px), calc(var(--py) * -10px));
-}
-html.dark .wallpaper::before {
-  background:
-    conic-gradient(from 210deg at 62% 34%,
-      transparent 0deg, rgba(150, 118, 74, .34) 58deg, transparent 128deg,
-      rgba(0, 0, 0, .5) 190deg, transparent 250deg, rgba(170, 134, 84, .22) 312deg, transparent 360deg);
-}
-html.dark .wallpaper::after {
-  background:
-    conic-gradient(from 30deg at 30% 72%,
-      transparent 0deg, rgba(0, 0, 0, .55) 70deg, transparent 150deg,
-      rgba(150, 118, 74, .24) 224deg, transparent 300deg);
 }
 
 /* ============================ 菜单栏 ============================
@@ -901,6 +996,18 @@ html[data-desk-opaque="1"] .ctx-pop { backdrop-filter: none; -webkit-backdrop-fi
   font: 500 12px/1 var(--sans); cursor: pointer;
 }
 .seg button[aria-pressed="true"] { background: var(--glass-med); color: var(--txt-1); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+/* 壁纸选取：一排小色片，直接用该壁纸的代表渐变当色块 —— 比写四个字直给得多 */
+.wall-pick { display: flex; gap: 7px; flex: none; }
+.wall-pick button {
+  width: 42px; height: 26px; padding: 0;
+  border: 1px solid var(--sep); border-radius: 7px;
+  cursor: pointer;
+  outline: 2px solid transparent; outline-offset: 1.5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28);
+  transition: transform .14s var(--ease), outline-color .14s var(--ease);
+}
+.wall-pick button:hover { transform: translateY(-1px); }
+.wall-pick button[aria-pressed="true"] { outline-color: var(--accent); }
 .sw {
   position: relative; width: 42px; height: 25px; flex: none;
   border: 0; border-radius: var(--r-pill);
