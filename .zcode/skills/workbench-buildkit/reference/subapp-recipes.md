@@ -42,7 +42,7 @@ progress: { javaguide: null, jbl: null },     // ← 改成按 APPS 生成的 ma
 // probeDb() 里两段 if，只探 /api/overview 与 /api/jbl/progress  // ← 改成探针表
 ```
 
-改法见 `new-subapp` 技能第 4.3 节。**别忘了它还有两个容易漏的兄弟**：`Palette.vue`（3 处归属三元，见 pitfalls #36a）与 `windows.bulkChapter()`（见 pitfalls #36b）—— 全量清单以 `new-subapp` 第 4 步的表为准（8 个文件 11 处）。
+改法见 `new-subapp` 技能第 4.3 节。**别忘了它那几个容易漏的兄弟**：`Palette.vue`（3 处归属三元，见 pitfalls #36a）、`windows.bulkChapter()`（#36b）、`Launchpad.vue`（整套「检查系统」文件夹，#36c）—— 全量清单以 `new-subapp` 第 4 步的表为准（**7 个文件**，数字用 `npm run ci` 的闸 D/F 实测，别背）。
 
 ---
 
@@ -60,11 +60,12 @@ client/src/components/mynotes/
 client/src/components/shell/WinFrame.vue    ⑥ ★ 宿主表 + 文案（第 4.1 节、第 4 步表第 6 项）
 client/src/lib/nburl.js                     ⑦ ★ appOfHref 泛化（第 4.2 节）
 client/src/components/shell/Palette.vue     ⑧ ★ tabNew/分组归属改走统一函数（表第 7 项）
-client/src/stores/windows.js                ⑨ ★ gotoModule/openRecent/bulkChapter 改用统一函数
-client/src/stores/desk.js                   ⑩ ★ progress 探针表（第 4.3 节）
-server/index.js                             ⑪ require + register + API_ROUTES
-server/routes/mynotes.js                    ⑫ API
-server/context.js                           ⑬ DESK_TOC.mynotes（侧栏目录）
+client/src/components/shell/Launchpad.vue   ⑨ ★ 「检查系统」文件夹要么数据驱动、要么明确写死（表第 8 项）
+client/src/stores/windows.js                ⑩ ★ gotoModule/openRecent/bulkChapter 改用统一函数
+client/src/stores/desk.js                   ⑪ ★ progress 探针表（第 4.3 节）
+server/index.js                             ⑫ require + register + API_ROUTES
+server/routes/mynotes.js                    ⑬ API
+server/context.js                           ⑭ DESK_TOC.mynotes（侧栏目录）
 ```
 
 ### ④ `MynotesRoot.vue` 的要点（照 `NotebookRoot.vue` 改）
@@ -171,6 +172,7 @@ app.use("/mynotes", express.static(path.join(__dirname, "..", "我的笔记"), {
 | 5 | `nburl.appOfHref` 泛化 | ✓ | ✓ |
 | 6 | `windows.gotoModule/openRecent/bulkChapter` | ✓ | ✓ |
 | 6a | `Palette.vue` 3 处归属三元 | ✓ | ✓ |
+| 6b | `Launchpad.vue` 的「检查系统」文件夹 | ✓ | ✓ |
 | 7 | `desk.progress` 探针表 | 有进度才要 | 有进度才要 |
 | 8 | `server/statics.js` 挂载 | ✗ | ✓ |
 | 9 | `server/index.js` 路由 + `API_ROUTES` | 有 API 才要 | 有 API 才要 |

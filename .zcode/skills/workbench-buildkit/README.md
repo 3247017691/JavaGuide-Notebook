@@ -70,7 +70,7 @@ npm run ci                      # 或 npm run ci:e2e 追加上无头浏览器验
 
 1. **`npm run build` 不是前端构建。** 它是内容管线（markdown → HTML）。前端构建叫 **`npm run build:client`**。名字反着来，是本仓库最容易踩的一条 —— 详见 `build-map`。
 2. **服务端只读 `client/dist`，不读 `client/src`。** 改完 `client/src/**` 不重新构建，页面永远没变化，而且**不会报任何错**。
-3. **新增子应用时，先看 `new-subapp` 里的「必须泛化的硬编码」。** 当前外壳把「只有两个应用」写死在 **8 个文件 11 处**（`WinFrame.vue` 二元分发 + 2 处侧栏文案、`nburl.appOfHref`、`windows.js` gotoModule/openRecent/bulkChapter、`desk.progress`、`DesktopShell.vue` 的 appId 特判、`Palette.vue` 的 3 处归属三元…）。直接照抄既有应用会在第三个应用上崩掉。
+3. **新增子应用时，先看 `new-subapp` 里的「必须泛化的硬编码」。** 当前外壳把「只有两个应用」写死在 **7 个文件**里（`WinFrame.vue` 二元分发 + 2 处文案、`nburl.appOfHref`、`windows.js` gotoModule/openRecent/bulkChapter、`desk.progress`、`DesktopShell.vue` 的 appId 特判、`Palette.vue` 的 3 处归属三元、`Launchpad.vue` 整套「检查系统」文件夹…）。直接照抄既有应用会在第三个应用上崩掉。**别背这个数字，跑 `npm run ci` 的闸 D / 闸 F 看实测。**
 
 ---
 

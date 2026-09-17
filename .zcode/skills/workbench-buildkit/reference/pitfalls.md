@@ -68,7 +68,8 @@
 | 35 | 快捷键 / 最近打开跳不到新应用 | `nburl.appOfHref`、`windows.gotoModule/openRecent` 写死 `/jbl/` 前缀 | 泛化成按 `APPS.src` 最长前缀匹配（第 4.2） |
 | 36 | 新应用进度条不显示 | `desk.progress` 写死 `{ javaguide, jbl }` | 改成按 `APPS` 生成的 map + 探针表（第 4.3） |
 | 36a | 命令面板把新应用的搜索结果 / 模块归到旧应用（分组名、图标、开窗目标全错） | `Palette.vue` 有 3 处 `h.app === "jbl"` / `/jbl/` 三元，藏在面板逻辑里平时看不见 | `tabNew` 走 `appOfHref()`；分组名与图标改查 `appById[app]`（`new-subapp` 第 4 步表第 7 项） |
-| 36b | 「整章标记已读」对新应用行为不对 | `windows.bulkChapter()` 写死 `catalog[appId === "jbl" ? … : …]` | 改走 `desk.toc(w.appId)`；该动作只对小抄有意义，用注册表的 `bulk` 开关判断（表第 8 项） |
+| 36b | 「整章标记已读」对新应用行为不对 | `windows.bulkChapter()` 写死 `catalog[appId === "jbl" ? … : …]` | 改走 `desk.toc(w.appId)`；该动作只对小抄有意义，用注册表的 `bulk` 开关判断（表第 9 项） |
+| 36c | 启动台里新应用没有「文件夹」，或点进去显示的还是 JBL 的检查系统 | `Launchpad.vue` 把「文件夹」做成 JBL 专属：`ui.launchpadFolder === "jbl"` 分支、`jblChapters`、两处 `desk.toc("jbl")`、硬编码搜索词 `"题库 检查系统 火箭 jbl"`、`appById.jbl.chapterIcons`。**这不是一行判断，是一整套功能级特判** | 要么把「文件夹」提升成注册表字段（`folder: { title, items }`）数据驱动，要么**明确决定**只有 jbl 有文件夹并在注释里写死这个前提 —— 别让它默默成为第二处会出错的地方（表第 8 项） |
 | 37 | iframe 应用点链接后「回不来」 | 外链没加 `target="_blank"`，在 iframe 里打开了 | 外链一律 `target="_blank" rel="noopener"` |
 | 38 | iframe 应用的标签标题 / 前进后退失效 | 跨域（没挂在本服务下），拿不到 `contentWindow.location` | **必须同源** |
 | 39 | 子应用独立打开就报错 | 删了桥开头的 `if (window.top === window.self) return;` | 别删 —— 独立可跑是形态 B 的价值 |

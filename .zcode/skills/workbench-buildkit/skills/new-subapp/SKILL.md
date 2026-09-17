@@ -223,7 +223,10 @@ app.use("/mynotes", express.static(path.join(__dirname, "..", "我的笔记"), {
 
 ## 第 4 步 · ★ 泛化硬编码（**这一步不能跳**）
 
-外壳当前把「只有两个应用」写死在 **8 个文件 11 处代码 + 1 处数据契约**（下表第 8 行不需要改代码，只需在服务端加一个键）。加第三个应用前，**先把它们改造成数据驱动**；否则会出现「窗口开出空白」「侧栏文案错」「进度探针不认」「快捷键切不到」「命令面板归错应用」这类**不报错的静默故障**。
+外壳把「只有两个应用」写死在 **7 个文件**里（下表 9 处逻辑 + 1 处数据契约）。加第三个应用前，**先把它们改造成数据驱动**；否则会出现「窗口开出空白」「侧栏文案错」「进度探针不认」「快捷键切不到」「命令面板归错应用」这类**不报错的静默故障**。
+
+> **这个数字怎么来的（可复现）**：`npm run ci` 的**闸 F** 会扫出 **6 个文件、13 处候选行**（grep 形态：`=== "jbl"` / `? "jbl" :` / `indexOf("/jbl/")`）；`stores/desk.js` 的 `progress` 字面量是**对象字面量**，grep 扫不到，由**闸 D** 专门判定 —— 两个闸合起来才是 7 个文件。
+> 别凭记忆数这个数字，改完先跑一次闸 F/闸 D。
 
 | # | 位置 | 现状（写死了二） | 泛化方式 |
 | --- | --- | --- | --- |
@@ -234,10 +237,11 @@ app.use("/mynotes", express.static(path.join(__dirname, "..", "我的笔记"), {
 | 5 | `components/shell/DesktopShell.vue` `onMessage` / `pushJblTheme` | `if (w.appId !== "jbl") return;` —— 只把主题推给 jbl | 按应用查 `modeKey` 决定推给谁（`apps.js` 里已有该字段） |
 | 6 | `components/shell/WinFrame.vue` `sideItems` / 底部进度文案 | 侧栏标题 `appId === "jbl" ? "检查系统" : "章节"`（两处）、进度行 `=== "jbl" ? "已掌握" : "已划线"` | 把文案放进 `apps.js`（例如加 `sideTitle` / `progressWord` 字段），组件只读不算 |
 | 7 | `components/shell/Palette.vue` | 3 处：`tabNew` 的 `/jbl/` 前缀判断、`h.app === "jbl"` 的分组名与图标三元 | 一律改走 `appOfHref()` / 按 `app` 反查 `appById`，分组名用 `appById[app].name` |
-| 8 | `stores/windows.js` `bulkChapter()` | `desk.catalog[w.appId === "jbl" ? "jbl" : "javaguide"]` —— 整章确认框的目录归属 | 改成 `desk.toc(w.appId)`；注意该函数本身只对小抄有意义，可在应用表里加 `bulk` 开关判断 |
-| 9 | `stores/desk.js` `toc` getter —— **数据契约，非代码** | `c[appId]` 本身没问题，但 `/api/desk` 只返回 `javaguide`/`jbl` 两键 | 第 5.3 步在 `server/context.js` 的 `DESK_TOC` 里加你的键即可 |
+| 8 | `components/shell/Launchpad.vue` —— **整套功能级特判** | 启动台里有 JBL 专属的「检查系统」文件夹：`ui.launchpadFolder === "jbl"` 分支、`jblChapters` computed、两处 `desk.toc("jbl")`、硬编码搜索词 `"题库 检查系统 火箭 jbl"`、`appById.jbl.chapterIcons` | 比一行判断重得多。要么把「文件夹」概念做成注册表字段（`folder: { title, items }`），要么**明确决定**只有 jbl 有文件夹并写进注释 —— 别让它默默成为第二处会出错的地方 |
+| 9 | `stores/windows.js` `bulkChapter()` | `desk.catalog[w.appId === "jbl" ? "jbl" : "javaguide"]` —— 整章确认框的目录归属 | 改成 `desk.toc(w.appId)`；注意该函数本身只对小抄有意义，可在应用表里加 `bulk` 开关判断（`apps.js` 已有该字段） |
+| 10 | `stores/desk.js` `toc` getter —— **数据契约，非代码** | `c[appId]` 本身没问题，但 `/api/desk` 只返回 `javaguide`/`jbl` 两键 | 第 5.3 步在 `server/context.js` 的 `DESK_TOC` 里加你的键即可 |
 
-> 快速自查命令见 4.4；`Palette.vue` 与 `bulkChapter` 是最容易被漏的两处 —— 前者藏在命令面板里，平时不搜不到；后者只在「整章划线」时走到。
+> 快速自查命令见 4.4。**最容易漏的三处**：`Palette.vue`（藏在命令面板里，不搜不到）、`Launchpad.vue`（藏在启动台的一个分支里）、`bulkChapter`（只在「整章划线」时走到）。
 
 ### 4.1 宿主表（第 1 项，改法）
 
