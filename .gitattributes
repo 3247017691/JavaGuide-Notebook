@@ -1,0 +1,22 @@
+# 行尾约定（显式写死，不看 core.autocrlf 的脸色）
+#
+# 背景：本机 core.autocrlf = true，签出时会把 LF 换成 CRLF。对下面这两类文件，
+# 那是**功能性错误**而不是风格问题：
+#
+#   · shell 钩子 —— CRLF 会让 sh 在 shebang 与每行末尾的 \r 上出错。
+#     `tools/hooks/*` 会被 install-hooks.mjs 拷进 .git/hooks/ 直接执行，
+#     全新 clone 后钩子必须是 LF，否则「装了钩子却跑不起来」。
+#     （tools/install-hooks.mjs 里另有一层保险：写入时把 CRLF 归一成 LF。）
+#   · Windows 批处理 —— cmd 解析 for /f 多行块对 LF 不友好，
+#     所以 启动离线小抄.bat 与 tools/push.bat 必须是 CRLF（见 README 的说明）。
+
+# shell 脚本与钩子：强制 LF
+*.sh            text eol=lf
+tools/hooks/*   text eol=lf
+
+# 本文件自己也是 LF（git 两种都读得懂，只为消掉签出警告）
+.gitattributes  text eol=lf
+
+# Windows 批处理：强制 CRLF
+*.bat           text eol=crlf
+*.cmd           text eol=crlf

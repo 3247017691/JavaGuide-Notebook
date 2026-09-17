@@ -1,0 +1,39 @@
+#!/bin/sh
+# == workbench-buildkit pre-commit ==
+# 面试工作台 · 提交前预检（离线静态闸）
+#
+# 由 tools/install-hooks.mjs 安装到 .git/hooks/pre-commit；源码在 tools/hooks/ 里受版本控制。
+#
+# 只跑「不依赖运行时」的闸（产物 / 内容 / 注册表 / 硬编码报告）：
+#   · 不构建        —— vite build 要 8s+，每条提交都等不合适
+#   · 不要求服务在跑 —— 否则「没起服务」会让每条提交都失败（一条永远红的闸只会被 --no-verify 绕过）
+#   · 不开浏览器    —— e2e 留给 npm run ci:e2e
+# 完整的运行时确认交给提交后 / 推送前：npm run ci（或 npm run ci:e2e）
+#
+# 急事绕过：git commit --no-verify
+
+# 定位仓库根（hooks 的 cwd 不保证）
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$root" || exit 0
+
+# 预检脚本不在（部分检出 / 子模块）就静默放过，别拦人提交
+[ -f tools/preflight.mjs ] || exit 0
+
+# 没有 node 就跳过（新机器还没装依赖时不该拦提交）
+command -v node >/dev/null 2>&1 || { echo "[pre-commit] 找不到 node，跳过预检"; exit 0; }
+
+out=$(node tools/preflight.mjs --static 2>&1)
+code=$?
+
+if [ "$code" -ne 0 ]; then
+  printf '%s\n' "$out" | tail -n 45
+  echo ""
+  echo "✗ 提交前预检未通过 —— 把上面的失败项处理完再提交。"
+  echo "  完整预检（含构建 / 服务 / 浏览器）：npm run ci:e2e"
+  echo "  确属急事可绕过：git commit --no-verify"
+  exit 1
+fi
+
+# 通过了也别刷屏，只留汇总那一行（形如「11 通过   0 失败   1 警告   3 跳过」）
+printf '%s\n' "$out" | grep -E '[0-9]+ 通过.*失败' | tail -n 1
+exit 0

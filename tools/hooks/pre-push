@@ -1,0 +1,34 @@
+#!/bin/sh
+# == workbench-buildkit pre-push ==
+# 面试工作台 · 推送前提醒：改了前端却没重新构建
+#
+# 为什么值得拦：服务端**只读 client/dist，不读 client/src** ——
+# 改了源码没构建，推上去的仓库里 dist 还是旧的，别人（和未来的你）拉下来看到的
+# 是旧页面，而且**不会报任何错**。这是本仓库最高频的「我改了怎么没生效」。
+#
+# 为什么只查这一条：推送（tools/push.bat）在 GFW 下要 30–40 分钟，
+# 在最后一步才失败很恼人 —— 所以这里只挡「真的会推错东西」的那种错，不做完整预检。
+# 完整预检请用 npm run ci（或让 pre-commit 每次提交替你跑 --static 那几闸）。
+#
+# 急事绕过：git push --no-verify
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$root" || exit 0
+
+# dist 不存在（还没构建过）→ 不拦，交给 npm run ci 的闸 B 去报
+[ -f client/dist/index.html ] || exit 0
+
+if [ -n "$(find client/src -type f -newer client/dist/index.html -print -quit 2>/dev/null)" ]; then
+  echo ""
+  echo "✗ client/src 有文件比 client/dist 新 —— 前端改了但没重新构建。"
+  echo ""
+  echo "  服务端只读 client/dist，不读 client/src。现在推上去，仓库里的 dist 还是旧的，"
+  echo "  拉下来看到的是旧页面，且不会报任何错。"
+  echo ""
+  echo "  先跑：npm run build:client      （或 npm run ci，顺带把其余闸过一遍）"
+  echo "  确属故意（比如只改了还没生效的实验代码）可绕过：git push --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0

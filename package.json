@@ -13,6 +13,12 @@
     "build:client": "npm --prefix client run build",
     "build": "node build-content.js",
     "verify": "node verify-links.js",
+    "ci": "node tools/preflight.mjs",
+    "ci:fast": "node tools/preflight.mjs --skip-build",
+    "ci:e2e": "node tools/preflight.mjs --e2e",
+    "ci:hook": "node tools/preflight.mjs --static",
+    "ci:selftest": "node tools/preflight.mjs --selftest",
+    "prepare": "node tools/install-hooks.mjs",
     "fetch-images": "node download-images.js"
   },
   "dependencies": {
