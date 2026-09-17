@@ -11,9 +11,9 @@
      纯色塑料。所以厚档只给 26px 而不是 44px —— 菜单背后若是窗口纸面，26px 还能
      留住卡片边界与文字块的明暗结构，那才是「毛玻璃」；44px 出来只剩一块米色。
      （对照 参考/macOS27.jpg：那里之所以通透，是因为背后是深色照片，有结构可透。） */
-  --glass-thin: rgba(252, 251, 249, .44);
-  --glass-med: rgba(253, 252, 250, .6);
-  --glass-thick: rgba(254, 253, 251, .72);
+  --glass-thin: rgba(252, 251, 249, .58);
+  --glass-med: rgba(253, 252, 250, .66);
+  --glass-thick: rgba(254, 253, 251, .76);
   --glass-blur: 22px;
   --glass-blur-thick: 32px;
   --glass-sat: 1.8;
@@ -178,9 +178,20 @@ button { font-family: inherit; }
   backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
   -webkit-backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-sat));
 }
+/* 工具栏与侧栏取的是 glass-thin 的**颜色**，但颜色不等于材质 ——
+   少了 backdrop-filter 就只是一层半透明色，下层内容原样透上来，没有任何模糊。
+   以前 .win 自带不透明底色时看不出来；.win 一改透明就暴露了：
+   窗口叠窗口时两层的侧栏文字会直接压在一起。
+   （它们不属于「壁纸上的玻璃件」，所以单独列，不并进上面那条。） */
+.win-bar, .win-side {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+}
 html[data-desk-opaque="1"] .glass-thin,
 html[data-desk-opaque="1"] .glass-med,
-html[data-desk-opaque="1"] .glass-thick {
+html[data-desk-opaque="1"] .glass-thick,
+html[data-desk-opaque="1"] .win-bar,
+html[data-desk-opaque="1"] .win-side {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
