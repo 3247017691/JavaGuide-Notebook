@@ -57,6 +57,11 @@
 | 31 | 截图坐标全偏一倍 | 设备像素比是 2 | `--force-device-scale-factor=1` |
 | 32 | `ls` / `cat` / `head` 报 command not found | 本机 shell 缺 coreutils | 用**绝对路径 node 跑内联脚本** |
 | 33 | 根目录多出 `_shot-*.png` 这类垃圾 | 截图直接写在仓库根 | 用 `$TEMP/wb-verify/` |
+| 33a | 单 Chrome 跑多档时「看到上一档的主题/布局」 | `addScriptToEvaluateOnNewDocument` **累积**，两段种子都跑 | 换种子前 `removeScriptToEvaluateOnNewDocument(identifier)`；媒体模拟每档 navigate 前重设 |
+| 33b | 种子「没生效」、截到一张空桌面 | 种子 JSON 嵌模板字符串时**多套了一层 `JSON.stringify`**（三重编码 → `setItem` 存进垃圾） | 只套两层：`JSON.stringify(JSON.stringify(obj))` 拼进模板 |
+| 33c | 看板大数字恒 `0/332`、百分比恒 `—`，但**零报错零警告**、闸 G 全绿 | 模板引用了 setup 没暴露的变量；**Vue 生产构建剥掉这类警告** | 加数据绑定断言（渲染文本 vs `/api`，`tools/cdp-scenes.mjs` 已内置）；想收警告跑 dev 态 5173 |
+| 33d | 想看细节却只有 1x 全图 | 「看图看两遍」的放大图没有独立工具 | `captureScreenshot` 带 `clip:{x,y,width,height,scale:2}` |
+| 33e | README 界面截图与真实 UI 不符（还印着旧数字） | `docs/screenshots/` 没有任何闸守，改完 UI 没人记得重截 | 改到数据呈现/标题栏文案就重截五张（jpeg） |
 
 ---
 

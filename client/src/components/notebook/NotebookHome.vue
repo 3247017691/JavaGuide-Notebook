@@ -102,6 +102,7 @@ const SIZE = { 6: "xl", 4: "md", 2: "sm" };
 const FOLD = { xl: [30, 30], md: [26, 24], sm: [18, 12] };
 const SKELETONS = PLACEMENT.map((p) => ({ col: p.col, row: p.row, size: SIZE[p.col] || "md" }));
 
+const ov = computed(() => nb.overview);
 const chapters = computed(() => (nb.overview && nb.overview.chapters) || []);
 const whenText = computed(() => {
   const ov = nb.overview;
@@ -130,7 +131,7 @@ const toastShow = ref(false);
 const toastText = ref("");
 
 onMounted(() => {
-  setTitle && setTitle("");
+  setTitle && setTitle("桌面卡阵");
   nb.loadOverview();
 });
 </script>

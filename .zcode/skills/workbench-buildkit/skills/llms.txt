@@ -1,4 +1,4 @@
 new-subapp: 在这个 macOS 风格桌面外壳里新增一个子应用（子 App / 子应用 / 新 App / 新窗口应用 / subapp / 新模块 / 接入新应用 / add app to desktop shell）。三种接入形态（native Vue 宿主 / iframe 独立站点 / 纯静态挂载）的选型、注册表、宿主组件、桥协议、侧栏、主题联动、构建与验收、CI/CD 接入，并指出加第 3 个应用前必须泛化的硬编码位置。
 build-map: 本项目的全部构建方法（构建 / build / 打包 / 编译 / 启动 / 部署 / 发布 / 重建 / 内容管线 / 数据库初始化 / CI / CD / 预检 / 流水线）。命令矩阵、依赖顺序、内容管线、前端构建、服务启动、JBL 题库管线、截图工具、7 道预检闸（npm run ci）、git 钩子（pre-commit 静态闸 / pre-push 拦未构建）、本地部署与 GFW 下的远端推送，以及 npm run build 与 build:client 的命名陷阱。
 headless-verify: 用无头 Chrome + CDP 验证前端改动（验证 / 截图 / 无头 / headless / CDP / 断言 / 回归 / 视觉验收 / screenshot）。种子化会话开窗、深浅色与 reduced-motion 模拟、截图污染陷阱、本机代理与 coreutils 坑。
-design-contract: 本项目的视觉契约（样式 / CSS / 设计系统 / 令牌 / token / 玻璃 / 毛玻璃 / 液态玻璃 / 主题 / 深浅色 / 壁纸 / 改样式）。外壳玻璃与纸面两个世界、token 清单与禁止事项、壁纸参数化扩展点、液玻璃开关的两处名单一致性。
+design-contract: 本项目的视觉契约（样式 / CSS / 设计系统 / 令牌 / token / 玻璃 / 毛玻璃 / 液态玻璃 / 主题 / 深浅色 / 壁纸 / 改样式）。全局外壳 + 每应用自有语言（小抄纸面 / JBL 暗色控制台）、全局四条铁律与 token 清单、壁纸参数化扩展点、液玻璃开关的两处名单一致性。

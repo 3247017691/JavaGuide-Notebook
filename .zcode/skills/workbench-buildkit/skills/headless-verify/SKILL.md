@@ -113,6 +113,18 @@ localStorage.setItem('desk:prefs', JSON.stringify({ theme: 'dark', opaque: 1, wa
 
 字段：`theme: 'auto'|'light'|'dark'`、`opaque: 0|1`、`wall: 'linen'|'abyss'|'dusk'|'moss'`、`sideW`。
 
+### ★ 多档矩阵：一个 Chrome 跑完所有档位
+
+**可复跑工具已在仓库里：`tools/cdp-scenes.mjs`**（15 档 = 浅/深 × 4 壁纸 × 看板/阅读/多标签/叠窗/命令面板/启动台/降级；每档截图 + 计算样式断言 + 数据绑定断言 + 错误收集，全绿退出码 0）。改外观后跑它，别每次重写探针：
+
+```bash
+node tools/cdp-scenes.mjs                 # 全 15 档 → $TEMP/wb-verify/
+node tools/cdp-scenes.mjs --scenes 01,15  # 只跑编号前缀匹配的档
+node tools/cdp-scenes.mjs --zoom          # 看板档追加 2x 局部放大图
+```
+
+**换档不换 Chrome 的关键**：`Page.addScriptToEvaluateOnNewDocument` 是**累积**的 —— 第二段种子不会替换第一段，两段都跑、后写的 localStorage 反而可能被先写的盖住，症状是「看到上一档的布局/主题」，极像种子没生效。换种子前必须 `Page.removeScriptToEvaluateOnNewDocument({ identifier })`（用添加时返回的 identifier）。媒体模拟同理：每档 `navigate` 前重设 `Emulation.setEmulatedMedia`。
+
 ---
 
 ## 四、断言与截图
@@ -153,6 +165,43 @@ await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "le
 await sleep(120);   // 趁涟漪还在扩散时截图/断言
 await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", buttons: 0, clickCount: 1 });
 ```
+
+### 错误收集：零错误才是最硬的「没坏」信号
+
+只截图不够。挂上这四个事件，每档清零重计 —— 破图、404 资源、未捕获异常一次拿全：
+
+```js
+await send("Runtime.enable"); await send("Log.enable"); await send("Network.enable");
+// Runtime.exceptionThrown / Runtime.consoleAPICalled(type=error)
+// Log.entryAdded(level=error) / Network.loadingFailed
+```
+
+再配两条零成本断言：`[...document.images].filter(i => i.complete && i.naturalWidth === 0)`（破图）与 `scrollWidth > innerWidth`（横向溢出）。
+
+### ★ 数据绑定断言：抓「渲染落回兜底值」这类 bug
+
+**Vue 生产构建会剥掉「模板引用未定义」的警告** —— 一个只在模板里存在、setup 没暴露的变量，在 `:3000` 的 dist 上**零报错零警告**，页面只是静静显示兜底值（真发生过：看板大数字恒为 `0/332`、百分比恒为 `—`，所有材质断言与闸 G 全绿）。控制台干净 ≠ 没坏。把渲染文本与 API 比对：
+
+```js
+const DATA_PROBE = `(async () => {
+  const num = document.querySelector('.score-num');
+  if (!num) return { skip: true };
+  const ov = await (await fetch('/api/overview')).json();
+  return { rendered: num.textContent.replace(/\\s+/g, ''), expected: ov.read + '/' + ov.total };
+})()`;   // Runtime.evaluate 带 awaitPromise: true
+```
+
+想收 Vue 的模板警告只能跑 dev 态（`npm run dev:client` 的 5173，dev 构建才带警告）；验收仍走 3000，靠上面这条断言。
+
+### 放大图怎么截：`clip` + `scale`
+
+「看图看两遍」里的放大图没有别的机制，就是带裁剪区截图：
+
+```js
+await send("Page.captureScreenshot", { format: "png", clip: { x: 900, y: 160, width: 540, height: 140, scale: 2 } });
+```
+
+坐标是 CSS 像素（`--force-device-scale-factor=1` 前提下与屏幕一致）。**种子 JSON 嵌在模板字符串里时别多套一层 `JSON.stringify`** —— 三重编码会让种子静默失效，截到一张空桌面，症状极像「会话恢复坏了」（见 pitfalls 81）。
 
 ---
 
@@ -235,12 +284,11 @@ npm run build:client && npm start
 **建议的目录约定**（别把临时产物写进仓库 —— 根目录那几张 `_shot-*.png` 就是这么来的）：
 
 ```
-$TEMP/wb-verify/
-  ├─ probe.mjs          探测脚本（一次写好，后续只改 URL 与档位）
-  ├─ pre.png            没动过的干净版面
-  ├─ after.png          操作后
-  ├─ dark.png / dark-zoom.png
-  └─ reduced.png
+tools/cdp-scenes.mjs    矩阵探针（仓库内，可复跑；档位/断言改这里）
+$TEMP/wb-verify/        产物目录：各档 png + summary.json + 放大图
+  ├─ 01-light-home.png … 15-reduced.png
+  ├─ 01-light-home-z-header.png …（--zoom 的 2x 局部图）
+  └─ summary.json       每档断言与错误明细
 ```
 
 **看图的顺序**：先看整体（版面有没有塌、层次对不对），**再看放大图**（色散边、玻璃透不透这类细节在 1x 下看不出来）。放大图会夸大重叠问题，**结论要回到 1x 复核**。
@@ -252,8 +300,11 @@ $TEMP/wb-verify/
 - [ ] `pre` 图：版面完整（菜单栏 / widgets / 窗口 / Dock 都在）
 - [ ] 窗口 `winClass` 含 `active`，`winDisplay: flex`，`dockMinis: 0`（没有被误最小化）
 - [ ] 断言的核心属性符合预期（不是「看起来对」）
+- [ ] **数据绑定断言**：渲染出来的数字/文案与 `/api` 一致（prod 剥警告，这类 bug 控制台是干净的）
+- [ ] 错误收集为零：无 `exceptionThrown` / `console.error` / `Log` error / `Network.loadingFailed`；无破图、无横向溢出
 - [ ] 深浅色两档都看过图
 - [ ] `prefers-reduced-motion` / `prefers-reduced-transparency` 降级**零残留**
 - [ ] 改动涉及叠层时：**两窗叠放**验过
 - [ ] 截图里没有「凭空消失的窗口」这类探测污染
 - [ ] 若验的是缓存 / Range：用的是 `http.request` 而非 `fetch`
+- [ ] 改到**数据呈现 / 标题栏文案**时：重截 `docs/screenshots/` 五张 README 图（`captureScreenshot` 用 `format:'jpeg'`）。它们没有任何闸守着，漂移了没人会发现

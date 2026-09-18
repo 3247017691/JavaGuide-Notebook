@@ -11,9 +11,9 @@
      纯色塑料。所以厚档只给 26px 而不是 44px —— 菜单背后若是窗口纸面，26px 还能
      留住卡片边界与文字块的明暗结构，那才是「毛玻璃」；44px 出来只剩一块米色。
      （对照 参考/macOS27.jpg：那里之所以通透，是因为背后是深色照片，有结构可透。） */
-  --glass-thin: rgba(252, 251, 249, .58);
-  --glass-med: rgba(253, 252, 250, .66);
-  --glass-thick: rgba(254, 253, 251, .76);
+  --glass-thin: rgba(255, 255, 255, .58);
+  --glass-med: rgba(255, 255, 255, .66);
+  --glass-thick: rgba(255, 255, 255, .76);
   --glass-blur: 22px;
   --glass-blur-thick: 32px;
   --glass-sat: 1.8;
@@ -21,11 +21,11 @@
   --glass-brd-dark: rgba(0, 0, 0, .10);
   --glass-inner: rgba(255, 255, 255, .78);
   /* 右键菜单/下拉：高透 vibrancy，能透出背后内容色（参考图 macOS27.jpg） */
-  --glass-menu: rgba(251, 250, 248, .46);
+  --glass-menu: rgba(255, 255, 255, .46);
   /* 窗口正文底色。**只给 .frames 用** —— .win 自己是透明的，
      否则工具栏 / 侧栏的 backdrop-filter 采样到的是窗口自己的底，永远透不到壁纸，
      玻璃就等于白做（这是浅色主题「看着不透」的根因）。 */
-  --win-bg: #f7f5f1;
+  --win-bg: #f5f5f5;
 
   /* ---- 墨色 ---- */
   --txt-1: #1d1d1f;
@@ -88,11 +88,11 @@
 
 /* ============================ 深色档：只换值 ============================ */
 html.dark {
-  --glass-thin: rgba(30, 28, 26, .46);
-  --glass-med: rgba(32, 30, 27, .6);
-  --glass-thick: rgba(36, 33, 30, .72);
-  --glass-menu: rgba(38, 35, 31, .48);
-  --win-bg: #23201b;
+  --glass-thin: rgba(30, 30, 30, .46);
+  --glass-med: rgba(32, 32, 32, .6);
+  --glass-thick: rgba(36, 36, 36, .72);
+  --glass-menu: rgba(38, 38, 38, .48);
+  --win-bg: #232323;
   --glass-brd: rgba(255, 255, 255, .16);
   --glass-brd-dark: rgba(0, 0, 0, .42);
   --glass-inner: rgba(255, 255, 255, .12);
@@ -119,29 +119,29 @@ html.dark {
 
 /* 降低透明度：玻璃退成实面（等同系统的「减少透明度」） */
 html[data-desk-opaque="1"] {
-  --glass-thin: #efece6;
-  --glass-med: #f7f5f0;
-  --glass-thick: #fbfaf7;
-  --glass-menu: #fbfaf7;
+  --glass-thin: #f2f2f2;
+  --glass-med: #fafafa;
+  --glass-thick: #ffffff;
+  --glass-menu: #ffffff;
 }
 html[data-desk-opaque="1"].dark {
-  --glass-thin: #211f1c;
-  --glass-med: #26231f;
-  --glass-thick: #2b2823;
-  --glass-menu: #2b2823;
+  --glass-thin: #212121;
+  --glass-med: #262626;
+  --glass-thick: #2b2b2b;
+  --glass-menu: #2b2b2b;
 }
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --glass-thin: #efece6;
-    --glass-med: #f7f5f0;
-    --glass-thick: #fbfaf7;
-    --glass-menu: #fbfaf7;
+    --glass-thin: #f2f2f2;
+    --glass-med: #fafafa;
+    --glass-thick: #ffffff;
+    --glass-menu: #ffffff;
   }
   html.dark {
-    --glass-thin: #211f1c;
-    --glass-med: #26231f;
-    --glass-thick: #2b2823;
-    --glass-menu: #2b2823;
+    --glass-thin: #212121;
+    --glass-med: #262626;
+    --glass-thick: #2b2b2b;
+    --glass-menu: #2b2b2b;
   }
 }
 
@@ -750,7 +750,7 @@ html:not(.dark) .w-cal .wc-wk { color: #d64541; }
 .frame { position: absolute; inset: 0; display: none; }
 .frame.on { display: block; }
 .frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-html.dark .frame iframe { background: #1e1c19; }
+html.dark .frame iframe { background: #1e1e1e; }
 .frame-load, .frame-err {
   position: absolute; inset: 0;
   display: grid; place-content: center; gap: 12px;
@@ -1022,7 +1022,7 @@ html[data-desk-opaque="1"] .ctx-pop { backdrop-filter: none; -webkit-backdrop-fi
   box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
   transition: transform .2s var(--spring);
 }
-html.dark .sw::after { background: #d8d5cf; }
+html.dark .sw::after { background: #d8d8d8; }
 .sw[aria-checked="true"] { background: var(--ok); }
 .sw[aria-checked="true"]::after { transform: translateX(17px); }
 html.dark .sw[aria-checked="true"]::after { background: #fff; }
@@ -1038,7 +1038,7 @@ html.dark .sw[aria-checked="true"]::after { background: #fff; }
   position: absolute; inset: 0;
   backdrop-filter: blur(40px) saturate(1.4) brightness(.92);
   -webkit-backdrop-filter: blur(40px) saturate(1.4) brightness(.92);
-  background: rgba(20, 16, 10, .18);
+  background: rgba(15, 15, 15, .18);
 }
 .lp-search {
   position: relative;
@@ -1138,8 +1138,8 @@ html.dark .sw[aria-checked="true"]::after { background: #fff; }
 
 /* 外壳滚动条 */
 .desk-scroll::-webkit-scrollbar { width: 10px; }
-.desk-scroll::-webkit-scrollbar-thumb { background: rgba(128, 120, 104, .5); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
-.desk-scroll::-webkit-scrollbar-thumb:hover { background: rgba(128, 120, 104, .75); background-clip: content-box; border: 2px solid transparent; }
+.desk-scroll::-webkit-scrollbar-thumb { background: rgba(118, 118, 118, .5); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+.desk-scroll::-webkit-scrollbar-thumb:hover { background: rgba(118, 118, 118, .75); background-clip: content-box; border: 2px solid transparent; }
 
 .skip {
   position: fixed; left: 50%; top: 0; z-index: 999;

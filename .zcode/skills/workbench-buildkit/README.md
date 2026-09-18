@@ -28,7 +28,7 @@
 | **new-subapp** | `workbench-new-subapp` | ★ **新增一个子应用**：选型 → 注册 → 宿主 → 桥接 → 侧栏 → 主题 → 构建 → 验收 → **CI/CD 接入**，全链路 |
 | **build-map** | `workbench-build-map` | 本项目**所有构建方法**：命令矩阵、依赖顺序、各管线细节、命名陷阱、**预检与发布（CI/CD）** |
 | **headless-verify** | `workbench-headless-verify` | 用无头 Chrome + CDP **验证改动**：种子化会话、媒体模拟、截图污染、本机环境坑 |
-| **design-contract** | `workbench-design-contract` | **视觉契约**：外壳玻璃 / 纸面两个世界、token 清单、扩展点、禁止事项 |
+| **design-contract** | `workbench-design-contract` | **视觉契约**：全局外壳 + 每应用自有语言（小抄纸面 / JBL 暗色控制台）、token 清单、扩展点、禁止事项 |
 
 **只读一个的话**：要加功能读 `new-subapp`，要跑起来读 `build-map`，要确认改对了读 `headless-verify`。
 

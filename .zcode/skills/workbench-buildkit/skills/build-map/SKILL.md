@@ -65,6 +65,7 @@ npm --prefix client install  # 前端：vue / vite / pinia / vue-router / elemen
 | `npm run ci:hook` | `… --static` | 不构建 / 不连服务 / 不开浏览器 —— **git 的 pre-commit 跑的就是这条** |
 | `npm run ci:selftest` | `… --selftest` | 只验预检自己的两个解析器（不碰项目） |
 | `node tools/cdp-shot.mjs a.png [b.png] [x,y]` | — | 无头截图（验证用，见 `headless-verify` 技能） |
+| `node tools/cdp-scenes.mjs [--zoom] [--scenes 01,15]` | — | **15 档视觉矩阵**：截图 + 材质/降级/破图/数据绑定断言 + 错误收集，全绿退出码 0（改外观后跑它） |
 
 ### 内容链（仅当 JavaGuide 正文变了才跑）
 

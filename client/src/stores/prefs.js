@@ -28,6 +28,8 @@ function loadJSON(key, def) {
 function saveJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* 隐私模式 */ } }
 
 const mqDark = window.matchMedia("(prefers-color-scheme: dark)");
+/* 系统「降低透明度」：与手动 opaque 开关同效，靠同一个 data-desk-opaque 属性降级 */
+const mqTrans = window.matchMedia("(prefers-reduced-transparency: reduce)");
 
 export const usePrefs = defineStore("prefs", {
   state: () => {
@@ -59,13 +61,16 @@ export const usePrefs = defineStore("prefs", {
       if (mqDark.addEventListener) {
         mqDark.addEventListener("change", () => { this.sysDark = mqDark.matches; this.apply(); });
       }
+      if (mqTrans.addEventListener) {
+        mqTrans.addEventListener("change", () => this.apply());
+      }
       this.apply();
     },
     apply() {
       const r = this.resolved;
       document.documentElement.classList.toggle("dark", r === "dark");
       document.documentElement.dataset.deskTheme = r;
-      document.documentElement.dataset.deskOpaque = this.opaque ? "1" : "0";
+      document.documentElement.dataset.deskOpaque = (this.opaque || mqTrans.matches) ? "1" : "0";
       document.documentElement.dataset.deskWall = this.wall;
       // 同步到小抄容器（走 read-mode 键，规则与原版一致）
       const m = this.nbMode;

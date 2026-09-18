@@ -89,7 +89,7 @@ public/content/             444 页正文 HTML（331 篇目录页 + 113 篇延�
 public/img/                 本地化图片（/img 挂载带魔数嗅探纠正 Content-Type）
 public/vendor/mermaid/      mermaid 离线渲染
 data/                       chapters.json 目录种子 · articles-meta.json · image-map.json
-tools/                      preflight.mjs（本地 CI）· cdp-shot.mjs（无头截图）· push.bat（HTTPS 备用推送）
+tools/                      preflight.mjs（本地 CI）· cdp-shot.mjs（无头截图）· cdp-scenes.mjs（15 档视觉矩阵）· push.bat（HTTPS 备用推送）
                             install-hooks.mjs + hooks/（pre-commit / pre-push git 钩子）
 build-content.js            Markdown → HTML 渲染管线（高亮 / 锚点 / 容器 / mermaid / 站内链接本地化）
 verify-links.js             构建后自检：外链残留 / 落点缺失 / 锚点错位（有问题非零退出）
@@ -111,6 +111,7 @@ server.js                   3 行兼容壳（等价 node server/index.js）
 | `npm run ci` | `node tools/preflight.mjs` | **提交前预检**（本项目的 CI，7 道闸含构建）。⚠️ 不是 `npm ci` |
 | `npm run ci:fast` / `ci:e2e` | `… --skip-build` / `… --e2e` | 快速（跳过构建）/ 加无头浏览器验证 |
 | `node tools/cdp-shot.mjs a.png [b.png]` | — | 无头 Chrome 截图（种子化会话，验样式用） |
+| `node tools/cdp-scenes.mjs [--zoom]` | — | 15 档视觉矩阵回归：截图 + 材质/降级/破图/数据绑定断言，全绿退出码 0 |
 
 **「改了什么 → 跑什么」口诀**：改前端 → `build:client`；改服务端 → 重启；改内容/题库 → 重跑对应管线 + 重启；提交前 → `npm run ci`。
 
